@@ -40,17 +40,17 @@ export async function POST(request: NextRequest) {
   console.log('🚀 WEBHOOK RECIBIDO:', timestamp);
   console.log('🔑 MP_ACCESS_TOKEN:', MP_ACCESS_TOKEN ? 'Configurado ✅' : 'No configurado ❌');
   
+  // ✅ SIEMPRE DEVOLVER 200 - Wrapper principal
   try {
     // Validaciones básicas
     if (!MP_ACCESS_TOKEN) {
       console.error('❌ MP_ACCESS_TOKEN no configurado');
       return NextResponse.json({ 
+        success: false,
         error: 'MP_ACCESS_TOKEN faltante',
         timestamp 
-      }, { status: 200 }); // 200 para evitar reintentos
-    }
-
-    // Parsear body
+      }, { status: 200 }); // ✅ SIEMPRE 200
+    }    // Parsear body
     let body;
     try {
       body = await request.json();
@@ -58,29 +58,32 @@ export async function POST(request: NextRequest) {
     } catch (parseError) {
       console.error('❌ Error parseando JSON:', parseError);
       return NextResponse.json({ 
+        success: false,
         error: 'JSON inválido',
         timestamp 
-      }, { status: 200 });
+      }, { status: 200 }); // ✅ SIEMPRE 200
     }
 
     // Solo procesar pagos
     if (body.type !== 'payment') {
       console.log(`ℹ️ Tipo ${body.type} ignorado`);
       return NextResponse.json({ 
+        success: true,
         received: true, 
         action: 'ignored',
         type: body.type,
         timestamp 
-      });
+      }, { status: 200 }); // ✅ SIEMPRE 200
     }
 
     const paymentId = body.data?.id;
     if (!paymentId) {
       console.error('❌ Payment ID faltante');
       return NextResponse.json({ 
+        success: false,
         error: 'Payment ID faltante',
         timestamp 
-      }, { status: 200 });
+      }, { status: 200 }); // ✅ SIEMPRE 200
     }
 
     console.log('💳 Procesando payment:', paymentId);
@@ -103,28 +106,28 @@ export async function POST(request: NextRequest) {
       });
 
       console.log('📡 Response status:', response.status);
-      console.log('📡 Response statusText:', response.statusText);
-
-      if (response.status === 404) {
+      console.log('📡 Response statusText:', response.statusText);      if (response.status === 404) {
         console.log(`⚠️ Payment ${paymentId} no encontrado (404) - Posiblemente pago de prueba o expirado`);
         return NextResponse.json({ 
+          success: true, // ✅ Éxito porque se recibió
           received: true,
-          error: 'Payment not found',
+          warning: 'Payment not found',
           paymentId,
           status: 404,
           message: 'El pago no existe o es de prueba',
           timestamp 
-        }, { status: 200 }); // 200 para evitar reintentos
+        }, { status: 200 }); // ✅ SIEMPRE 200
       }
 
       if (response.status === 401) {
         console.error('❌ Token de MercadoPago inválido (401)');
         return NextResponse.json({ 
+          success: false,
           received: true,
           error: 'Invalid MP token',
           status: 401,
           timestamp 
-        }, { status: 200 });
+        }, { status: 200 }); // ✅ SIEMPRE 200
       }
 
       if (!response.ok) {
@@ -135,6 +138,7 @@ export async function POST(request: NextRequest) {
         console.error('  Body:', errorText);
         
         return NextResponse.json({ 
+          success: false,
           received: true,
           error: 'Error MercadoPago API',
           status: response.status,
@@ -142,7 +146,7 @@ export async function POST(request: NextRequest) {
           errorDetails: errorText,
           paymentId,
           timestamp 
-        }, { status: 200 });
+        }, { status: 200 }); // ✅ SIEMPRE 200
       }
 
       paymentData = await response.json();
@@ -153,29 +157,29 @@ export async function POST(request: NextRequest) {
         amount: paymentData.transaction_amount,
         payer_email: paymentData.payer?.email,
         date_created: paymentData.date_created
-      });
-
-    } catch (fetchError) {
+      });    } catch (fetchError) {
       console.error('❌ Error fetch MercadoPago:', fetchError);
       return NextResponse.json({ 
+        success: false,
         received: true,
         error: 'Error conectando con MercadoPago',
         details: fetchError instanceof Error ? fetchError.message : 'Unknown',
         paymentId,
         timestamp 
-      }, { status: 200 });
+      }, { status: 200 }); // ✅ SIEMPRE 200
     }
 
     // Solo procesar pagos aprobados
     if (paymentData.status !== 'approved') {
       console.log(`⚠️ Pago ${paymentId} no aprobado - status: ${paymentData.status}`);
       return NextResponse.json({ 
+        success: true, // ✅ Éxito porque se recibió
         received: true, 
         status: paymentData.status, 
         action: 'not_processed',
         paymentId,
         timestamp 
-      });
+      }, { status: 200 }); // ✅ SIEMPRE 200
     }
 
     // Procesar pago aprobado
@@ -186,25 +190,27 @@ export async function POST(request: NextRequest) {
     console.log(`✅ WEBHOOK EXITOSO en ${processingTime}ms`);
     
     return NextResponse.json({
+      success: true, // ✅ Éxito total
       received: true,
       status: 'processed',
       user: result.userEmail,
       revisionsAdded: result.revisionsAdded,
       processingTime,
       timestamp
-    });
+    }, { status: 200 }); // ✅ SIEMPRE 200
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error('❌ ERROR WEBHOOK:', error);
     
-    // SIEMPRE devolver 200 para evitar reintentos de MercadoPago
+    // ✅ SIEMPRE devolver 200 para evitar reintentos de MercadoPago
     return NextResponse.json({
-      received: true,
+      success: false,
+      received: true, // ✅ Siempre confirmamos recepción
       error: error instanceof Error ? error.message : 'Error desconocido',
       timestamp,
       processingTime
-    }, { status: 200 });
+    }, { status: 200 }); // ✅ SIEMPRE 200
   }
 }
 

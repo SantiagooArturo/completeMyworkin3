@@ -5,18 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-const PACKAGES = [
-  { id: 'cv_1', name: '1 Revisión', price: 4, reviews: 1 },
-  { id: 'cv_3', name: '3 Revisiones', price: 7, reviews: 3, popular: true },
-  { id: 'cv_6', name: '6 Revisiones', price: 10, reviews: 6 }
-];
+import { CV_PACKAGES } from '@/config/mercadopago';
 
 export default function TestPayment() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handlePurchase = async (pkg: typeof PACKAGES[0]) => {
+  const handlePurchase = async (pkg: typeof CV_PACKAGES[0]) => {
     if (!user) {
       alert('Debes estar logueado para comprar');
       return;
@@ -75,9 +70,8 @@ export default function TestPayment() {
         <h1 className="text-3xl font-bold text-center mb-8">
           🧪 Prueba de Pagos MercadoPago
         </h1>
-        
-        <div className="grid md:grid-cols-3 gap-6">
-          {PACKAGES.map((pkg) => (
+          <div className="grid md:grid-cols-3 gap-6">
+          {CV_PACKAGES.map((pkg) => (
             <Card key={pkg.id} className={pkg.popular ? 'border-blue-500 border-2' : ''}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">

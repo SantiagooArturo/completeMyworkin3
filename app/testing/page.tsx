@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { cvReviewService } from '@/services/cvReviewService';
 import { useMercadoPago, mercadoPagoService } from '@/services/mercadoPagoService';
-import { Button } from 'react-day-picker';
+import { Button } from '@/components/ui/button'; 
 
 export default function TestingPage() {
   const { user } = useAuth();
@@ -56,51 +56,64 @@ export default function TestingPage() {
     }
   };
 
-  const testMercadoPago = async () => {
-    if (!user) {
-      setTestResults(prev => ({ ...prev, mercadopago: 'Error: Usuario no autenticado' }));
-      setMercadopagoStatus('error');
-      return;
-    }
-
-    setMercadopagoStatus('testing');
-    try {
-      // Verificar variables de entorno
-      const hasPublicKey = !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
-      
-      if (!hasPublicKey) {
-        throw new Error('NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY no configurada');
+  // ...existing code...
+    const testMercadoPago = async () => {
+      if (!user) {
+        setTestResults(prev => ({ ...prev, mercadopago: 'Error: Usuario no autenticado' }));
+        setMercadopagoStatus('error');
+        return;
       }
-
-      // Probar creación de preferencia (sin redirigir)
-      const testPaymentData = {
-        userId: user.uid,
-        userEmail: user.email || 'test@example.com',
-        packageId: '1-review',
-        packageName: 'Paquete Test',
-        amount: 4,
-        currency: 'PEN'
-      };
-
-      // Simular creación de preferencia
-      const preference = await mercadoPagoService.createPaymentPreference(testPaymentData);
-      
-      setTestResults(prev => ({
-        ...prev,
-        mercadopago: `✅ Configuración correcta!
-        - Public Key: ${hasPublicKey ? 'Configurada' : 'No configurada'}
-        - Preferencia creada: ${preference.id}
-        - URL de pago: ${preference.init_point ? 'Generada' : 'No generada'}`
-      }));
-      setMercadopagoStatus('success');
-    } catch (error: any) {
-      setTestResults(prev => ({
-        ...prev,
-        mercadopago: `❌ Error: ${error.message}`
-      }));
-      setMercadopagoStatus('error');
-    }
-  };
+  
+      setMercadopagoStatus('testing');
+      try {
+        // Verificar variables de entorno del lado del cliente
+        const hasPublicKey = !!process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+        
+        if (!hasPublicKey) {
+          throw new Error('NEXT_PUBLIC_MP_PUBLIC_KEY no configurada');
+        }
+  
+        // Usar el API para crear preferencia (donde SÍ están las credenciales)
+        const response = await fetch('/api/mercadopago/create-preference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: 'Test Package',
+            price: 4,
+            quantity: 1,
+            userId: user.uid,
+            revisions: 1,
+            userEmail: user.email || 'test@example.com'
+          })
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al crear preferencia de prueba');
+        }
+  
+        const preference = await response.json();
+        
+        setTestResults(prev => ({
+          ...prev,
+          mercadopago: `✅ Configuración correcta!
+          - Public Key: ${hasPublicKey ? 'Configurada' : 'No configurada'}
+          - Preferencia creada: ${preference.id}
+          - URL de pago: ${preference.init_point ? 'Generada' : 'No generada'}
+          - Sandbox URL: ${preference.sandbox_init_point ? 'Disponible' : 'No disponible'}`
+        }));
+        setMercadopagoStatus('success');
+      } catch (error: any) {
+        setTestResults(prev => ({
+          ...prev,
+          mercadopago: `❌ Error: ${error.message}`
+        }));
+        setMercadopagoStatus('error');
+      }
+    };
+  // ...existing code...
 
   const getStatusIcon = (status: string) => {
     switch (status) {

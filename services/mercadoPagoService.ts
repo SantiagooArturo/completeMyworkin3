@@ -1,7 +1,8 @@
+// Configuración de MercadoPago - Usando configuración centralizada
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { UserService } from './userService';
+import { CV_PACKAGES, CVPackage, getPackageById } from '../config/mercadopago';
 
-// Configuración de MercadoPago - CORREGIDO: MP_ACCESS_TOKEN debe ser privado
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || '';
 
@@ -32,72 +33,9 @@ export interface PaymentData {
   currency: string;
 }
 
-export interface CVPackage {
-  id: string;
-  name: string;
-  price: number;
-  reviews: number;
-  description: string;
-  features: string[];
-}
-
-// Paquetes de revisión de CV disponibles
-export const CV_PACKAGES: CVPackage[] = [
-  {
-    id: 'cv_basic',
-    name: '1 Revisión',
-    price: 4.00,
-    reviews: 1,
-    description: '1 revisión adicional de CV',    features: [
-      '1 análisis detallado',
-      'Recomendaciones específicas',
-      'Puntuación mejorada'
-    ]
-  },
-  {
-    id: 'cv_premium',
-    name: '3 Revisiones',
-    price: 7.00,
-    reviews: 3,
-    description: '3 revisiones de CV - ¡Más Popular!',
-    features: [
-      '3 análisis detallados',
-      'Recomendaciones específicas',
-      'Puntuación mejorada',
-      'Soporte por email'
-    ]
-  },
-  {
-    id: 'cv_enterprise',
-    name: '6 Revisiones',
-    price: 10.00,
-    reviews: 6,
-    description: '6 revisiones de CV - Mejor valor',
-    features: [
-      '6 análisis detallados',
-      'Recomendaciones específicas',
-      'Puntuación mejorada',
-      'Soporte prioritario',
-      'Seguimiento de mejoras'
-    ]
-  },
-  {
-    id: 'cv_unlimited',
-    name: 'Paquete Ilimitado',
-    price: 40.00,
-    reviews: -1, // -1 significa ilimitado
-    description: 'Revisiones ilimitadas por 30 días',
-    features: [
-      'Análisis ilimitados por 30 días',
-      'Recomendaciones específicas',
-      'Puntuación mejorada',
-      'Soporte 24/7',
-      'Plantillas premium',
-      'Seguimiento de mejoras',
-      'Consultorías personalizadas'
-    ]
-  }
-];
+// Re-exportar CVPackage desde la configuración centralizada
+export type { CVPackage } from '../config/mercadopago';
+export { CV_PACKAGES } from '../config/mercadopago';
 
 // Clase para manejar pagos con MercadoPago
 export class MercadoPagoService {
@@ -124,9 +62,9 @@ export class MercadoPagoService {
 
   // Crear preferencia de pago real
   async createPaymentPreference(paymentData: PaymentData): Promise<PaymentPreference> {
-    const selectedPackage = CV_PACKAGES.find(pkg => pkg.id === paymentData.packageId);
+    const selectedPackage = getPackageById(paymentData.packageId);
     if (!selectedPackage) {
-      throw new Error('Paquete no encontrado');
+      throw new Error(`Paquete ${paymentData.packageId} no encontrado`);
     }
 
     if (!this.isConfigured()) {
@@ -257,7 +195,7 @@ export function useMercadoPago() {
     userName: string,
     packageId: string
   ): Promise<void> => {
-    const selectedPackage = CV_PACKAGES.find(pkg => pkg.id === packageId);
+    const selectedPackage = getPackageById(packageId);
     if (!selectedPackage) {
       throw new Error('Paquete no encontrado');
     }

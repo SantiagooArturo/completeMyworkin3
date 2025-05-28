@@ -1,4 +1,16 @@
 // Configuración centralizada de MercadoPago
+
+// Interfaz para paquetes de CV
+export interface CVPackage {
+  id: string;
+  name: string;
+  price: number;
+  reviews: number;
+  description: string;
+  features: string[];
+  popular?: boolean;
+}
+
 export const MERCADOPAGO_CONFIG = {
   // Credenciales (desde variables de entorno)
   ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN!,
@@ -10,50 +22,46 @@ export const MERCADOPAGO_CONFIG = {
   // Configuración de pagos
   CURRENCY: 'PEN',
   COUNTRY: 'PE',
-  
-  // Paquetes de CV con precios actualizados
+    // Paquetes de CV con precios actualizados - FUENTE ÚNICA DE VERDAD
   CV_PACKAGES: [
     {
-      id: 'cv_1',
+      id: 'cv_basic',
       name: '1 Revisión',
       price: 4.00,
       reviews: 1,
-      description: '1 revisión de CV con análisis IA',
+      description: '1 revisión adicional de CV',
       features: [
-        '1 análisis detallado con IA',
+        '1 análisis detallado',
         'Recomendaciones específicas',
-        'Puntuación de compatibilidad ATS',
-        'Feedback personalizado'
+        'Puntuación mejorada'
       ]
     },
     {
-      id: 'cv_3',
+      id: 'cv_premium',
       name: '3 Revisiones',
       price: 7.00,
       reviews: 3,
       description: '3 revisiones de CV - ¡Más Popular!',
       popular: true,
       features: [
-        '3 análisis detallados con IA',
-        'Comparativa entre versiones',
-        'Seguimiento de mejoras',
-        'Optimización ATS avanzada',
+        '3 análisis detallados',
+        'Recomendaciones específicas',
+        'Puntuación mejorada',
         'Soporte por email'
       ]
     },
     {
-      id: 'cv_6',
+      id: 'cv_enterprise',
       name: '6 Revisiones',
       price: 10.00,
       reviews: 6,
       description: '6 revisiones de CV - Mejor valor',
       features: [
-        '6 análisis detallados con IA',
-        'Análisis comparativo completo',
-        'Plantillas CV premium',
-        'Consultoría personalizada',
+        '6 análisis detallados',
+        'Recomendaciones específicas',
+        'Puntuación mejorada',
         'Soporte prioritario',
-        'Garantía de mejora'
+        'Seguimiento de mejoras'
       ]
     }
   ],
@@ -89,9 +97,12 @@ export const formatPrice = (price: number): string => {
   return `S/ ${price.toFixed(2)}`;
 };
 
-export const getPackageById = (id: string) => {
+export const getPackageById = (id: string): CVPackage | undefined => {
   return MERCADOPAGO_CONFIG.CV_PACKAGES.find(pkg => pkg.id === id);
 };
+
+// Exportar los paquetes directamente para facilitar el acceso
+export const CV_PACKAGES = MERCADOPAGO_CONFIG.CV_PACKAGES;
 
 export const validateMercadoPagoConfig = (): { isValid: boolean; missing: string[] } => {
   const missing: string[] = [];

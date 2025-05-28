@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, CreditCard, Star, CheckCircle, Loader2 } from 'lucide-react';
+import { CV_PACKAGES } from '@/config/mercadopago';
 
 interface CVPaymentModalProps {
   isOpen: boolean;
@@ -12,33 +13,8 @@ interface CVPaymentModalProps {
 
 export default function CVPaymentModal({ isOpen, onClose, userEmail, userName }: CVPaymentModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-    const packages = [
-    {
-      id: 'cv_1',
-      name: '1 Revisión',
-      price: 4,
-      revisions: 1,
-      description: 'Ideal para una revisión rápida y concisa de tu CV.',
-      popular: false
-    },
-    {
-      id: 'cv_3',
-      name: '3 Revisiones',
-      price: 7,
-      revisions: 3,
-      description: 'Múltiples revisiones para perfeccionar tu CV a detalle.',
-      popular: true
-    },
-    {
-      id: 'cv_6',
-      name: '6 Revisiones',
-      price: 10,
-      revisions: 6,
-      description: 'El paquete completo para una preparación exhaustiva.',
-      popular: false
-    }
-  ];
-  const handlePayment = async (packageData: typeof packages[0]) => {
+  
+  const handlePayment = async (packageData: typeof CV_PACKAGES[0]) => {
     if (!userEmail || !userName) {
       alert('Por favor, inicia sesión para continuar con el pago');
       return;
@@ -51,13 +27,12 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName }:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        },        body: JSON.stringify({
           title: packageData.name,
           price: packageData.price,
           quantity: 1,
           userId: userEmail, // Usamos email como identificador
-          revisions: packageData.revisions,
+          revisions: packageData.reviews,
           userEmail: userEmail
         }),
       });
@@ -100,12 +75,10 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName }:
           >
             <X className="h-5 w-5" />
           </button>
-        </div>
-
-        {/* Contenido */}
+        </div>        {/* Contenido */}
         <div className="p-6">
           <div className="grid md:grid-cols-3 gap-4">
-            {packages.map((pkg) => (
+            {CV_PACKAGES.map((pkg) => (
               <div
                 key={pkg.id}
                 className={`relative border rounded-xl p-5 flex flex-col transition-all duration-200 hover:shadow-md ${
@@ -129,7 +102,7 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName }:
                     <span className="text-3xl font-bold text-[#028bbf]">S/ {pkg.price}</span>
                   </div>
                   <div className="text-sm text-gray-600">
-                    <span className="font-medium">{pkg.revisions}</span> análisis incluido{pkg.revisions > 1 ? 's' : ''}
+                    <span className="font-medium">{pkg.reviews}</span> análisis incluido{pkg.reviews > 1 ? 's' : ''}
                   </div>
                 </div>
 

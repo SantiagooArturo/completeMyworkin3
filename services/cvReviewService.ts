@@ -1,22 +1,29 @@
 'use client';
-
+import { CV_PACKAGES, CVPackage } from '../config/mercadopago';
+import { User } from 'firebase/auth';
 import { 
   collection, 
   doc, 
-  addDoc, 
-  updateDoc, 
   getDoc, 
-  getDocs, 
+  setDoc, 
+  updateDoc, 
+  addDoc, 
   query, 
   where, 
+  getDocs, 
   orderBy, 
   limit,
-  serverTimestamp,
   increment,
-  setDoc
+  arrayUnion,
+  Timestamp,
+  serverTimestamp
 } from 'firebase/firestore';
-import { db } from '@/firebase/config';
-import { User } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase/config';
+
+// ✅ EXPORTAR CV_PACKAGES para que otros archivos puedan importarlo
+export { CV_PACKAGES };
+export type { CVPackage };
 
 // Tipos para el sistema de revisiones CV
 export interface CVResult {
@@ -60,18 +67,6 @@ export interface UserCVProfile {
   updatedAt: any;
 }
 
-export interface CVPackage {
-  id: string;
-  name: string;
-  reviews: number;
-  price: number;
-  originalPrice: number;
-  discount: number;
-  description: string;
-  features: string[];
-  popular?: boolean;
-}
-
 export interface CVPackagePurchase {
   id: string;
   packageId: string;
@@ -86,40 +81,7 @@ export interface CVPackagePurchase {
   expiresAt?: any;
 }
 
-// Paquetes de revisión de CV disponibles
-export const CV_PACKAGES: CVPackage[] = [
-  {
-    id: '1-review',
-    name: 'Paquete Individual',
-    reviews: 1,
-    price: 4,
-    originalPrice: 4,
-    discount: 0,
-    description: 'Perfecto para una revisión rápida de tu CV',
-    features: ['1 revisión completa', 'Análisis detallado', 'Recomendaciones específicas']
-  },
-  {
-    id: '3-reviews',
-    name: 'Paquete Básico',
-    reviews: 3,
-    price: 7,
-    originalPrice: 12,
-    discount: 42,
-    description: 'Ideal para perfeccionar tu CV con múltiples revisiones',
-    features: ['3 revisiones completas', 'Análisis comparativo', 'Seguimiento de mejoras'],
-    popular: true
-  },
-  {
-    id: '6-reviews',
-    name: 'Paquete Premium',
-    reviews: 6,
-    price: 10,
-    originalPrice: 24,
-    discount: 58,
-    description: 'La mejor opción para optimizar tu CV al máximo',
-    features: ['6 revisiones completas', 'Análisis avanzado', 'Soporte prioritario', 'Plantillas premium']
-  }
-];
+// Usar paquetes centralizados - eliminando definición local
 
 // Clase para manejar las revisiones de CV
 export class CVReviewService {
