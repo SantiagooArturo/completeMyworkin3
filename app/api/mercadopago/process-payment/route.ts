@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-// import { cvReviewService } from '../../../../services/cvReviewService';
-// import { getUserByEmail } from '../../../../lib/firebase-admin';
-// import { getAuth } from 'firebase-admin/auth';
+import { CV_PACKAGES } from '../../../../config/mercadopago';
+import { doc, getDoc, updateDoc, setDoc, serverTimestamp, increment, Timestamp } from 'firebase/firestore';
+import { db } from '../../../../firebase/config';
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
@@ -66,52 +66,85 @@ export async function POST(request: NextRequest) {
       amount: paymentResult.transaction_amount
     });
 
-    // FIREBASE CODE COMMENTED OUT FOR TESTING
-    /*
     // Si el pago es exitoso, agregar revisiones al usuario en Firebase
     if (paymentResult.status === 'approved') {
       try {
         console.log('💾 Agregando revisiones al usuario en Firebase...');
         console.log('📋 Datos recibidos:', { userId, userEmail, userName });
         
-        // Buscar el usuario - intentar por UID primero, luego por email
-        let user;
-        try {
-          if (userId) {
-            // Si tenemos UID, usarlo directamente
-            console.log('🔍 Buscando usuario por UID:', userId);
-            user = await getAuth().getUser(userId);
-            console.log('✅ Usuario encontrado por UID:', { uid: user.uid, email: user.email });
-          } else {
-            // Si no tenemos UID, buscar por email
-            console.log('🔍 Buscando usuario por email:', userEmail);
-            user = await getUserByEmail(userEmail);
-            console.log('✅ Usuario encontrado por email:', { uid: user.uid, email: user.email });
-          }
-        } catch (error) {
-          console.error('❌ Error buscando usuario:', error);
-          console.error('❌ Detalles del error:', { 
-            message: error instanceof Error ? error.message : 'Error desconocido',
-            userId, 
-            userEmail 
-          });
+        // Usar directamente Firestore en lugar de Firebase Admin Auth
+        if (!userId) {
+          console.error('❌ userId es requerido para agregar revisiones');
           return NextResponse.json({ 
-            error: `Usuario no encontrado en Firebase. UID: ${userId}, Email: ${userEmail}` 
-          }, { status: 404 });
+            error: 'userId es requerido para procesar la compra' 
+          }, { status: 400 });
         }
 
-        // Agregar revisiones usando cvReviewService
-        console.log('📝 Agregando revisiones con cvReviewService...');
-        await cvReviewService.addPurchasedReviews(
-          { uid: user.uid, email: user.email || userEmail } as any,
-          {
-            packageId: packageData.id,
-            paymentId: paymentResult.id,
-            packageName: packageData.name,
-            reviewsIncluded: packageData.reviews,
-            price: packageData.price
+        // Agregar revisiones directamente usando Firestore
+        console.log('📝 Agregando revisiones directamente a Firestore...');
+        
+        // Buscar el paquete seleccionado
+        const selectedPackage = CV_PACKAGES.find(pkg => pkg.id === packageData.id);
+        if (!selectedPackage) {
+          console.error('❌ Paquete no encontrado:', packageData.id);
+          return NextResponse.json({ 
+            error: 'Paquete no encontrado' 
+          }, { status: 400 });
+        }
+
+        // Crear referencia al perfil del usuario
+        const userProfileRef = doc(db, 'userCVProfiles', userId);
+        
+        // Obtener perfil actual del usuario
+        let profile;
+        try {
+          const profileDoc = await getDoc(userProfileRef);
+          if (profileDoc.exists()) {
+            profile = profileDoc.data();
+          } else {
+            // Crear perfil inicial si no existe
+            profile = {
+              userId: userId,
+              email: userEmail,
+              freeReviewUsed: false,
+              totalReviews: 0,
+              remainingReviews: 0,
+              purchasedPackages: [],
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            };
+            await setDoc(userProfileRef, profile);
           }
-        );
+        } catch (error) {
+          console.error('❌ Error obteniendo perfil del usuario:', error);
+          return NextResponse.json({ 
+            error: 'Error accediendo al perfil del usuario' 
+          }, { status: 500 });
+        }
+
+        // Crear registro de compra
+        const newPurchase = {
+          id: paymentResult.id?.toString() || '',
+          packageId: selectedPackage.id,
+          packageName: selectedPackage.name,
+          reviewsIncluded: selectedPackage.reviews,
+          reviewsUsed: 0,
+          reviewsRemaining: selectedPackage.reviews,
+          price: selectedPackage.price,
+          paymentId: paymentResult.id?.toString() || '',
+          status: 'approved',
+          purchasedAt: Timestamp.now() // Usar Timestamp.now() en lugar de serverTimestamp() dentro de arrays
+        };
+
+        // Actualizar el perfil del usuario
+        const updatedPackages = [...(profile.purchasedPackages || []), newPurchase];
+        
+        await updateDoc(userProfileRef, {
+          remainingReviews: increment(selectedPackage.reviews),
+          totalReviews: increment(selectedPackage.reviews),
+          purchasedPackages: updatedPackages,
+          updatedAt: serverTimestamp()
+        });
         
         console.log(`✅ Usuario ${userEmail} actualizado exitosamente: +${packageData.reviews} análisis de CV`);
       } catch (error) {
@@ -122,14 +155,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
     }
-    */
-
-    if (paymentResult.status === 'approved') {
-      console.log('✅ Pago REAL aprobado por MercadoPago:', paymentResult.id);
-      console.log('🔥 FIREBASE CODE COMMENTED OUT - TESTING PAYMENT FLOW ONLY');
-    } else {
-      console.log('❌ Pago rechazado:', paymentResult.status_detail);
-    }
 
     return NextResponse.json({
       status: paymentResult.status,
@@ -137,7 +162,7 @@ export async function POST(request: NextRequest) {
       id: paymentResult.id,
       transaction_amount: paymentResult.transaction_amount,
       message: paymentResult.status === 'approved' 
-        ? '🎉 Pago REAL exitoso con MercadoPago! (Firebase deshabilitado para pruebas)'
+        ? '🎉 Pago exitoso! Se han agregado las revisiones a tu cuenta.'
         : `❌ Pago rechazado: ${paymentResult.status_detail}`
     });
 
