@@ -478,6 +478,11 @@ export default function AnalizarCVPage() {
           onClose={() => setShowPaymentModal(false)}
           userEmail={user?.email ?? undefined}
           userName={user?.displayName ?? user?.email ?? undefined}
+          userId={user?.uid}
+          onPaymentSuccess={async () => {
+            await loadUserData();
+            setShowPaymentModal(false);
+          }}
         />
       )}
     </div>
