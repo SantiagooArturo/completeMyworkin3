@@ -12,10 +12,23 @@ interface CVPreviewProps {
 export default function CVPreview({ cvData }: CVPreviewProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const [year, month] = dateString.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+    const date = new Date(dateString);
+    // Asegurarse de que el mes se muestre correctamente
+    return new Intl.DateTimeFormat('es-ES', { 
+      year: 'numeric',
+      month: 'long'
+    }).format(date);
   };
+
+  const formatDateRange = (startDate: string, endDate: string, current: boolean) => {
+    const start = formatDate(startDate);
+    if (current) {
+      return `${start} - Presente`;
+    }
+    const end = formatDate(endDate);
+    return `${start} - ${end}`;
+  };
+
   const renderSkillLevel = (level: string) => {
     const stars = level === 'Básico' ? 1 : level === 'Intermedio' ? 2 : level === 'Avanzado' ? 3 : 4;
     return (

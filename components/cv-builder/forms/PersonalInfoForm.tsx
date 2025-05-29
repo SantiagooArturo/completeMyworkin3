@@ -6,7 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Mail, Phone, MapPin, Globe, Linkedin } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Globe, Linkedin, Sparkles } from 'lucide-react';
+import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface PersonalInfoFormProps {
   personalInfo: PersonalInfo;
@@ -14,11 +17,35 @@ interface PersonalInfoFormProps {
 }
 
 export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInfoFormProps) {
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  
   const handleChange = (field: keyof PersonalInfo, value: string) => {
     onUpdate({
       ...personalInfo,
       [field]: value
     });
+  };
+
+  const enhanceSummaryWithAI = async () => {
+    if (!personalInfo.summary) {
+      alert('Por favor, escribe un resumen inicial antes de mejorarlo con IA.');
+      return;
+    }
+    
+    try {
+      setIsEnhancing(true);
+      const enhancedSummary = await cvAIEnhancementService.enhanceSummary(
+        personalInfo.summary,
+        'profesional' // Puedes personalizar esto basado en el perfil del usuario
+      );
+      
+      handleChange('summary', enhancedSummary);
+    } catch (error) {
+      console.error('Error al mejorar el resumen:', error);
+      alert('No se pudo mejorar el resumen. Por favor, inténtalo más tarde.');
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   return (
@@ -126,9 +153,26 @@ export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInf
         </div>
 
         <div>
-          <Label htmlFor="summary">
-            Resumen Profesional *
-          </Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="summary">
+              Resumen Profesional *
+            </Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={enhanceSummaryWithAI}
+              disabled={isEnhancing}
+              className="flex items-center gap-1 text-xs bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+            >
+              {isEnhancing ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-700"></div>
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {isEnhancing ? 'Mejorando...' : 'Mejorar con IA'}
+            </Button>
+          </div>
           <Textarea
             id="summary"
             value={personalInfo.summary}

@@ -34,7 +34,6 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName, u
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<typeof CV_PACKAGES[0] | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [mpInstance, setMpInstance] = useState<any>(null);
   const [cardData, setCardData] = useState<CardFormData>({
     cardNumber: '',
@@ -161,120 +160,79 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName, u
     return v;
   };
 
-  // ...existing code...
-    const handleProcessPayment = async () => {
-      if (!selectedPackage || !mpInstance) {
-        alert('Error: MercadoPago no está inicializado');
-        return;
-      }
-  
-      setIsLoading(true);
-      try {
-        console.log('💳 Tokenizando tarjeta con MercadoPago...');
-        
-        // Preparar datos de la tarjeta para tokenización
-        const cardForm = {
-          cardNumber: cardData.cardNumber.replace(/\s/g, ''),
-          cardholderName: cardData.cardholderName,
-          cardExpirationMonth: cardData.expiryDate.split('/')[0],
-          cardExpirationYear: '20' + cardData.expiryDate.split('/')[1],
-          securityCode: cardData.cvv,
-          identificationType: cardData.docType,
-          identificationNumber: cardData.docNumber
-        };
-  
-        // Crear token de la tarjeta
-        const token = await mpInstance.createCardToken(cardForm);
-        console.log('✅ Token creado:', token.id);
-  
-        // Enviar token al backend para procesar el pago
-        const response = await fetch('/api/mercadopago/process-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            packageData: selectedPackage,
-            cardToken: token.id,
-            userEmail: userEmail,
-            userName: userName,
-            userId: userId,
-            payerData: {
-              email: cardData.email,
-              identification: {
-                type: cardData.docType,
-                number: cardData.docNumber
-              },
-              first_name: cardData.cardholderName.split(' ')[0] || '',
-              last_name: cardData.cardholderName.split(' ').slice(1).join(' ') || ''
-            }
-          }),
-        });
-  
-        // MEJORAR EL MANEJO DE ERRORES AQUÍ:
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
-        
-        if (!response.ok) {
-          // Intentar obtener el error del servidor
-          let errorMessage = 'Error al procesar el pago';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (jsonError) {
-            // Si no se puede parsear JSON, usar el status text
-            errorMessage = `Error del servidor: ${response.status} ${response.statusText}`;
+  const handleProcessPayment = async () => {
+    if (!selectedPackage || !mpInstance) {
+      alert('Error: MercadoPago no está inicializado');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('💳 Tokenizando tarjeta con MercadoPago...');
+      
+      // Preparar datos de la tarjeta para tokenización
+      const cardForm = {
+        cardNumber: cardData.cardNumber.replace(/\s/g, ''),
+        cardholderName: cardData.cardholderName,
+        cardExpirationMonth: cardData.expiryDate.split('/')[0],
+        cardExpirationYear: '20' + cardData.expiryDate.split('/')[1],
+        securityCode: cardData.cvv,
+        identificationType: cardData.docType,
+        identificationNumber: cardData.docNumber
+      };
+
+      // Crear token de la tarjeta
+      const token = await mpInstance.createCardToken(cardForm);
+      console.log('✅ Token creado:', token.id);
+
+      // Enviar token al backend para procesar el pago
+      const response = await fetch('/api/mercadopago/process-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageData: selectedPackage,
+          cardToken: token.id,
+          userEmail: userEmail,
+          userName: userName,
+          userId: userId,
+          payerData: {
+            email: cardData.email,
+            identification: {
+              type: cardData.docType,
+              number: cardData.docNumber
+            },
+            first_name: cardData.cardholderName.split(' ')[0] || '',
+            last_name: cardData.cardholderName.split(' ').slice(1).join(' ') || ''
           }
-          throw new Error(errorMessage);
-        }
-  
-        // Verificar si hay contenido antes de parsear JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('El servidor no devolvió una respuesta JSON válida');
-        }
-  
-        // Intentar obtener el texto de la respuesta primero
-        const responseText = await response.text();
-        console.log('📄 Response text:', responseText);
-        
-        if (!responseText) {
-          throw new Error('El servidor devolvió una respuesta vacía');
-        }
-  
-        // Parsear JSON solo si hay contenido
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('❌ Error parsing JSON:', parseError);
-          console.error('❌ Response text was:', responseText);
-          throw new Error('Respuesta del servidor inválida');
-        }
-        
-        if (result.status === 'approved') {
-          setShowSuccess(true);
-          // Cerrar el modal después de 3 segundos
-          setTimeout(() => {
-            setShowSuccess(false);
-            onClose();
-            if (onPaymentSuccess) {
-              onPaymentSuccess();
-            }
-          }, 3000);
-        } else {
-          throw new Error(result.status_detail || 'Pago rechazado');
-        }
-        
-      } catch (error) {
-        console.error('Error processing payment:', error);
-        // En lugar de alert, podrías mostrar un toast o una notificación en pantalla
-        alert(`Error al procesar el pago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-      } finally {
-        setIsLoading(false);
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar el pago');
       }
-    };
-  // ...existing code...
+
+      const result = await response.json();
+      
+      if (result.status === 'approved') {
+        alert('¡Pago exitoso! Se han agregado las revisiones a tu cuenta.');
+        onClose();
+        if (onPaymentSuccess) {
+          onPaymentSuccess();
+        }
+      } else {
+        throw new Error(result.status_detail || 'Pago rechazado');
+      }
+      
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert(`Error al procesar el pago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleBackToPackages = () => {
     setShowCardForm(false);
@@ -282,35 +240,6 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName, u
   };
 
   if (!isOpen) return null;
-
-  // Pantalla de éxito
-  if (showSuccess) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-green-500" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            ¡Pago Exitoso!
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Se han agregado <span className="font-semibold text-[#028bbf]">{selectedPackage?.reviews} revisiones</span> a tu cuenta.
-          </p>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
-            <p className="text-sm text-green-700">
-              <strong>Paquete:</strong> {selectedPackage?.name}<br />
-              <strong>Precio:</strong> S/ {selectedPackage?.price}<br />
-              <strong>Estado:</strong> Aprobado
-            </p>
-          </div>
-          <p className="text-sm text-gray-500">
-            Ahora puedes analizar tus CVs desde tu dashboard.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -347,7 +276,7 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName, u
         </div>
 
         {/* Contenido */}
-        <div className="p-6 text-gray-700">
+        <div className="p-6">
           {!showCardForm ? (
             // Mostrar paquetes
             <div className="grid md:grid-cols-3 gap-4">
@@ -398,7 +327,7 @@ export default function CVPaymentModal({ isOpen, onClose, userEmail, userName, u
             </div>
           ) : (
             // Mostrar formulario de tarjeta
-            <div className="space-y-6">
+            <div className="space-y-6 text-gray-700">
               {/* Información del paquete */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex justify-between items-center">

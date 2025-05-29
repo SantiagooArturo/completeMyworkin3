@@ -506,7 +506,12 @@ export default function ProfilePage() {
                 {/* Estadísticas de análisis CV */}
                 {userStats && (
                   <div className="pt-4 space-y-3 border-t border-gray-100">
-                   <div className="flex justify-between">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Análisis CV usados</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {userStats.cvAnalyzesUsed} / {userStats.cvAnalyzesTotal}
+                      </span>
+                    </div>                    <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Análisis restantes</span>
                       <span className={`text-sm font-medium ${
                         userStats.cvAnalyzesRemaining > 0 

@@ -15,7 +15,8 @@ interface ProjectsFormProps {
 }
 
 export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) {
-  const addProject = () => {    const newProject: Project = {
+  const addProject = () => {
+    const newProject: Project = {
       id: Date.now().toString(),
       name: '',
       description: '',
@@ -28,6 +29,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
     };
     onUpdate([...projects, newProject]);
   };
+
   const updateProject = (index: number, field: keyof Project, value: string | string[] | boolean) => {
     const updatedProjects = projects.map((project, i) => 
       i === index ? { ...project, [field]: value } : project
@@ -41,8 +43,20 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
   };
 
   const updateTechnologies = (index: number, value: string) => {
-    const technologies = value.split(',').map(tech => tech.trim()).filter(tech => tech);
+    // Permitir comas al final y no filtrar espacios en blanco innecesariamente
+    const technologies = value
+      .split(',')
+      .map(tech => tech.trim())
+      .filter(tech => tech.length > 0);
     updateProject(index, 'technologies', technologies);
+  };
+
+  const updateHighlights = (index: number, value: string) => {
+    // Permitir líneas vacías y conservar el formato
+    const highlights = value
+      .split('\n')
+      .filter(h => h.trim().length > 0);
+    updateProject(index, 'highlights', highlights);
   };
 
   return (
@@ -91,7 +105,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       className="mt-1"
                     />
                   </div>
-                    <div>
+                  <div>
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio
@@ -144,14 +158,13 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       className="mt-1"
                     />
                   </div>
-                </div>                <div className="mt-4">
+                </div>
+                
+                <div className="mt-4">
                   <Label>Logros y Destacados del Proyecto</Label>
                   <Textarea
                     value={project.highlights?.join('\n') || ''}
-                    onChange={(e) => {
-                      const highlights = e.target.value.split('\n').filter(h => h.trim());
-                      updateProject(index, 'highlights', highlights);
-                    }}
+                    onChange={(e) => updateHighlights(index, e.target.value)}
                     placeholder="• Desarrollé la interfaz de usuario que mejoró la experiencia del usuario en un 40%&#10;• Implementé un sistema de autenticación seguro&#10;• Reduje el tiempo de carga de la aplicación en un 60%"
                     rows={4}
                     className="mt-1 resize-none"

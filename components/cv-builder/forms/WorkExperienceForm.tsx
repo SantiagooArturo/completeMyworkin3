@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Briefcase, Calendar, MapPin, Building } from 'lucide-react';
+import { Plus, Trash2, Briefcase, Calendar, MapPin, Building, Sparkles } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
+import { useState } from 'react';
 
 interface WorkExperienceFormProps {
   workExperience: WorkExperience[];
@@ -16,6 +18,8 @@ interface WorkExperienceFormProps {
 }
 
 export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExperienceFormProps) {
+  const [enhancingDescription, setEnhancingDescription] = useState<number | null>(null);
+  const [suggestingAchievements, setSuggestingAchievements] = useState<number | null>(null);
   const addWorkExperience = () => {
     const newExperience: WorkExperience = {
       id: Date.now().toString(),
@@ -79,6 +83,60 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
   const updateTechnologies = (index: number, value: string) => {
     const technologies = value.split(',').map(tech => tech.trim()).filter(tech => tech);
     updateWorkExperience(index, 'technologies', technologies);
+  };
+
+  const enhanceDescriptionWithAI = async (index: number) => {
+    const exp = workExperience[index];
+    if (!exp.description) {
+      alert('Por favor, escribe una descripción inicial antes de mejorarla con IA.');
+      return;
+    }
+    
+    try {
+      setEnhancingDescription(index);
+      const enhancedDescription = await cvAIEnhancementService.enhanceJobDescriptions(
+        exp.description,
+        exp.position
+      );
+      
+      updateWorkExperience(index, 'description', enhancedDescription);
+    } catch (error) {
+      console.error('Error al mejorar la descripción:', error);
+      alert('No se pudo mejorar la descripción. Por favor, inténtalo más tarde.');
+    } finally {
+      setEnhancingDescription(null);
+    }
+  };
+
+  const suggestAchievementsWithAI = async (index: number) => {
+    const exp = workExperience[index];
+    if (!exp.description) {
+      alert('Por favor, escribe una descripción del puesto antes de sugerir logros.');
+      return;
+    }
+    
+    try {
+      setSuggestingAchievements(index);
+      const suggestedAchievements = await cvAIEnhancementService.suggestAchievements(
+        exp.description,
+        exp.position
+      );
+      
+      // Añadir los logros sugeridos a los existentes
+      const updatedExperience = workExperience.map((exp, i) => 
+        i === index ? { 
+          ...exp, 
+          achievements: [...exp.achievements, ...suggestedAchievements] 
+        } : exp
+      );
+      
+      onUpdate(updatedExperience);
+    } catch (error) {
+      console.error('Error al sugerir logros:', error);
+      alert('No se pudieron sugerir logros. Por favor, inténtalo más tarde.');
+    } finally {
+      setSuggestingAchievements(null);
+    }
   };
 
   return (
@@ -200,7 +258,24 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                 </div>
 
                 <div className="mt-4">
-                  <Label>Descripción del Puesto *</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>Descripción del Puesto *</Label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => enhanceDescriptionWithAI(index)}
+                      disabled={enhancingDescription === index}
+                      className="flex items-center gap-1 text-xs bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+                    >
+                      {enhancingDescription === index ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-700"></div>
+                      ) : (
+                        <Sparkles className="h-3 w-3" />
+                      )}
+                      {enhancingDescription === index ? 'Mejorando...' : 'Mejorar con IA'}
+                    </Button>
+                  </div>
                   <Textarea
                     value={exp.description}
                     onChange={(e) => updateWorkExperience(index, 'description', e.target.value)}
@@ -224,15 +299,32 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
                     <Label>Logros y Resultados Cuantificables</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addAchievement(index)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Agregar
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => suggestAchievementsWithAI(index)}
+                        disabled={suggestingAchievements === index}
+                        className="flex items-center gap-1 text-xs bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+                      >
+                        {suggestingAchievements === index ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-700"></div>
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        {suggestingAchievements === index ? 'Sugiriendo...' : 'Sugerir con IA'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addAchievement(index)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Agregar
+                      </Button>
+                    </div>
                   </div>
                   
                   {exp.achievements.map((achievement, achIndex) => (
