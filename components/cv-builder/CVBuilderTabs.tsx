@@ -44,7 +44,7 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       id: 'experience',
       label: 'Experiencia',
       icon: Briefcase,
-      isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position)
+      isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0)
     },
     {
       id: 'skills',
@@ -52,30 +52,6 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       icon: Wrench,
       isComplete: cvData.skills.length > 0
     },
-    {
-      id: 'projects',
-      label: 'Proyectos',
-      icon: FolderOpen,
-      isComplete: cvData.projects.length > 0
-    },
-    {
-      id: 'certifications',
-      label: 'Certificaciones',
-      icon: Award,
-      isComplete: cvData.certifications.length > 0
-    },
-    {
-      id: 'languages',
-      label: 'Idiomas',
-      icon: Languages,
-      isComplete: cvData.languages.length > 0
-    },
-    {
-      id: 'references',
-      label: 'Referencias',
-      icon: Users,
-      isComplete: cvData.references.length > 0
-    }
   ];
 
   const currentTabIndex = tabs.findIndex(tab => tab.id === activeTab);
@@ -119,7 +95,7 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 gap-1 h-auto bg-gray-50 p-2 rounded-lg">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-4 gap-1 h-auto bg-gray-50 p-2 rounded-lg">
           {tabs.map((tab, index) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

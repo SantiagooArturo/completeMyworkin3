@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CVData, PersonalInfo, Education, WorkExperience, Skill, Reference, Project, Certification, Language } from '@/types/cv';
+import { CVData, PersonalInfo, Education, WorkExperience, Skill } from '@/types/cv';
 import { cvBuilderService } from '@/services/cvBuilderService';
 import { CVPDFGeneratorHarvard } from '@/services/cvPDFGeneratorHarvard';
 import { useAuth } from '@/hooks/useAuth';
 import PersonalInfoForm from './forms/PersonalInfoForm';
 import EducationFormHarvard from './forms/EducationFormHarvard';
+import WorkExperienceForm from './forms/WorkExperienceForm';
+import SkillsForm from './forms/SkillsForm';
 import CVPreviewHarvard from './CVPreviewHarvard';
 import HarvardFormatGuide from './HarvardFormatGuide';
 import { Button } from '@/components/ui/button';
@@ -15,14 +17,6 @@ import { TabsContent } from '@/components/ui/tabs';
 import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import CVPreview from './CVPreview';
-import CertificationsForm from './forms/CertificationsForm';
-import EducationForm from './forms/EducationForm';
-import LanguagesForm from './forms/LanguagesForm';
-import ProjectsForm from './forms/ProjectsForm';
-import ReferencesForm from './forms/ReferencesForm';
-import SkillsForm from './forms/SkillsForm';
-import WorkExperienceForm from './forms/WorkExperienceForm';
 
 const initialCVData: CVData = {
   personalInfo: {
@@ -31,19 +25,15 @@ const initialCVData: CVData = {
     phone: '',
     address: '',
     linkedIn: '',
-    website: '',
     summary: ''
   },
   education: [],
   workExperience: [],
   skills: [],
-  references: [],
+  languages: [],
   projects: [],
   certifications: [],
-  languages: [],
-  awards: [],
-  publications: [],
-  volunteerWork: []
+  references: []
 };
 
 interface CVBuilderProps {
@@ -53,8 +43,8 @@ interface CVBuilderProps {
 export default function CVBuilder({ cvId }: CVBuilderProps) {
   const { user } = useAuth();
   const [cvData, setCVData] = useState<CVData>(initialCVData);
-  const [activeTab, setActiveTab] = useState('personal');  const [showPreview, setShowPreview] = useState(true); // Mostrar vista previa por defecto
-  const [cvFormat, setCvFormat] = useState<'standard' | 'harvard'>('harvard'); // Default to Harvard
+  const [activeTab, setActiveTab] = useState('personal');
+  const [showPreview, setShowPreview] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,7 +52,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Cargar CV existente si se proporciona cvId
   useEffect(() => {
     if (cvId && user) {
       loadExistingCV();
@@ -84,7 +73,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     }
   };
 
-  // Funciones de actualización para cada sección
   const updatePersonalInfo = (personalInfo: PersonalInfo) => {
     setCVData(prev => ({ ...prev, personalInfo }));
     clearValidationErrors();
@@ -104,22 +92,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     setCVData(prev => ({ ...prev, skills }));
   };
 
-  const updateProjects = (projects: Project[]) => {
-    setCVData(prev => ({ ...prev, projects }));
-  };
-
-  const updateCertifications = (certifications: Certification[]) => {
-    setCVData(prev => ({ ...prev, certifications }));
-  };
-
-  const updateLanguages = (languages: Language[]) => {
-    setCVData(prev => ({ ...prev, languages }));
-  };
-
-  const updateReferences = (references: Reference[]) => {
-    setCVData(prev => ({ ...prev, references }));
-  };
-
   const clearValidationErrors = () => {
     if (validationErrors.length > 0) {
       setValidationErrors([]);
@@ -135,7 +107,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     try {
       setIsSaving(true);
       
-      // Validar datos
       const validation = cvBuilderService.validateCVData(cvData);
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
@@ -143,10 +114,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       }
 
       if (cvId) {
-        // Actualizar CV existente
         await cvBuilderService.updateCV(cvId, cvData, cvTitle);
       } else {
-        // Crear nuevo CV
         await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');
       }
 
@@ -159,25 +128,22 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       setIsSaving(false);
     }
   };
+
   const handleDownloadPDF = async () => {
     try {
-      // Validar antes de generar PDF
       const validation = cvBuilderService.validateCVData(cvData);
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
       }
 
-      if (cvFormat === 'harvard') {
-        await CVPDFGeneratorHarvard.generatePDF(cvData);
-      } else {
-        alert('Funcionalidad de descarga PDF estándar en desarrollo');
-      }
+      await CVPDFGeneratorHarvard.generatePDF(cvData);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
     }
   };
+
   const getCompletionPercentage = () => {
     const sections = [
       { 
@@ -190,27 +156,11 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       },
       { 
         key: 'experience', 
-        isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position)
+        isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0)
       },
       { 
         key: 'skills', 
         isComplete: cvData.skills.length > 0
-      },
-      { 
-        key: 'projects', 
-        isComplete: cvData.projects.length > 0
-      },
-      { 
-        key: 'certifications', 
-        isComplete: cvData.certifications.length > 0
-      },
-      { 
-        key: 'languages', 
-        isComplete: cvData.languages.length > 0
-      },
-      { 
-        key: 'references', 
-        isComplete: cvData.references.length > 0
       }
     ];
 
@@ -237,7 +187,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               <h1 className="text-3xl font-bold text-gray-900">Crear CV - Formato Harvard</h1>
               <p className="text-gray-600">Progreso: {getCompletionPercentage()}% completado</p>
             </div>
-          </div>          <div className="flex items-center gap-2 mt-2">
+          </div>
+          <div className="flex items-center gap-2 mt-2">
             <input
               type="text"
               value={cvTitle}
@@ -246,25 +197,9 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               placeholder="Nombre de tu CV"
             />
           </div>
-        </div>        <div className="flex flex-wrap gap-3 items-center">
-         
+        </div>
 
-          {/* Selector de formato */}
-          <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200 shadow-sm">
-            <label htmlFor="format-select" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              Formato:
-            </label>
-            <select
-              id="format-select"
-              value={cvFormat}
-              onChange={(e) => setCvFormat(e.target.value as 'standard' | 'harvard')}
-              className="text-sm bg-transparent text-gray-900 focus:outline-none focus:text-[#028bbf] font-medium"
-            >
-              <option value="harvard">Harvard</option>
-              <option value="standard">Estándar</option>
-            </select>
-          </div>
-
+        <div className="flex flex-wrap gap-3 items-center">
           <Button
             variant="outline"
             onClick={() => setShowPreview(!showPreview)}
@@ -275,17 +210,15 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
             <span className="sm:hidden">{showPreview ? 'Ocultar' : 'Ver'}</span>
           </Button>
 
-          {cvFormat === 'harvard' && (
-            <Button
-              variant="outline"
-              onClick={() => setShowGuide(!showGuide)}
-              className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 shadow-sm"
-            >
-              <Info className="h-4 w-4" />
-              <span className="hidden sm:inline">{showGuide ? 'Ocultar Guía' : 'Guía Harvard'}</span>
-              <span className="sm:hidden">Guía</span>
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => setShowGuide(!showGuide)}
+            className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 shadow-sm"
+          >
+            <Info className="h-4 w-4" />
+            <span className="hidden sm:inline">{showGuide ? 'Ocultar Guía' : 'Guía Harvard'}</span>
+            <span className="sm:hidden">Guía</span>
+          </Button>
           
           <Button 
             onClick={handleSaveCV} 
@@ -334,14 +267,16 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               ))}
             </ul>
           </AlertDescription>
-        </Alert>      )}
+        </Alert>
+      )}
 
       {/* Guía de Formato Harvard */}
-      {showGuide && cvFormat === 'harvard' && (
+      {showGuide && (
         <HarvardFormatGuide />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">        {/* Formularios */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Formularios */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -361,17 +296,10 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                 </TabsContent>
 
                 <TabsContent value="education" className="mt-6">
-                  {cvFormat === 'harvard' ? (
-                    <EducationFormHarvard
-                      education={cvData.education}
-                      onUpdate={updateEducation}
-                    />
-                  ) : (
-                    <EducationForm
-                      education={cvData.education}
-                      onUpdate={updateEducation}
-                    />
-                  )}
+                  <EducationFormHarvard
+                    education={cvData.education}
+                    onUpdate={updateEducation}
+                  />
                 </TabsContent>
 
                 <TabsContent value="experience" className="mt-6">
@@ -387,45 +315,15 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                     onUpdate={updateSkills}
                   />
                 </TabsContent>
-
-                <TabsContent value="projects" className="mt-6">
-                  <ProjectsForm
-                    projects={cvData.projects}
-                    onUpdate={updateProjects}
-                  />
-                </TabsContent>
-
-                <TabsContent value="certifications" className="mt-6">
-                  <CertificationsForm
-                    certifications={cvData.certifications}
-                    onUpdate={updateCertifications}
-                  />
-                </TabsContent>
-
-                <TabsContent value="languages" className="mt-6">
-                  <LanguagesForm
-                    languages={cvData.languages}
-                    onUpdate={updateLanguages}
-                  />
-                </TabsContent>
-
-                <TabsContent value="references" className="mt-6">
-                  <ReferencesForm
-                    references={cvData.references}
-                    onUpdate={updateReferences}
-                  />
-                </TabsContent>
               </CVBuilderTabs>
             </CardContent>
           </Card>
-        </div>{/* Vista Previa */}
+        </div>
+
+        {/* Vista Previa */}
         {showPreview && (
           <div className="lg:sticky lg:top-6">
-            {cvFormat === 'harvard' ? (
-              <CVPreviewHarvard cvData={cvData} />
-            ) : (
-              <CVPreview cvData={cvData} />
-            )}
+            <CVPreviewHarvard cvData={cvData} />
           </div>
         )}
       </div>

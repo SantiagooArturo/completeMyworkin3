@@ -2,40 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from 'react-day-picker';
 
 export default function PaymentPending() {
   const router = useRouter();
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-        <div className="mb-6">
-          <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Pago Pendiente</h1>
-          <p className="text-gray-600">
-            Tu pago está siendo procesado. Te notificaremos cuando se complete.
-          </p>
-        </div>
-        
-        <div className="space-y-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-full bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold py-3 px-4 rounded-xl transition-colors"
-          >
-            Ir al Dashboard
-          </button>
-          
-          <button
-            onClick={() => router.push('/analizar-cv')}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-colors"
-          >
-            Volver
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -58,7 +29,6 @@ export default function PaymentPending() {
               Ir al Dashboard
             </Button>
             <Button 
-              variant="outline"
               onClick={() => router.push('/analizar-cv')}
               className="w-full"
             >

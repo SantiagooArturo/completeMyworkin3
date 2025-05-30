@@ -61,6 +61,13 @@ const config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        garamond: ['EB Garamond', 'serif'],
+      },
+      fontSize: {
+        'cv-base': ['16px', '1.5'],
+        'cv-lg': ['18px', '1.5'],
+        'cv-xl': ['20px', '1.5'],
+        'cv-2xl': ['24px', '1.5'],
       },
       keyframes: {
         "accordion-down": {

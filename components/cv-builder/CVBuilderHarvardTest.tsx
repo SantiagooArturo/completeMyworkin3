@@ -28,9 +28,6 @@ const initialCVData: CVData = {
   projects: [],
   certifications: [],
   languages: [],
-  awards: [],
-  publications: [],
-  volunteerWork: []
 };
 
 export default function CVBuilderHarvardTest() {

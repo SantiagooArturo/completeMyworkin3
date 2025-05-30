@@ -1,105 +1,120 @@
-// Tipos e interfaces para el generador de CV con formato Harvard
-
+// Información personal clara y formal
 export interface PersonalInfo {
-  fullName: string;
-  email: string;
-  phone: string;
-  address: string;
-  linkedIn?: string;
-  website?: string;
-  summary: string;
+  fullName: string;           // Nombre completo
+  email: string;             // Correo electrónico profesional
+  phone: string;             // Número de teléfono
+  address: string;           // Ciudad y País
+  linkedIn?: string;         // Perfil de LinkedIn
+  website?: string;          // Sitio web personal o portafolio
+  summary: string;           // Resumen profesional conciso
 }
 
+// Formación académica con énfasis en logros académicos
 export interface Education {
   id: string;
-  institution: string;
-  degree: string;
-  fieldOfStudy: string;
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  gpa?: string;
-  achievements?: string[];
-  honors?: string;
-  relevantCourses?: string[];
+  institution: string;       // Nombre de la institución
+  degree: string;           // Título obtenido
+  fieldOfStudy?: string;    // Campo de estudio específico
+  startDate: string;        // Fecha de inicio
+  endDate: string;          // Fecha de finalización
+  current: boolean;         // Si está en curso
+  gpa?: string;            // GPA o promedio académico
+  honors?: string;         // Honores académicos (Cum Laude, etc.)
+  relevantCourses?: string[]; // Cursos relevantes para la posición
+  achievements?: string[];  // Logros académicos destacados
+  location?: string;       // Ciudad y país de la institución
 }
 
+// Experiencia profesional con énfasis en logros cuantificables
 export interface WorkExperience {
   id: string;
-  company: string;
-  position: string;
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  location: string;
-  description: string;
-  achievements: string[];
-  technologies?: string[];
+  company: string;          // Nombre de la empresa
+  position: string;         // Cargo o posición
+  startDate: string;        // Fecha de inicio
+  endDate: string;          // Fecha de finalización
+  current: boolean;         // Si es el trabajo actual
+  location?: string;        // Ciudad y país
+  description?: string;     // Breve descripción del rol
+  achievements: string[];   // Logros cuantificables y medibles
+  technologies?: string[];  // Tecnologías o herramientas utilizadas
+  responsibilities?: string[]; // Responsabilidades principales
+  projects?: string[];      // Proyectos destacados
 }
 
+// Habilidades categorizadas según el formato Harvard
 export interface Skill {
   id: string;
   name: string;
-  level: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Experto';
-  category: 'Técnica' | 'Blanda' | 'Idioma';
+  level: 'Básico' | 'Intermedio' | 'Avanzado' | 'Experto';
+  category: 'Technical' | 'Analytical' | 'Leadership' | 'Communication' | 'Research';
+  proficiency?: number;     // Nivel de competencia (1-5)
+  certifications?: string[]; // Certificaciones relacionadas
 }
 
-export interface Reference {
-  id: string;
-  name: string;
-  position: string;
-  company: string;
-  phone: string;
-  email: string;
-  relationship: string;
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  description: string;
-  technologies: string[];
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  url?: string;
-  highlights: string[];
-}
-
-export interface Certification {
-  id: string;
-  name: string;
-  issuer: string;
-  date: string;
-  expiryDate?: string;
-  credentialId?: string;
-  url?: string;
-}
-
+// Idiomas con nivel de competencia
 export interface Language {
   id: string;
   language: string;
   proficiency: 'Básico' | 'Intermedio' | 'Avanzado' | 'Nativo';
+  certifications?: string[]; // Certificaciones de idiomas
+  writingLevel?: string;    // Nivel de escritura específico
+  speakingLevel?: string;   // Nivel de conversación específico
 }
 
+// Proyectos con detalles específicos
+export interface Project {
+  id: string;
+  name: string;            // Nombre del proyecto
+  description: string;     // Descripción detallada
+  technologies: string[];  // Tecnologías utilizadas
+  startDate: string;      // Fecha de inicio
+  endDate: string;        // Fecha de finalización
+  current: boolean;       // Si está en curso
+  url?: string;           // Enlace al proyecto
+  highlights: string[];   // Logros y resultados destacados
+  role?: string;         // Rol en el proyecto
+  teamSize?: number;     // Tamaño del equipo
+  methodology?: string;  // Metodología utilizada
+}
+
+// Certificaciones profesionales
+export interface Certification {
+  id: string;
+  name: string;           // Nombre de la certificación
+  issuer: string;         // Entidad emisora
+  date: string;          // Fecha de obtención
+  expiryDate?: string;   // Fecha de vencimiento
+  credentialId?: string; // ID de la credencial
+  url?: string;          // URL de verificación
+  score?: string;        // Calificación obtenida
+  description?: string;  // Descripción breve
+}
+
+// Referencias profesionales
+export interface Reference {
+  id: string;
+  name: string;           // Nombre completo
+  position: string;       // Cargo actual
+  company: string;        // Empresa actual
+  email: string;         // Correo electrónico
+  phone: string;         // Teléfono
+  relationship?: string;  // Relación profesional
+  yearsKnown?: number;   // Años de conocimiento
+  preferredContact?: 'email' | 'phone'; // Método de contacto preferido
+}
+
+// Estructura completa del CV
 export interface CVData {
   personalInfo: PersonalInfo;
   education: Education[];
   workExperience: WorkExperience[];
   skills: Skill[];
-  references: Reference[];
   projects: Project[];
-  certifications: Certification[];
   languages: Language[];
-  awards?: string[];
-  publications?: string[];
-  volunteerWork?: string[];
-}
-
-export interface CVTemplate {
-  id: string;
-  name: string;
-  description: string;
-  preview: string;
-  category: 'harvard' | 'modern' | 'creative' | 'minimal';
+  certifications: Certification[];
+  references: Reference[];
+  awards?: string[];         // Premios y reconocimientos
+  publications?: string[];   // Publicaciones académicas o profesionales
+  volunteerWork?: string[];  // Trabajo voluntario
+  professionalMemberships?: string[]; // Membresías profesionales
 }

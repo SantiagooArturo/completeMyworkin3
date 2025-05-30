@@ -48,10 +48,10 @@ const testCVData: CVData = {
       ]
     }
   ],  skills: [
-    { id: '1', name: 'JavaScript', category: 'Técnica', level: 'Experto' },
-    { id: '2', name: 'React', category: 'Técnica', level: 'Avanzado' },
-    { id: '3', name: 'Node.js', category: 'Técnica', level: 'Avanzado' },
-    { id: '4', name: 'PostgreSQL', category: 'Técnica', level: 'Intermedio' }
+    { id: '1', name: 'JavaScript', category: 'Technical', level: 'Experto' },
+    { id: '2', name: 'React', category: 'Technical', level: 'Avanzado' },
+    { id: '3', name: 'Node.js', category: 'Technical', level: 'Avanzado' },
+    { id: '4', name: 'PostgreSQL', category: 'Technical', level: 'Intermedio' }
   ],
   projects: [
     {
@@ -94,10 +94,7 @@ const testCVData: CVData = {
       phone: '+51 987 123 456',
       relationship: 'Supervisor directo'
     }
-  ],
-  awards: [],
-  publications: [],
-  volunteerWork: []
+  ]
 };
 
 const TestHarvardPDFPage = () => {

@@ -3,28 +3,39 @@ import { CVData } from '@/types/cv';
 export class CVPDFGeneratorHarvard {
   static async generatePDF(cvData: CVData): Promise<void> {
     try {
-      // Importar jsPDF dinámicamente para evitar problemas de SSR
       const { jsPDF } = await import('jspdf');
       
+      // Crear documento PDF
       const doc = new jsPDF();
+      
+      // Cargar fuentes Garamond
+      await doc.addFont('EBGaramond-Regular.ttf', 'Garamond', 'normal');
+      await doc.addFont('EBGaramond-Bold.ttf', 'Garamond', 'bold');
+      await doc.addFont('EBGaramond-Italic.ttf', 'Garamond', 'italic');
+      
+      // Configuración de tamaños de fuente
+      const fontSize = {
+        name: 20,    // text-cv-2xl
+        heading: 14, // text-cv-lg
+        normal: 11,  // text-cv-base
+        small: 10    // texto pequeño
+      };
+
       let yPosition = 20;
       const pageWidth = doc.internal.pageSize.width;
       const margin = 20;
       const contentWidth = pageWidth - (margin * 2);
 
-      // Configuración de fuentes
-      doc.setFont('helvetica');
-
-      // Header - Información Personal (Formato Harvard)
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
+      // Header - Información Personal
+      doc.setFont('Garamond', 'bold');
+      doc.setFontSize(fontSize.name);
       const nameWidth = doc.getTextWidth(cvData.personalInfo.fullName);
       doc.text(cvData.personalInfo.fullName, (pageWidth - nameWidth) / 2, yPosition);
-      yPosition += 8;
+      yPosition += 10;
 
-      // Información de contacto centrada
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
+      // Información de contacto
+      doc.setFontSize(fontSize.normal);
+      doc.setFont('Garamond', 'normal');
       const contactInfo = [
         cvData.personalInfo.address,
         cvData.personalInfo.phone,
@@ -33,7 +44,7 @@ export class CVPDFGeneratorHarvard {
       
       const contactWidth = doc.getTextWidth(contactInfo);
       doc.text(contactInfo, (pageWidth - contactWidth) / 2, yPosition);
-      yPosition += 5;
+      yPosition += 6;
 
       // LinkedIn y Website si existen
       if (cvData.personalInfo.linkedIn || cvData.personalInfo.website) {
@@ -44,24 +55,26 @@ export class CVPDFGeneratorHarvard {
         
         const onlineWidth = doc.getTextWidth(onlineInfo);
         doc.text(onlineInfo, (pageWidth - onlineWidth) / 2, yPosition);
-        yPosition += 5;
+        yPosition += 6;
       }
 
-      // Línea separadora
-      yPosition += 5;
-      doc.setDrawColor(100, 100, 100);
+      // Línea separadora más fina y elegante
+      yPosition += 4;
+      doc.setDrawColor(70, 70, 70);
+      doc.setLineWidth(0.2);
       doc.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
+      yPosition += 8;
 
       // Función para agregar sección con título
       const addSection = (title: string) => {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(fontSize.heading);
+        doc.setFont('Garamond', 'bold');
         doc.text(title.toUpperCase(), margin, yPosition);
-        yPosition += 3;
+        yPosition += 4;
         
-        // Línea bajo el título
-        doc.setDrawColor(100, 100, 100);
+        // Línea bajo el título más fina
+        doc.setDrawColor(70, 70, 70);
+        doc.setLineWidth(0.2);
         doc.line(margin, yPosition, pageWidth - margin, yPosition);
         yPosition += 8;
       };
@@ -79,8 +92,8 @@ export class CVPDFGeneratorHarvard {
         checkPageSpace(30);
         addSection('Perfil Profesional');
         
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(fontSize.small);
+        doc.setFont('Garamond', 'normal');
         const summaryLines = doc.splitTextToSize(cvData.personalInfo.summary, contentWidth);
         doc.text(summaryLines, margin, yPosition);
         yPosition += summaryLines.length * 4 + 10;
@@ -94,32 +107,32 @@ export class CVPDFGeneratorHarvard {
         cvData.education.forEach((edu) => {
           checkPageSpace(25);
           
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fontSize.normal);
+          doc.setFont('Garamond', 'bold');
           const degreeText = `${edu.degree}${edu.fieldOfStudy ? ` en ${edu.fieldOfStudy}` : ''}`;
           doc.text(degreeText, margin, yPosition);
           
           // Fechas a la derecha
           const dateText = `${this.formatDate(edu.startDate)} - ${edu.current ? 'Presente' : this.formatDate(edu.endDate)}`;
           const dateWidth = doc.getTextWidth(dateText);
-          doc.setFont('helvetica', 'normal');
+          doc.setFont('Garamond', 'normal');
           doc.text(dateText, pageWidth - margin - dateWidth, yPosition);
           yPosition += 5;
           
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(fontSize.small);
+          doc.setFont('Garamond', 'italic');
           doc.text(edu.institution, margin, yPosition);
           yPosition += 4;
           
           // GPA y honores
           if (edu.gpa) {
-            doc.setFont('helvetica', 'normal');
+            doc.setFont('Garamond', 'normal');
             doc.text(`GPA: ${edu.gpa}`, margin, yPosition);
             yPosition += 4;
           }
           
           if (edu.honors) {
-            doc.setFont('helvetica', 'normal');
+            doc.setFont('Garamond', 'normal');
             doc.text(edu.honors, margin, yPosition);
             yPosition += 4;
           }
@@ -145,25 +158,25 @@ export class CVPDFGeneratorHarvard {
         cvData.workExperience.forEach((exp) => {
           checkPageSpace(30);
           
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(fontSize.normal);
+          doc.setFont('Garamond', 'bold');
           doc.text(exp.position, margin, yPosition);
           
           // Fechas a la derecha
           const dateText = `${this.formatDate(exp.startDate)} - ${exp.current ? 'Presente' : this.formatDate(exp.endDate)}`;
           const dateWidth = doc.getTextWidth(dateText);
-          doc.setFont('helvetica', 'normal');
+          doc.setFont('Garamond', 'normal');
           doc.text(dateText, pageWidth - margin - dateWidth, yPosition);
           yPosition += 5;
           
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(fontSize.small);
+          doc.setFont('Garamond', 'italic');
           doc.text(exp.company, margin, yPosition);
           yPosition += 4;
           
           // Descripción
           if (exp.description) {
-            doc.setFont('helvetica', 'normal');
+            doc.setFont('Garamond', 'normal');
             const descLines = doc.splitTextToSize(exp.description, contentWidth);
             doc.text(descLines, margin, yPosition);
             yPosition += descLines.length * 4;
@@ -187,10 +200,8 @@ export class CVPDFGeneratorHarvard {
         checkPageSpace(30);
         addSection('Competencias y Habilidades');
           const skillsByCategory = {
-          'tecnica': cvData.skills.filter(s => s.category === 'Técnica'),
-          'blanda': cvData.skills.filter(s => s.category === 'Blanda'),
-          'herramienta': cvData.skills.filter(s => s.category === 'Técnica'), // Herramientas también van en Técnica
-          'idioma': cvData.skills.filter(s => s.category === 'Idioma')
+          'tecnica': cvData.skills.filter(s => s.category === 'Technical'),
+          'blanda': cvData.skills.filter(s => s.category === 'Analytical' || s.category === 'Leadership' || s.category === 'Communication'),
         };
         
         Object.entries(skillsByCategory).forEach(([category, skills]) => {
@@ -202,12 +213,12 @@ export class CVPDFGeneratorHarvard {
               'idioma': 'Idiomas'
             };
             
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(fontSize.small);
+            doc.setFont('Garamond', 'bold');
             doc.text(`${categoryNames[category as keyof typeof categoryNames]}:`, margin, yPosition);
             yPosition += 4;
             
-            doc.setFont('helvetica', 'normal');
+            doc.setFont('Garamond', 'normal');
             const skillNames = skills.map(s => s.name).join(', ');
             const skillLines = doc.splitTextToSize(skillNames, contentWidth - 10);
             doc.text(skillLines, margin + 5, yPosition);
@@ -216,34 +227,31 @@ export class CVPDFGeneratorHarvard {
         });
       }
 
-      // Referencias
+      // Referencias con estilo refinado
       if (cvData.references.length > 0) {
         checkPageSpace(40);
         addSection('Referencias');
         
         cvData.references.forEach((ref) => {
-          checkPageSpace(20);
-          
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
+          checkPageSpace(25);
+          doc.setFontSize(fontSize.normal);
+          doc.setFont('Garamond', 'bold');
           doc.text(ref.name, margin, yPosition);
-          yPosition += 4;
           
-          doc.setFont('helvetica', 'normal');
-          doc.text(ref.position, margin, yPosition);
-          yPosition += 4;
+          doc.setFont('Garamond', 'italic');
+          doc.text(`${ref.position}, ${ref.company}`, margin, yPosition + 5);
           
-          doc.text(ref.company, margin, yPosition);
-          yPosition += 4;
+          doc.setFont('Garamond', 'normal');
+          doc.text(ref.email, margin, yPosition + 10);
+          doc.text(ref.phone, margin, yPosition + 15);
           
-          doc.text(`${ref.phone} • ${ref.email}`, margin, yPosition);
-          yPosition += 8;
+          yPosition += 20;
         });
       } else {
         checkPageSpace(20);
         addSection('Referencias');
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(11);
+        doc.setFont('Garamond', 'italic');
         const referencesText = 'Disponibles bajo solicitud';
         const refWidth = doc.getTextWidth(referencesText);
         doc.text(referencesText, (pageWidth - refWidth) / 2, yPosition);
