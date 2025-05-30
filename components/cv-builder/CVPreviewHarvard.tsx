@@ -192,35 +192,6 @@ export default function CVPreviewHarvard({ cvData }: CVPreviewHarvardProps) {
             </div>
           </div>
         )}
-
-        {/* Referencias */}
-        {cvData.references && cvData.references.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
-              Referencias
-            </h2>
-            <div className="grid grid-cols-2 gap-6">
-              {cvData.references.map((ref) => (
-                <div key={ref.id} className="space-y-1">
-                  <h3 className="font-bold text-gray-900">{ref.name}</h3>
-                  <p className="text-gray-700 text-sm italic">{ref.position}, {ref.company}</p>
-                  <p className="text-gray-600 text-sm">{ref.email}</p>
-                  <p className="text-gray-600 text-sm">{ref.phone}</p>
-                  {ref.relationship && (
-                    <p className="text-gray-600 text-sm italic">Relación: {ref.relationship}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
-              Referencias
-            </h2>
-            <p className="text-cv-base italic text-gray-700 text-center">Disponibles bajo solicitud</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

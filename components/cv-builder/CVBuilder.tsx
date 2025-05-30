@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CVData, PersonalInfo, Education, WorkExperience, Skill } from '@/types/cv';
+import { CVData, PersonalInfo, Education, WorkExperience, Skill, Project, Certification } from '@/types/cv';
+import ProjectsForm from './forms/ProjectsForm';
+import CertificationsForm from './forms/CertificationsForm';
 import { cvBuilderService } from '@/services/cvBuilderService';
 import { CVPDFGeneratorHarvard } from '@/services/cvPDFGeneratorHarvard';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,7 +20,7 @@ import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info }
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const initialCVData: CVData = {
+const  initialCVData: CVData = {
   personalInfo: {
     fullName: '',
     email: '',
@@ -30,10 +32,8 @@ const initialCVData: CVData = {
   education: [],
   workExperience: [],
   skills: [],
-  languages: [],
   projects: [],
-  certifications: [],
-  references: []
+  certifications: []
 };
 
 interface CVBuilderProps {
@@ -87,9 +87,18 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     setCVData(prev => ({ ...prev, workExperience }));
     clearValidationErrors();
   };
-
   const updateSkills = (skills: Skill[]) => {
     setCVData(prev => ({ ...prev, skills }));
+  };
+
+  const updateProjects = (projects: Project[]) => {
+    setCVData(prev => ({ ...prev, projects }));
+    clearValidationErrors();
+  };
+
+  const updateCertifications = (certifications: Certification[]) => {
+    setCVData(prev => ({ ...prev, certifications }));
+    clearValidationErrors();
   };
 
   const clearValidationErrors = () => {
@@ -301,19 +310,31 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                     onUpdate={updateEducation}
                   />
                 </TabsContent>
-
-                <TabsContent value="experience" className="mt-6">
-                  <WorkExperienceForm
-                    workExperience={cvData.workExperience}
-                    onUpdate={updateWorkExperience}
-                  />
+                
+                <TabsContent value="experience_projects" className="mt-6">
+                  <div className="space-y-6">
+                    <WorkExperienceForm
+                      workExperience={cvData.workExperience}
+                      onUpdate={updateWorkExperience}
+                    />
+                    <ProjectsForm
+                      projects={cvData.projects}
+                      onUpdate={updateProjects}
+                    />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="skills" className="mt-6">
-                  <SkillsForm
-                    skills={cvData.skills}
-                    onUpdate={updateSkills}
-                  />
+                <TabsContent value="skills_certifications" className="mt-6">
+                  <div className="space-y-6">
+                    <SkillsForm
+                      skills={cvData.skills}
+                      onUpdate={updateSkills}
+                    />
+                    <CertificationsForm 
+                      certifications={cvData.certifications}
+                      onUpdate={updateCertifications}
+                    />
+                  </div>
                 </TabsContent>
               </CVBuilderTabs>
             </CardContent>

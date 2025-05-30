@@ -305,49 +305,6 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
               </div>
             </section>
           )}
-
-          {/* Idiomas */}
-          {cvData.languages.length > 0 && (
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                IDIOMAS
-              </h2>              <div className="grid grid-cols-2 gap-4">
-                {cvData.languages.map((language, index) => (
-                  <div key={language.id}>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-900">{language.language}</span>
-                      <span className="text-gray-600 text-sm capitalize">{language.proficiency}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Referencias */}
-          {cvData.references.length > 0 && (
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                REFERENCIAS
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cvData.references.map((ref, index) => (
-                  <div key={ref.id}>
-                    <h3 className="font-semibold text-gray-900">{ref.name}</h3>
-                    <p className="text-gray-700">{ref.position}</p>
-                    <p className="text-gray-700">{ref.company}</p>
-                    <div className="text-gray-600 text-sm mt-1">
-                      <p>{ref.email}</p>
-                      <p>{ref.phone}</p>
-                      {ref.relationship && (
-                        <p className="italic">Relación: {ref.relationship}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </CardContent>
     </Card>

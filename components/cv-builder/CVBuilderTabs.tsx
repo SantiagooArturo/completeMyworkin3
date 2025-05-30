@@ -26,8 +26,7 @@ interface CVBuilderTabsProps {
   children: React.ReactNode;
 }
 
-export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children }: CVBuilderTabsProps) {
-  const tabs = [
+export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children }: CVBuilderTabsProps) {  const tabs = [
     {
       id: 'personal',
       label: 'Personal',
@@ -39,18 +38,17 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       label: 'Educación',
       icon: GraduationCap,
       isComplete: cvData.education.length > 0 && cvData.education.every(edu => edu.institution && edu.degree)
-    },
-    {
-      id: 'experience',
+    },    {
+      id: 'experience_projects',
       label: 'Experiencia',
-      icon: Briefcase,
-      isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0)
+      icon: FolderOpen,  
+      isComplete: (cvData.projects.length > 0 || cvData.workExperience.length > 0)
     },
     {
-      id: 'skills',
+      id: 'skills_certifications',
       label: 'Habilidades',
-      icon: Wrench,
-      isComplete: cvData.skills.length > 0
+      icon: Award,
+      isComplete: cvData.skills.length > 0 || cvData.certifications.length > 0
     },
   ];
 

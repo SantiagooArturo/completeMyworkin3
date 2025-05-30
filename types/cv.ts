@@ -110,11 +110,5 @@ export interface CVData {
   workExperience: WorkExperience[];
   skills: Skill[];
   projects: Project[];
-  languages: Language[];
   certifications: Certification[];
-  references: Reference[];
-  awards?: string[];         // Premios y reconocimientos
-  publications?: string[];   // Publicaciones académicas o profesionales
-  volunteerWork?: string[];  // Trabajo voluntario
-  professionalMemberships?: string[]; // Membresías profesionales
 }
