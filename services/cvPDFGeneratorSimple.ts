@@ -71,20 +71,12 @@ export class CVPDFGeneratorSimple {  static async generatePDF(cvData: CVData): P
         doc.setTextColor(2, 139, 191); // Color azul corporativo
         doc.text(title.toUpperCase(), leftMargin, y);
         
-        // Línea bajo el título
-        const titleWidth = doc.getTextWidth(title.toUpperCase());
-        doc.setDrawColor(2, 139, 191);
-        doc.setLineWidth(0.5);
-        doc.line(leftMargin, y + 2, leftMargin + titleWidth, y + 2);
-        
         y += 10;
         doc.setTextColor(0, 0, 0); // Volver a negro
       };
 
       // PERFIL/RESUMEN PROFESIONAL
       if (cvData.personalInfo.summary) {
-        addSectionTitle('Perfil Profesional');
-        
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         const summaryLines = doc.splitTextToSize(cvData.personalInfo.summary, contentWidth);
