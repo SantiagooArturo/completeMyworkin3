@@ -62,10 +62,9 @@ export const BUNDLE_CONFIG = {
     firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
     pdf: ['jspdf', 'html2canvas'],
   },
-  
-  // Archivos para lazy loading
+    // Archivos para lazy loading
   lazyComponents: [
-    'CVPreviewHarvard',
+    'CVPreview',
     'CVAnalysisModal',
     'PaymentModal',
     'PricingCards',

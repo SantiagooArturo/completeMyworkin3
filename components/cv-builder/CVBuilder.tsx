@@ -1,22 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CVData, PersonalInfo, Education, WorkExperience, Skill, SkillCategory, Project, Certification } from '@/types/cv';
+import { CVData, PersonalInfo, Education, WorkExperience, Skill, Project, Certification } from '@/types/cv';
 import ProjectsForm from './forms/ProjectsForm';
 import CertificationsForm from './forms/CertificationsForm';
 import StudentExperienceForm from './forms/StudentExperienceForm';
-import SkillsFormHarvard from './forms/SkillsFormHarvard';
 import HobbiesForm from './forms/HobbiesForm';
 import { cvBuilderService } from '@/services/cvBuilderService';
 import { CVPDFGeneratorSimple } from '@/services/cvPDFGeneratorSimple';
-import { CVDataConverter } from '@/lib/cv/CVDataConverter';
 import { useAuth } from '@/hooks/useAuth';
 import PersonalInfoForm from './forms/PersonalInfoForm';
-import EducationFormHarvard from './forms/EducationFormHarvard';
+import EducationForm from './forms/EducationForm';
 import WorkExperienceForm from './forms/WorkExperienceForm';
 import SkillsForm from './forms/SkillsForm';
-import CVPreviewHarvard from './CVPreviewHarvard';
-import HarvardFormatGuide from './HarvardFormatGuide';
+import CVPreview from './CVPreview';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
@@ -56,7 +53,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
-  const [pdfGeneratorType, setPdfGeneratorType] = useState<'simple' | 'improved'>('simple'); // Nuevo estado
 
   useEffect(() => {
     if (cvId && user) {
@@ -69,15 +65,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       setIsLoading(true);
       const savedCV = await cvBuilderService.getCV(cvId!);
       if (savedCV) {
-        // Si es CVDataHarvard, convertir a CVData
-        const data = savedCV.data;
-        if ('skillCategories' in data) {
-          // Es CVDataHarvard, convertir a CVData
-          setCVData(CVDataConverter.fromHarvardFormat(data as any));
-        } else {
-          // Es CVData normal
-          setCVData(data as CVData);
-        }
+        // Cargar datos del CV
+        setCVData(savedCV.data as CVData);
         setCVTitle(savedCV.title);
       }
     } catch (error) {
@@ -118,28 +107,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   // Función para actualizar hobbies
   const updateHobbies = (hobbies: string[]) => {
     setCVData(prev => ({ ...prev, hobbies }));
-    clearValidationErrors();
-  };
-
-  // Función para actualizar skill categories (formato Harvard)
-  const updateSkillCategories = (skillCategories: SkillCategory[]) => {
-    // Convertir skillCategories a skills tradicionales para mantener compatibilidad
-    const skills: Skill[] = [];
-    skillCategories.forEach((category, catIndex) => {
-      category.skills.forEach((skill, skillIndex) => {
-        skills.push({
-          id: `skill-${catIndex}-${skillIndex}`,
-          name: skill.name,
-          level: skill.level || 'Intermedio' as any,
-          category: category.category === 'Software' ? 'Technical' : 
-                    category.category === 'Gestión de proyectos' ? 'Leadership' :
-                    category.category === 'Comunicación' ? 'Communication' :
-                    category.category === 'Investigación' ? 'Research' : 'Technical'
-        });
-      });
-    });
-    
-    setCVData(prev => ({ ...prev, skills }));
     clearValidationErrors();
   };
 
@@ -255,14 +222,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         setValidationErrors(validation.errors);
         return;
       }
-
-      // Usar el generador seleccionado
-      if (pdfGeneratorType === 'improved') {
-        await CVPDFGeneratorSimple.generatePDF(cvData);
-      } else {
-        await CVPDFGeneratorSimple.generatePDF(cvData);
-      }
-      
+      await CVPDFGeneratorSimple.generatePDF(cvData);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
@@ -335,18 +295,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                   className="w-4 h-4 text-[#028bbf] bg-gray-100 border-gray-300 rounded focus:ring-[#028bbf] focus:ring-2"
                 />
               </div>
-              <div className="flex items-center space-x-2">
-                <FileText className="h-4 w-4 text-[#028bbf]" />
-                <label className="text-sm font-medium text-gray-700">Diseño PDF</label>
-                <select
-                  value={pdfGeneratorType}
-                  onChange={(e) => setPdfGeneratorType(e.target.value as 'simple' | 'improved')}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none"
-                >
-                  <option value="simple">Simple</option>
-                  <option value="improved">Harvard Formal</option>
-                </select>
-              </div>
+
             </div>
           </div>
         </div>
@@ -422,11 +371,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         </Alert>
       )}
 
-      {/* Guía de Formato Harvard */}
-      {showGuide && (
-        <HarvardFormatGuide />
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formularios */}
         <div className="space-y-6">
@@ -449,7 +393,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                 </TabsContent>
 
                 <TabsContent value="education" className="mt-6">
-                  <EducationFormHarvard
+                  <EducationForm
                     education={cvData.education}
                     onUpdate={updateEducation}
                   />
@@ -479,19 +423,10 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
 
                 <TabsContent value="skills_certifications" className="mt-6">
                   <div className="space-y-6">
-                    {isStudentMode ? (
-                      <SkillsFormHarvard
-                        skills={cvData.skills}
-                        skillCategories={CVDataConverter.toHarvardFormat(cvData).skillCategories}
-                        onUpdateSkills={updateSkills}
-                        onUpdateSkillCategories={updateSkillCategories}
-                      />
-                    ) : (
-                      <SkillsForm
-                        skills={cvData.skills}
-                        onUpdate={updateSkills}
-                      />
-                    )}
+                    <SkillsForm
+                      skills={cvData.skills}
+                      onUpdate={updateSkills}
+                    />
                     <CertificationsForm 
                       certifications={cvData.certifications}
                       onUpdate={updateCertifications}
@@ -513,9 +448,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         {/* Vista Previa */}
         {showPreview && (
           <div className="lg:sticky lg:top-6">
-            <CVPreviewHarvard 
-              cvData={isStudentMode ? CVDataConverter.fromHarvardFormat(CVDataConverter.toHarvardFormat(cvData)) : cvData}
-              isStudentMode={isStudentMode}
+            <CVPreview 
+              cvData={cvData}
             />
           </div>
         )}

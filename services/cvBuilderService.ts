@@ -1,18 +1,17 @@
 'use client';
 
 import { 
-  CVData, 
-  CVDataHarvard,
+  CVData,
   PersonalInfo, 
   Education, 
   WorkExperience, 
-  Skill,
-  SkillCategory, 
+  Skill, 
   Reference, 
   Project, 
   Certification, 
   Language 
 } from '@/types/cv';
+import { CVPDFGeneratorSimple } from '@/services/cvPDFGeneratorSimple';
 import { db } from '@/firebase/config';
 import { User } from 'firebase/auth';
 import { 
@@ -32,7 +31,7 @@ export interface SavedCV {
   id: string;
   userId: string;
   title: string;
-  data: CVData | CVDataHarvard;
+  data: CVData;
   template: string;
   createdAt: any;
   updatedAt: any;
@@ -57,8 +56,8 @@ export class CVBuilderService {
     return CVBuilderService.instance;
   }
 
-  // Guardar CV (soporta ambos formatos)
-  async saveCV(user: User, cvData: CVData | CVDataHarvard, title: string, template: string = 'harvard'): Promise<string> {
+  // Guardar CV
+  async saveCV(user: User, cvData: CVData, title: string, template: string = 'simple'): Promise<string> {
     try {
       if (!user || !user.uid) {
         throw new Error('Usuario no autenticado');
@@ -81,8 +80,8 @@ export class CVBuilderService {
     }
   }
 
-  // Actualizar CV existente (soporta ambos formatos)
-  async updateCV(cvId: string, cvData: CVData | CVDataHarvard, title?: string): Promise<void> {
+  // Actualizar CV existente
+  async updateCV(cvId: string, cvData: CVData, title?: string): Promise<void> {
     try {
       const cvRef = doc(db, 'userCVs', cvId);
       const updateData: any = {
@@ -220,12 +219,13 @@ export class CVBuilderService {
     };
   }
 
-  // Generar PDF del CV (placeholder)
-  async generatePDF(cvData: CVData, template: string = 'harvard'): Promise<Blob> {
+  // Generar PDF del CV
+  async generatePDF(cvData: CVData, template: string = 'simple'): Promise<Blob> {
     try {
-      // Aquí implementarías la lógica para generar PDF
-      // Por ahora, retornamos un placeholder
-      throw new Error('Generación de PDF en desarrollo');
+      // Usar el generador de PDF simple mejorado
+      await CVPDFGeneratorSimple.generatePDF(cvData);
+      // Por ahora retornamos un placeholder, ya que el generador actual no retorna Blob
+      throw new Error('Generación de PDF implementada - usar CVPDFGeneratorSimple.generatePDF directamente');
     } catch (error) {
       console.error('Error generando PDF:', error);
       throw new Error('Error al generar el PDF del CV');
