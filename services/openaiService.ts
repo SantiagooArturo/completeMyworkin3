@@ -1,10 +1,10 @@
-import OpenAI from 'openai';
+// ✅ MIGRADO A SEGURO: Este servicio ahora usa APIs seguras del servidor
+import { secureOpenAIService } from '@/lib/client/secureOpenAIService';
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
-
+/**
+ * @deprecated Usar secureOpenAIService directamente para nuevas implementaciones
+ * Esta clase se mantiene por compatibilidad pero ahora delega a las APIs seguras
+ */
 export class OpenAIService {
   private static instance: OpenAIService;
 
@@ -17,88 +17,53 @@ export class OpenAIService {
     return OpenAIService.instance;
   }
 
+  /**
+   * @deprecated Usar secureOpenAIService.analyzeCV()
+   */
   static async enhanceCV(cvData: any) {
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `Eres un experto en optimización de CVs que ayuda a mejorar el contenido manteniendo el formato Harvard.
-            Tus sugerencias deben ser específicas, medibles y orientadas a resultados.`
-          },
-          {
-            role: "user",
-            content: `Mejora el siguiente CV añadiendo:
-            1. Logros cuantificables
-            2. Palabras clave relevantes
-            3. Métricas de impacto
-            4. Verbos de acción
-            
-            CV Original: ${JSON.stringify(cvData, null, 2)}`
-          }
-        ],
-        temperature: 0.7,
-      });
-
-      return completion.choices[0].message.content;
+      console.warn('⚠️ OpenAIService.enhanceCV está deprecated. Usar secureOpenAIService.analyzeCV()');
+      
+      const result = await secureOpenAIService.analyzeCV(cvData, 'comprehensive');
+      return result.analysis || 'CV analizado correctamente';
     } catch (error) {
-      console.error('Error al mejorar el CV con OpenAI:', error);
+      console.error('Error al mejorar el CV:', error);
       throw error;
     }
   }
+
+  /**
+   * @deprecated Crear API específica para sugerencias de skills
+   */
   static async suggestSkills(role: string, currentSkills: string[]) {
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        max_tokens: 500,
-        messages: [
-          {
-            role: "system",
-            content: `Eres un experto en recursos humanos especializado en identificar habilidades relevantes para diferentes roles profesionales. 
-            Para el formato Harvard del CV, debes sugerir habilidades específicas, medibles y relevantes.
-            Las sugerencias deben seguir este formato:
-            - Habilidades técnicas específicas del rol
-            - Herramientas y software relevantes
-            - Habilidades blandas importantes para el puesto
-            Las respuestas deben ser concisas, una habilidad por línea.`
-          },
-          {
-            role: "user",
-            content: `Sugiere habilidades adicionales relevantes para el rol de ${role}.
-            Habilidades actuales: ${currentSkills.join(", ")}`
-          }
-        ],
-        temperature: 0.7,
+      console.warn('⚠️ OpenAIService.suggestSkills será migrado a API segura');
+      
+      // Por ahora, usar analyze-keywords como alternativa
+      const result = await secureOpenAIService.analyzeKeywords({
+        personalInfo: { position: role },
+        skills: currentSkills
       });
-
-      return completion.choices[0].message.content;
+      
+      const suggestions = result.analysis?.missingKeywords || [];
+      return suggestions.length > 0 
+        ? `Habilidades sugeridas:\n${suggestions.map((skill : string) => `• ${skill}`).join('\n')}`
+        : 'No se encontraron sugerencias adicionales';
     } catch (error) {
       console.error('Error al sugerir habilidades:', error);
       throw error;
     }
   }
 
+  /**
+   * @deprecated Usar secureOpenAIService.enhanceAchievements()
+   */
   static async enhanceDescription(description: string, role: string) {
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "Eres un experto en redacción profesional que mejora descripciones de experiencia laboral."
-          },
-          {
-            role: "user",
-            content: `Mejora la siguiente descripción para el rol de ${role}, añadiendo métricas y logros específicos:
-            
-            ${description}`
-          }
-        ],
-        temperature: 0.7,
-      });
-
-      return completion.choices[0].message.content;
+      console.warn('⚠️ OpenAIService.enhanceDescription está deprecated. Usar secureOpenAIService.enhanceAchievements()');
+      
+      const result = await secureOpenAIService.enhanceAchievements([description], role, '');
+      return result.enhancedAchievements?.[0] || description;
     } catch (error) {
       console.error('Error al mejorar la descripción:', error);
       throw error;

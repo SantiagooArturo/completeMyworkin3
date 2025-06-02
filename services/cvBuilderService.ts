@@ -1,6 +1,18 @@
 'use client';
 
-import { CVData, PersonalInfo, Education, WorkExperience, Skill, Reference, Project, Certification, Language } from '@/types/cv';
+import { 
+  CVData, 
+  CVDataHarvard,
+  PersonalInfo, 
+  Education, 
+  WorkExperience, 
+  Skill,
+  SkillCategory, 
+  Reference, 
+  Project, 
+  Certification, 
+  Language 
+} from '@/types/cv';
 import { db } from '@/firebase/config';
 import { User } from 'firebase/auth';
 import { 
@@ -20,10 +32,19 @@ export interface SavedCV {
   id: string;
   userId: string;
   title: string;
-  data: CVData;
+  data: CVData | CVDataHarvard;
   template: string;
   createdAt: any;
   updatedAt: any;
+}
+
+// Interfaz para validación específica para estudiantes
+export interface StudentValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  suggestions: string[];
+  completionPercentage: number;
 }
 
 export class CVBuilderService {
@@ -36,8 +57,8 @@ export class CVBuilderService {
     return CVBuilderService.instance;
   }
 
-  // Guardar CV
-  async saveCV(user: User, cvData: CVData, title: string, template: string = 'harvard'): Promise<string> {
+  // Guardar CV (soporta ambos formatos)
+  async saveCV(user: User, cvData: CVData | CVDataHarvard, title: string, template: string = 'harvard'): Promise<string> {
     try {
       if (!user || !user.uid) {
         throw new Error('Usuario no autenticado');
@@ -60,8 +81,8 @@ export class CVBuilderService {
     }
   }
 
-  // Actualizar CV existente
-  async updateCV(cvId: string, cvData: CVData, title?: string): Promise<void> {
+  // Actualizar CV existente (soporta ambos formatos)
+  async updateCV(cvId: string, cvData: CVData | CVDataHarvard, title?: string): Promise<void> {
     try {
       const cvRef = doc(db, 'userCVs', cvId);
       const updateData: any = {

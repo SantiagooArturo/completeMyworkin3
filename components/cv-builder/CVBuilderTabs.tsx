@@ -15,7 +15,8 @@ import {
   CheckCircle,
   Circle,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -24,9 +25,10 @@ interface CVBuilderTabsProps {
   onTabChange: (tab: string) => void;
   cvData: CVData;
   children: React.ReactNode;
+  isStudentMode?: boolean;
 }
 
-export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children }: CVBuilderTabsProps) {  const tabs = [
+export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children, isStudentMode = false }: CVBuilderTabsProps) {  const baseTabs = [
     {
       id: 'personal',
       label: 'Personal',
@@ -38,11 +40,14 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       label: 'Educación',
       icon: GraduationCap,
       isComplete: cvData.education.length > 0 && cvData.education.every(edu => edu.institution && edu.degree)
-    },    {
+    },    
+    {
       id: 'experience_projects',
-      label: 'Experiencia',
+      label: isStudentMode ? 'Experiencia/Proyectos' : 'Experiencia',
       icon: FolderOpen,  
-      isComplete: (cvData.projects.length > 0 || cvData.workExperience.length > 0)
+      isComplete: isStudentMode 
+        ? (cvData.projects.length > 0 || cvData.workExperience.length > 0)
+        : (cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0))
     },
     {
       id: 'skills_certifications',
@@ -51,6 +56,19 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       isComplete: cvData.skills.length > 0 || cvData.certifications.length > 0
     },
   ];
+
+  // Agregar pestaña de hobbies solo en modo estudiante
+  const tabs = isStudentMode 
+    ? [
+        ...baseTabs,
+        {
+          id: 'hobbies',
+          label: 'Hobbies',
+          icon: Heart,
+          isComplete: (cvData.hobbies && cvData.hobbies.length > 0) || false
+        }
+      ]
+    : baseTabs;
 
   const currentTabIndex = tabs.findIndex(tab => tab.id === activeTab);
   const canGoNext = currentTabIndex < tabs.length - 1;
@@ -93,7 +111,7 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-4 gap-1 h-auto bg-gray-50 p-2 rounded-lg">
+        <TabsList className={`grid w-full ${isStudentMode ? 'grid-cols-5 lg:grid-cols-5' : 'grid-cols-4 lg:grid-cols-4'} gap-1 h-auto bg-gray-50 p-2 rounded-lg`}>
           {tabs.map((tab, index) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

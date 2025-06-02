@@ -1,11 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CVData, PersonalInfo, Education, WorkExperience, Skill, Project, Certification } from '@/types/cv';
+import { CVData, CVDataHarvard, PersonalInfo, Education, WorkExperience, Skill, SkillCategory, Project, Certification } from '@/types/cv';
 import ProjectsForm from './forms/ProjectsForm';
 import CertificationsForm from './forms/CertificationsForm';
+import StudentExperienceForm from './forms/StudentExperienceForm';
+import SkillsFormHarvard from './forms/SkillsFormHarvard';
+import HobbiesForm from './forms/HobbiesForm';
 import { cvBuilderService } from '@/services/cvBuilderService';
 import { CVPDFGeneratorHarvard } from '@/services/cvPDFGeneratorHarvard';
+import { CVPDFGeneratorHarvardImproved } from '@/services/cvPDFGeneratorHarvardImproved';
+import { CVDataConverter } from '@/lib/cv/CVDataConverter';
 import { useAuth } from '@/hooks/useAuth';
 import PersonalInfoForm from './forms/PersonalInfoForm';
 import EducationFormHarvard from './forms/EducationFormHarvard';
@@ -16,7 +21,7 @@ import HarvardFormatGuide from './HarvardFormatGuide';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
-import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info, GraduationCap } from 'lucide-react';
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -51,6 +56,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [cvTitle, setCVTitle] = useState('Mi CV');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
 
   useEffect(() => {
     if (cvId && user) {
@@ -63,7 +69,15 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       setIsLoading(true);
       const savedCV = await cvBuilderService.getCV(cvId!);
       if (savedCV) {
-        setCVData(savedCV.data);
+        // Si es CVDataHarvard, convertir a CVData
+        const data = savedCV.data;
+        if ('skillCategories' in data) {
+          // Es CVDataHarvard, convertir a CVData
+          setCVData(CVDataConverter.fromHarvardFormat(data as any));
+        } else {
+          // Es CVData normal
+          setCVData(data as CVData);
+        }
         setCVTitle(savedCV.title);
       }
     } catch (error) {
@@ -101,10 +115,98 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     clearValidationErrors();
   };
 
+  // Función para actualizar hobbies
+  const updateHobbies = (hobbies: string[]) => {
+    setCVData(prev => ({ ...prev, hobbies }));
+    clearValidationErrors();
+  };
+
+  // Función para actualizar skill categories (formato Harvard)
+  const updateSkillCategories = (skillCategories: SkillCategory[]) => {
+    // Convertir skillCategories a skills tradicionales para mantener compatibilidad
+    const skills: Skill[] = [];
+    skillCategories.forEach((category, catIndex) => {
+      category.skills.forEach((skill, skillIndex) => {
+        skills.push({
+          id: `skill-${catIndex}-${skillIndex}`,
+          name: skill.name,
+          level: skill.level || 'Intermedio' as any,
+          category: category.category === 'Software' ? 'Technical' : 
+                    category.category === 'Gestión de proyectos' ? 'Leadership' :
+                    category.category === 'Comunicación' ? 'Communication' :
+                    category.category === 'Investigación' ? 'Research' : 'Technical'
+        });
+      });
+    });
+    
+    setCVData(prev => ({ ...prev, skills }));
+    clearValidationErrors();
+  };
+
   const clearValidationErrors = () => {
     if (validationErrors.length > 0) {
       setValidationErrors([]);
     }
+  };
+
+  // Validación específica para estudiantes
+  const validateStudentCV = (cvData: CVData): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Validar información personal obligatoria
+    if (!cvData.personalInfo.fullName.trim()) {
+      errors.push('El nombre completo es obligatorio');
+    }
+    if (!cvData.personalInfo.email.trim()) {
+      errors.push('El correo electrónico es obligatorio');
+    }
+    if (!cvData.personalInfo.phone.trim()) {
+      errors.push('El teléfono es obligatorio');
+    }
+    if (!cvData.personalInfo.summary.trim()) {
+      errors.push('El resumen profesional es obligatorio');
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (cvData.personalInfo.email && !emailRegex.test(cvData.personalInfo.email)) {
+      errors.push('El formato del correo electrónico no es válido');
+    }
+
+    // Validar que tenga al menos una educación
+    if (cvData.education.length === 0) {
+      errors.push('Debe incluir al menos una formación académica');
+    }
+
+    // Validar educación
+    cvData.education.forEach((edu, index) => {
+      if (!edu.institution.trim()) {
+        errors.push(`La institución en educación ${index + 1} es obligatoria`);
+      }
+      if (!edu.degree.trim()) {
+        errors.push(`El título en educación ${index + 1} es obligatorio`);
+      }
+    });
+
+    // Para estudiantes: Validar que tenga EXPERIENCIA O PROYECTOS (no ambos obligatorios)
+    const hasWorkExperience = cvData.workExperience.length > 0 && 
+      cvData.workExperience.some(exp => exp.company.trim() && exp.position.trim());
+    const hasProjects = cvData.projects.length > 0 && 
+      cvData.projects.some(proj => proj.name.trim() && proj.description.trim());
+
+    if (!hasWorkExperience && !hasProjects) {
+      errors.push('Como estudiante, debes incluir al menos experiencia laboral O proyectos académicos/personales');
+    }
+
+    // Validar que tenga habilidades
+    if (cvData.skills.length === 0) {
+      errors.push('Debe incluir al menos algunas habilidades');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   };
 
   const handleSaveCV = async () => {
@@ -116,7 +218,11 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     try {
       setIsSaving(true);
       
-      const validation = cvBuilderService.validateCVData(cvData);
+      // Usar validación específica para estudiantes
+      const validation = isStudentMode 
+        ? validateStudentCV(cvData)
+        : cvBuilderService.validateCVData(cvData);
+        
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
@@ -140,13 +246,21 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
 
   const handleDownloadPDF = async () => {
     try {
-      const validation = cvBuilderService.validateCVData(cvData);
+      // Usar validación específica para estudiantes
+      const validation = isStudentMode 
+        ? validateStudentCV(cvData)
+        : cvBuilderService.validateCVData(cvData);
+        
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
       }
 
-      await CVPDFGeneratorHarvard.generatePDF(cvData);
+      const dataForPDF = isStudentMode 
+        ? CVDataConverter.fromHarvardFormat(CVDataConverter.toHarvardFormat(cvData))
+        : cvData;
+
+      await CVPDFGeneratorHarvard.generatePDF(dataForPDF);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
@@ -164,8 +278,11 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         isComplete: cvData.education.length > 0 && cvData.education.every(edu => edu.institution && edu.degree)
       },
       { 
-        key: 'experience', 
-        isComplete: cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0)
+        key: 'experience_projects', 
+        // Para estudiantes: experiencia O proyectos es suficiente
+        isComplete: isStudentMode 
+          ? (cvData.workExperience.length > 0 || cvData.projects.length > 0)
+          : (cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0))
       },
       { 
         key: 'skills', 
@@ -197,7 +314,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               <p className="text-gray-600">Progreso: {getCompletionPercentage()}% completado</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center justify-between gap-4 mt-2">
             <input
               type="text"
               value={cvTitle}
@@ -205,6 +322,18 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               className="text-lg font-medium bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none shadow-sm min-w-[250px]"
               placeholder="Nombre de tu CV"
             />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center space-x-2">
+                <GraduationCap className="h-5 w-5 text-[#028bbf]" />
+                <label className="text-sm font-medium text-gray-700">Modo estudiante</label>
+                <input
+                  type="checkbox"
+                  checked={isStudentMode}
+                  onChange={(e) => setIsStudentMode(e.target.checked)}
+                  className="w-4 h-4 text-[#028bbf] bg-gray-100 border-gray-300 rounded focus:ring-[#028bbf] focus:ring-2"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -296,6 +425,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 cvData={cvData}
+                isStudentMode={isStudentMode}
               >
                 <TabsContent value="personal" className="mt-6">
                   <PersonalInfoForm
@@ -312,29 +442,54 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                 </TabsContent>
                 
                 <TabsContent value="experience_projects" className="mt-6">
-                  <div className="space-y-6">
-                    <WorkExperienceForm
+                  {isStudentMode ? (
+                    <StudentExperienceForm
                       workExperience={cvData.workExperience}
-                      onUpdate={updateWorkExperience}
-                    />
-                    <ProjectsForm
                       projects={cvData.projects}
-                      onUpdate={updateProjects}
+                      onUpdateWorkExperience={updateWorkExperience}
+                      onUpdateProjects={updateProjects}
                     />
-                  </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <WorkExperienceForm
+                        workExperience={cvData.workExperience}
+                        onUpdate={updateWorkExperience}
+                      />
+                      <ProjectsForm
+                        projects={cvData.projects}
+                        onUpdate={updateProjects}
+                      />
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="skills_certifications" className="mt-6">
                   <div className="space-y-6">
-                    <SkillsForm
-                      skills={cvData.skills}
-                      onUpdate={updateSkills}
-                    />
+                    {isStudentMode ? (
+                      <SkillsFormHarvard
+                        skills={cvData.skills}
+                        skillCategories={CVDataConverter.toHarvardFormat(cvData).skillCategories}
+                        onUpdateSkills={updateSkills}
+                        onUpdateSkillCategories={updateSkillCategories}
+                      />
+                    ) : (
+                      <SkillsForm
+                        skills={cvData.skills}
+                        onUpdate={updateSkills}
+                      />
+                    )}
                     <CertificationsForm 
                       certifications={cvData.certifications}
                       onUpdate={updateCertifications}
                     />
                   </div>
+                </TabsContent>
+
+                <TabsContent value="hobbies" className="mt-6">
+                  <HobbiesForm
+                    hobbies={cvData.hobbies || []}
+                    onUpdate={updateHobbies}
+                  />
                 </TabsContent>
               </CVBuilderTabs>
             </CardContent>
@@ -344,7 +499,10 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         {/* Vista Previa */}
         {showPreview && (
           <div className="lg:sticky lg:top-6">
-            <CVPreviewHarvard cvData={cvData} />
+            <CVPreviewHarvard 
+              cvData={isStudentMode ? CVDataConverter.fromHarvardFormat(CVDataConverter.toHarvardFormat(cvData)) : cvData}
+              isStudentMode={isStudentMode}
+            />
           </div>
         )}
       </div>

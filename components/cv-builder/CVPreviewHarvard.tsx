@@ -7,45 +7,51 @@ import { FileText } from 'lucide-react';
 
 interface CVPreviewHarvardProps {
   cvData: CVData;
+  isStudentMode?: boolean;
 }
 
-export default function CVPreviewHarvard({ cvData }: CVPreviewHarvardProps) {
-  return (
-    <Card className="w-full max-w-4xl mx-auto bg-white shadow-lg">
-      <CardContent className="p-8 space-y-6 font-garamond text-cv-base">
-        {/* Header - Información Personal */}
-        <div className="text-center space-y-2 mb-8">
-          <h1 className="text-cv-2xl font-bold tracking-wider text-gray-900 uppercase">{cvData.personalInfo.fullName}</h1>
-          <div className="flex justify-center items-center gap-2 text-cv-base text-gray-700">
-            {[
-              cvData.personalInfo.address,
-              cvData.personalInfo.phone,
-              cvData.personalInfo.email
-            ].filter(Boolean).join(' • ')}
-          </div>
-          {(cvData.personalInfo.linkedIn || cvData.personalInfo.website) && (
-            <div className="flex justify-center items-center gap-2 text-cv-base text-gray-700">
-              {[cvData.personalInfo.linkedIn, cvData.personalInfo.website]
-                .filter(Boolean)
-                .join(' • ')}
-            </div>
-          )}
-        </div>
+export default function CVPreviewHarvard({ cvData, isStudentMode = false }: CVPreviewHarvardProps) {
+  // Determinar el orden de las secciones según el modo
+  const getSectionOrder = () => {
+    if (isStudentMode) {
+      return [
+        'summary',
+        'education', 
+        'projects',
+        'experience',
+        'skills',
+        'certifications',
+        'hobbies'
+      ];
+    } else {
+      return [
+        'summary',
+        'experience',
+        'education',
+        'projects', 
+        'skills',
+        'certifications',
+        'hobbies'
+      ];
+    }
+  };
 
-        {/* Resumen Profesional */}
-        {cvData.personalInfo.summary && (
+  const renderSection = (sectionType: string) => {
+    switch (sectionType) {
+      case 'summary':
+        return cvData.personalInfo.summary && (
           <div className="space-y-2">
             <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
-              Perfil Profesional
+              {isStudentMode ? 'Perfil Estudiante' : 'Perfil Profesional'}
             </h2>
             <p className="text-cv-base text-gray-700 text-justify leading-relaxed">
               {cvData.personalInfo.summary}
             </p>
           </div>
-        )}
-
-        {/* Educación */}
-        {cvData.education.length > 0 && (
+        );
+      
+      case 'education':
+        return cvData.education.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
               Educación
@@ -84,53 +90,13 @@ export default function CVPreviewHarvard({ cvData }: CVPreviewHarvardProps) {
               </div>
             ))}
           </div>
-        )}
+        );
 
-        {/* Experiencia Profesional */}
-        {cvData.workExperience.length > 0 && (
+      case 'projects':
+        return cvData.projects && cvData.projects.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
-              Experiencia Profesional
-            </h2>
-            {cvData.workExperience.map((exp) => (
-              <div key={exp.id} className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-gray-900">{exp.position}</h3>
-                    <p className="text-gray-700 italic">{exp.company}</p>
-                    {exp.location && (
-                      <p className="text-gray-600 text-sm">{exp.location}</p>
-                    )}
-                  </div>
-                  <p className="text-gray-600 text-sm text-right">
-                    {formatDate(exp.startDate)} - {exp.current ? 'Presente' : formatDate(exp.endDate)}
-                  </p>
-                </div>
-                {exp.description && (
-                  <p className="text-gray-700 text-sm">{exp.description}</p>
-                )}
-                {exp.achievements && exp.achievements.length > 0 && (
-                  <ul className="list-disc list-inside text-gray-700 text-sm space-y-1 ml-4">
-                    {exp.achievements.map((achievement, index) => (
-                      <li key={index}>{achievement}</li>
-                    ))}
-                  </ul>
-                )}
-                {exp.technologies && exp.technologies.length > 0 && (
-                  <p className="text-gray-600 text-sm">
-                    <span className="font-medium">Tecnologías:</span> {exp.technologies.join(', ')}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Proyectos Destacados */}
-        {cvData.projects && cvData.projects.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
-              Proyectos Destacados
+              {isStudentMode ? 'Proyectos Académicos y Personales' : 'Proyectos Destacados'}
             </h2>
             {cvData.projects.map((project) => (
               <div key={project.id} className="space-y-2">
@@ -167,10 +133,50 @@ export default function CVPreviewHarvard({ cvData }: CVPreviewHarvardProps) {
               </div>
             ))}
           </div>
-        )}
+        );
 
-        {/* Habilidades y Competencias */}
-        {cvData.skills.length > 0 && (
+      case 'experience':
+        return cvData.workExperience.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
+              {isStudentMode ? 'Experiencia Laboral y Prácticas' : 'Experiencia Profesional'}
+            </h2>
+            {cvData.workExperience.map((exp) => (
+              <div key={exp.id} className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{exp.position}</h3>
+                    <p className="text-gray-700 italic">{exp.company}</p>
+                    {exp.location && (
+                      <p className="text-gray-600 text-sm">{exp.location}</p>
+                    )}
+                  </div>
+                  <p className="text-gray-600 text-sm text-right">
+                    {formatDate(exp.startDate)} - {exp.current ? 'Presente' : formatDate(exp.endDate)}
+                  </p>
+                </div>
+                {exp.description && (
+                  <p className="text-gray-700 text-sm">{exp.description}</p>
+                )}
+                {exp.achievements && exp.achievements.length > 0 && (
+                  <ul className="list-disc list-inside text-gray-700 text-sm space-y-1 ml-4">
+                    {exp.achievements.map((achievement, index) => (
+                      <li key={index}>{achievement}</li>
+                    ))}
+                  </ul>
+                )}
+                {exp.technologies && exp.technologies.length > 0 && (
+                  <p className="text-gray-600 text-sm">
+                    <span className="font-medium">Tecnologías:</span> {exp.technologies.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'skills':
+        return cvData.skills.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
               Habilidades y Competencias
@@ -191,7 +197,92 @@ export default function CVPreviewHarvard({ cvData }: CVPreviewHarvardProps) {
               ))}
             </div>
           </div>
-        )}
+        );
+
+      case 'certifications':
+        return cvData.certifications && cvData.certifications.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
+              Certificaciones
+            </h2>
+            {cvData.certifications.map((cert) => (
+              <div key={cert.id} className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-gray-900">{cert.name}</h3>
+                  <p className="text-gray-700 italic">{cert.issuer}</p>
+                  {cert.credentialId && (
+                    <p className="text-gray-600 text-sm">ID: {cert.credentialId}</p>
+                  )}
+                </div>
+                <p className="text-gray-600 text-sm text-right">
+                  {formatDate(cert.date)}
+                  {cert.expiryDate && ` - ${formatDate(cert.expiryDate)}`}
+                </p>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'hobbies':
+        return cvData.hobbies && cvData.hobbies.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-cv-lg font-bold uppercase tracking-wider border-b border-gray-300 pb-1">
+              Intereses y Hobbies
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {cvData.hobbies.map((hobby, index) => (
+                <span 
+                  key={index}
+                  className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
+                >
+                  {hobby}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto bg-white shadow-lg">
+      {isStudentMode && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3">
+          <div className="flex items-center gap-2 text-blue-700">
+            <span className="text-sm font-medium">✨ Vista Previa - Modo Estudiante</span>
+          </div>
+        </div>
+      )}
+      
+      <CardContent className="p-8 space-y-6 font-garamond text-cv-base">
+        {/* Header - Información Personal */}
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-cv-2xl font-bold tracking-wider text-gray-900 uppercase">{cvData.personalInfo.fullName}</h1>
+          <div className="flex justify-center items-center gap-2 text-cv-base text-gray-700">
+            {[
+              cvData.personalInfo.address,
+              cvData.personalInfo.phone,
+              cvData.personalInfo.email
+            ].filter(Boolean).join(' • ')}
+          </div>
+          {(cvData.personalInfo.linkedIn || cvData.personalInfo.website) && (
+            <div className="flex justify-center items-center gap-2 text-cv-base text-gray-700">
+              {[cvData.personalInfo.linkedIn, cvData.personalInfo.website]
+                .filter(Boolean)
+                .join(' • ')}
+            </div>
+          )}
+        </div>
+
+        {/* Renderizar secciones en el orden apropiado */}
+        {getSectionOrder().map(sectionType => (
+          <React.Fragment key={sectionType}>
+            {renderSection(sectionType)}
+          </React.Fragment>
+        ))}
       </CardContent>
     </Card>
   );

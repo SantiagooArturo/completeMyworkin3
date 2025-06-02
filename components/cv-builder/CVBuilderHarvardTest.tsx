@@ -24,10 +24,8 @@ const initialCVData: CVData = {
   education: [],
   workExperience: [],
   skills: [],
-  references: [],
   projects: [],
-  certifications: [],
-  languages: [],
+  certifications: []
 };
 
 export default function CVBuilderHarvardTest() {

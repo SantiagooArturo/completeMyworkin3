@@ -79,21 +79,6 @@ const testCVData: CVData = {
       expiryDate: '2026-05',
       credentialId: 'AWS-DEV-2023-001'
     }
-  ],  languages: [
-    { id: '1', language: 'Español', proficiency: 'Nativo' },
-    { id: '2', language: 'Inglés', proficiency: 'Avanzado' },
-    { id: '3', language: 'Portugués', proficiency: 'Básico' }
-  ],
-  references: [
-    {
-      id: '1',
-      name: 'María García López',
-      position: 'Tech Lead',
-      company: 'TechCorp Solutions',
-      email: 'maria.garcia@techcorp.com',
-      phone: '+51 987 123 456',
-      relationship: 'Supervisor directo'
-    }
   ]
 };
 
