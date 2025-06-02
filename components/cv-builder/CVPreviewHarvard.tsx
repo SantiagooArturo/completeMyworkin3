@@ -290,8 +290,43 @@ export default function CVPreviewHarvard({ cvData, isStudentMode = false }: CVPr
 
 function formatDate(dateString: string): string {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  
+  // Si el formato es YYYY-MM, procesarlo correctamente
+  if (dateString.includes('-') && dateString.length === 7) {
+    const [year, month] = dateString.split('-');
+    const monthNumber = parseInt(month);
+    const yearNumber = parseInt(year);
+    
+    // Crear fecha específica sin problemas de zona horaria
+    const date = new Date(yearNumber, monthNumber - 1, 1);
+    
+    const monthNames = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    
+    return `${monthNames[monthNumber - 1]} ${yearNumber}`;
+  }
+  
+  // Para otros formatos, intentar parsearlo
+  try {
+    const [year, month] = dateString.split('-');
+    if (year && month) {
+      const monthNumber = parseInt(month);
+      const yearNumber = parseInt(year);
+      
+      const monthNames = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ];
+      
+      return `${monthNames[monthNumber - 1]} ${yearNumber}`;
+    }
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+  }
+  
+  return dateString; // Fallback
 }
 
 function groupSkillsByCategory(skills: CVData['skills']) {

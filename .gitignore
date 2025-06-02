@@ -10,6 +10,9 @@ node_modules/
 serviceAccountKey.json
 firebase-service-account.json
 
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
 # Other sensitive files
 *.pem
 *.key

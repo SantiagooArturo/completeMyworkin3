@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CVData, CVDataHarvard, PersonalInfo, Education, WorkExperience, Skill, SkillCategory, Project, Certification } from '@/types/cv';
+import { CVData, PersonalInfo, Education, WorkExperience, Skill, SkillCategory, Project, Certification } from '@/types/cv';
 import ProjectsForm from './forms/ProjectsForm';
 import CertificationsForm from './forms/CertificationsForm';
 import StudentExperienceForm from './forms/StudentExperienceForm';
 import SkillsFormHarvard from './forms/SkillsFormHarvard';
 import HobbiesForm from './forms/HobbiesForm';
 import { cvBuilderService } from '@/services/cvBuilderService';
-import { CVPDFGeneratorHarvard } from '@/services/cvPDFGeneratorHarvard';
-import { CVPDFGeneratorHarvardImproved } from '@/services/cvPDFGeneratorHarvardImproved';
+import { CVPDFGeneratorSimple } from '@/services/cvPDFGeneratorSimple';
 import { CVDataConverter } from '@/lib/cv/CVDataConverter';
 import { useAuth } from '@/hooks/useAuth';
 import PersonalInfoForm from './forms/PersonalInfoForm';
@@ -57,6 +56,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
+  const [pdfGeneratorType, setPdfGeneratorType] = useState<'simple' | 'improved'>('simple'); // Nuevo estado
 
   useEffect(() => {
     if (cvId && user) {
@@ -256,11 +256,13 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         return;
       }
 
-      const dataForPDF = isStudentMode 
-        ? CVDataConverter.fromHarvardFormat(CVDataConverter.toHarvardFormat(cvData))
-        : cvData;
-
-      await CVPDFGeneratorHarvard.generatePDF(dataForPDF);
+      // Usar el generador seleccionado
+      if (pdfGeneratorType === 'improved') {
+        await CVPDFGeneratorSimple.generatePDF(cvData);
+      } else {
+        await CVPDFGeneratorSimple.generatePDF(cvData);
+      }
+      
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
@@ -332,6 +334,18 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                   onChange={(e) => setIsStudentMode(e.target.checked)}
                   className="w-4 h-4 text-[#028bbf] bg-gray-100 border-gray-300 rounded focus:ring-[#028bbf] focus:ring-2"
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4 text-[#028bbf]" />
+                <label className="text-sm font-medium text-gray-700">Diseño PDF</label>
+                <select
+                  value={pdfGeneratorType}
+                  onChange={(e) => setPdfGeneratorType(e.target.value as 'simple' | 'improved')}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none"
+                >
+                  <option value="simple">Simple</option>
+                  <option value="improved">Harvard Formal</option>
+                </select>
               </div>
             </div>
           </div>

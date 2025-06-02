@@ -12,8 +12,19 @@ interface CVPreviewProps {
 export default function CVPreview({ cvData }: CVPreviewProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    // Asegurarse de que el mes se muestre correctamente
+    
+    // Si el formato es YYYY-MM, procesarlo correctamente
+    if (dateString.includes('-') && dateString.length === 7) {
+      const [year, month] = dateString.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 15); // Día 15 para evitar problemas de zona horaria
+      return date.toLocaleDateString('es-ES', { 
+        year: 'numeric',
+        month: 'long'
+      });
+    }
+    
+    // Para otros formatos, usar el método original pero con día fijo
+    const date = new Date(dateString + '-15');
     return new Intl.DateTimeFormat('es-ES', { 
       year: 'numeric',
       month: 'long'

@@ -20,6 +20,7 @@ interface WorkExperienceFormProps {
 export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExperienceFormProps) {
   const [enhancingDescription, setEnhancingDescription] = useState<number | null>(null);
   const [suggestingAchievements, setSuggestingAchievements] = useState<number | null>(null);
+  const [enhancingPosition, setEnhancingPosition] = useState<number | null>(null);
 
   const addWorkExperience = () => {
     const newExperience: WorkExperience = {
@@ -82,8 +83,8 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
 
   const enhanceDescriptionWithAI = async (index: number) => {
     const exp = workExperience[index];
-    if (!exp.description) {
-      alert('Por favor, escribe una descripción inicial antes de mejorarla con IA.');
+    if (!exp.description || exp.description.trim().length < 5) {
+      alert('Por favor, escribe una descripción inicial (mínimo 5 caracteres) antes de mejorarla con IA.');
       return;
     }
     
@@ -91,13 +92,14 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
       setEnhancingDescription(index);
       const enhancedDescription = await cvAIEnhancementService.enhanceJobDescriptions(
         exp.description,
-        exp.position
+        exp.position || 'profesional',
+        exp.company
       );
       
       updateWorkExperience(index, 'description', enhancedDescription);
     } catch (error) {
       console.error('Error al mejorar la descripción:', error);
-      alert('No se pudo mejorar la descripción. Por favor, inténtalo más tarde.');
+      alert('No se pudo mejorar la descripción. Inténtalo más tarde o verifica tu conexión.');
     } finally {
       setEnhancingDescription(null);
     }
@@ -105,8 +107,8 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
 
   const suggestAchievementsWithAI = async (index: number) => {
     const exp = workExperience[index];
-    if (!exp.description) {
-      alert('Por favor, escribe una descripción del puesto antes de sugerir logros.');
+    if (!exp.description || exp.description.trim().length < 10) {
+      alert('Por favor, escribe una descripción del puesto (mínimo 10 caracteres) antes de sugerir logros.');
       return;
     }
     
@@ -114,23 +116,83 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
       setSuggestingAchievements(index);
       const suggestedAchievements = await cvAIEnhancementService.suggestAchievements(
         exp.description,
-        exp.position
+        exp.position || 'profesional',
+        exp.company
+      );
+      
+      // Filtrar logros que ya existen
+      const newAchievements = suggestedAchievements.filter(suggested => 
+        !exp.achievements.some(existing => 
+          existing.toLowerCase().includes(suggested.toLowerCase().substring(0, 20))
+        )
       );
       
       const updatedExperience = workExperience.map((exp, i) => 
         i === index ? { 
           ...exp, 
-          achievements: [...exp.achievements, ...suggestedAchievements] 
+          achievements: [...exp.achievements, ...newAchievements] 
         } : exp
       );
       
       onUpdate(updatedExperience);
+      
+      if (newAchievements.length === 0) {
+        alert('La IA no encontró nuevos logros para sugerir. Intenta ampliar la descripción del puesto.');
+      }
     } catch (error) {
       console.error('Error al sugerir logros:', error);
-      alert('No se pudieron sugerir logros. Por favor, inténtalo más tarde.');
+      alert('No se pudieron sugerir logros. Inténtalo más tarde o verifica tu conexión.');
     } finally {
       setSuggestingAchievements(null);
     }
+  };
+
+  const enhancePositionWithAI = async (index: number) => {
+    const exp = workExperience[index];
+    if (!exp.position || exp.position.trim().length < 3) {
+      alert('Por favor, escribe un título de puesto antes de mejorarlo.');
+      return;
+    }
+    
+    try {
+      setEnhancingPosition(index);
+      
+      // Mejorar el título del puesto basado en patrones comunes
+      const enhancedPosition = enhancePositionLocal(exp.position);
+      updateWorkExperience(index, 'position', enhancedPosition);
+    } catch (error) {
+      console.error('Error al mejorar el puesto:', error);
+    } finally {
+      setEnhancingPosition(null);
+    }
+  };
+
+  const enhancePositionLocal = (position: string): string => {
+    const positionEnhancements: { [key: string]: string } = {
+      'desarrollador': 'Desarrollador de Software',
+      'programador': 'Desarrollador Full Stack',
+      'analista': 'Analista de Sistemas',
+      'diseñador': 'Diseñador UX/UI',
+      'vendedor': 'Ejecutivo de Ventas',
+      'asistente': 'Asistente Administrativo',
+      'practicante': 'Practicante Profesional',
+      'intern': 'Practicante Profesional',
+      'junior': 'Desarrollador Junior',
+      'senior': 'Desarrollador Senior'
+    };
+
+    const positionLower = position.toLowerCase();
+    
+    for (const [key, enhancement] of Object.entries(positionEnhancements)) {
+      if (positionLower.includes(key)) {
+        return enhancement;
+      }
+    }
+    
+    // Si no encuentra coincidencia, capitalizar correctamente
+    return position.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
   };
 
   return (
@@ -236,7 +298,10 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         disabled={exp.current}
                         className="mt-1"
                       />
-                      <div className="flex items-center space-x-2 mt-2">
+                    </div>
+
+                    <div className="flex flex-col justify-center">
+                      <div className="flex items-center space-x-2">
                         <Checkbox
                           id={`current-job-${index}`}
                           checked={exp.current}
@@ -247,7 +312,7 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                             }
                           }}
                         />
-                        <Label htmlFor={`current-job-${index}`} className="text-sm">
+                        <Label htmlFor={`current-job-${index}`} className="text-sm cursor-pointer">
                           Trabajo actual
                         </Label>
                       </div>
