@@ -141,9 +141,9 @@ export class CVPDFGeneratorSimple {
             doc.setTextColor(0, 0, 0);
             doc.text(exp.position, leftMargin, y);
             
-            // Fechas alineadas a la derecha
+            // Fechas alineadas a la derecha (corregido para lógica igual que educación)
             doc.setFont('times', 'normal');
-            const expDateRange = `${this.formatDate(exp.startDate)} - ${exp.current ? 'Presente' : this.formatDate(exp.endDate)}`;
+            const expDateRange = `${this.formatDate(exp.startDate)}${exp.current ? ' – Presente' : exp.endDate ? ` – ${this.formatDate(exp.endDate)}` : ''}`;
             const expDateWidth = doc.getTextWidth(expDateRange);
             doc.text(expDateRange, pageWidth - rightMargin - expDateWidth, y);
             y += 5.5; // MÁS ESPACIO después de puesto y fechas
@@ -237,9 +237,8 @@ export class CVPDFGeneratorSimple {
             doc.setFont('times', 'bold');
             doc.setTextColor(0, 0, 0);
             doc.text(project.name, leftMargin, y);
-            
-            // Fechas y URL alineadas a la derecha
-            const projectDateRange = `${this.formatDate(project.startDate)} - ${project.current ? 'En curso' : this.formatDate(project.endDate)}`;
+              // Fechas y URL alineadas a la derecha
+            const projectDateRange = `${this.formatDate(project.startDate)}${project.current ? ' – En curso' : project.endDate ? ` – ${this.formatDate(project.endDate)}` : ''}`;
             const dateWidth = doc.getTextWidth(projectDateRange);
             doc.setFont('times', 'normal'); // font-medium
             doc.text(projectDateRange, pageWidth - rightMargin - dateWidth, y);
@@ -508,13 +507,22 @@ export class CVPDFGeneratorSimple {
       other: otherSkills
     };
   }
-
   // Función auxiliar para formatear fechas
   private static formatDate(dateString: string): string {
     if (!dateString) return '';
     
     try {
-      const date = new Date(dateString);
+      // Si el formato es YYYY-MM, agregar día ficticio para evitar problemas
+      let safeDate = dateString;
+      if (/^\d{4}-\d{2}$/.test(dateString)) {
+        safeDate += '-01';
+      } else if (/^\d{4}$/.test(dateString)) {
+        safeDate += '-01-01';
+      }
+      
+      const date = new Date(safeDate);
+      if (isNaN(date.getTime())) return dateString;
+      
       const months = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'

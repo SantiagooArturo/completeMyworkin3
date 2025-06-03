@@ -140,11 +140,10 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
                         {/* Descripción de la empresa */}
                         {exp.description && (
                           <p className="text-black italic font-serif mb-1">{exp.description}</p>
-                        )}
-                        {/* Puesto y fechas en la misma línea */}
+                        )}                        {/* Puesto y fechas en la misma línea */}
                         <div className="flex justify-between items-start mb-1">
                           <span className="font-semibold text-black font-serif">{exp.position}</span>
-                          <span className="text-black font-serif">{formatDate(exp.startDate)} - {exp.current ? 'Presente' : formatDate(exp.endDate)}</span>
+                          <span className="text-black font-serif">{formatDateRange(exp.startDate, exp.endDate, exp.current)}</span>
                         </div>
                         {/* Sub-secciones (si existen) */}
                         {exp.sections && exp.sections.length > 0 ? (
@@ -194,10 +193,9 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
                         <div className="flex justify-between items-start mb-1">
                           <div>
                             <h4 className="font-bold text-black font-serif">{project.name}</h4>
-                          </div>
-                          <div className="text-right text-black">
+                          </div>                          <div className="text-right text-black">
                             <p className="font-medium font-serif">
-                              {formatDate(project.startDate)} - {project.current ? 'En curso' : formatDate(project.endDate)}
+                              {formatDateRange(project.startDate, project.endDate, project.current)}
                             </p>
                             {project.url && (
                               <a href={project.url} className="text-blue-600 text-sm hover:underline font-serif">
@@ -245,9 +243,8 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
                         {edu.fieldOfStudy && (
                           <span className="font-normal text-black font-serif"> — {edu.fieldOfStudy}</span>
                         )}
-                      </span>
-                      <span className="font-normal text-black font-serif">
-                        {edu.startDate ? `${formatDate(edu.startDate)}${edu.current ? ' – Actualidad' : edu.endDate ? ` – ${formatDate(edu.endDate)}` : ''}` : ''}
+                      </span>                      <span className="font-normal text-black font-serif">
+                        {edu.startDate ? formatDateRange(edu.startDate, edu.endDate, edu.current) : ''}
                       </span>
                     </div>
                     {edu.achievements && edu.achievements.length > 0 && (

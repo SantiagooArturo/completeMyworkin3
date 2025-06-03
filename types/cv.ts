@@ -137,21 +137,9 @@ export interface CVData {
   hobbies?: string[];      // ✅ NUEVO: Hobbies e intereses
 }
 
-// ✅ NUEVO: CVData optimizada específicamente para formato Harvard
-export interface CVDataHarvard {
-  personalInfo: PersonalInfo;
-  education: Education[];
-  workExperience: WorkExperience[];
-  skillCategories: SkillCategory[]; // Reemplaza skills[] para formato Harvard
-  certifications: Certification[];
-  languages: Language[];
-  hobbies?: string[];      // Hobbies e intereses personales
-  projects?: Project[];    // Opcional para formato Harvard
-  references?: Reference[]; // Opcional, usualmente no se incluyen
-}
 
 // ✅ NUEVO: Datos de ejemplo para Francesco Lucchesi
-export const francescoLucchesiCV: CVDataHarvard = {
+export const francescoLucchesiCV: CVData = {
   personalInfo: {
     fullName: "Francesco Lucchesi Via",
     email: "flucchesi88@gmail.com",
@@ -222,27 +210,31 @@ export const francescoLucchesiCV: CVDataHarvard = {
       ]
     }
   ],
-  skillCategories: [
+  skills: [
     {
-      id: "skill-cat-1",
-      category: "Software",
-      skills: [
-        { name: "Microsoft Office: Excel", level: "(Intermedio)" },
-        { name: "Power Point", level: "(Avanzado)" },
-        { name: "Word", level: "(Avanzado)" },
-        { name: "SQL", level: "(Principiante)" }
-      ]
+      id: "skill-1",
+      name: "Microsoft Excel",
+      level: "Avanzado",
+      category: "Technical",
+      proficiency: 5,
+      certifications: ["cert-1"]
     },
     {
-      id: "skill-cat-2",
-      category: "Gestión de proyectos",
-      skills: [
-        { name: "Microsoft Project" },
-        { name: "Trello" },
-        { name: "Notion" }
-      ]
+      id: "skill-2",
+      name: "Análisis de Datos",
+      level: "Intermedio",
+      category: "Analytical",
+      proficiency: 4
+    },
+    {
+      id: "skill-3",
+      name: "Gestión de Proyectos",
+      level: "Intermedio",
+      category: "Leadership",
+      proficiency: 4
     }
   ],
+  projects: [],
   certifications: [
     {
       id: "cert-1",

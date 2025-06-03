@@ -491,4 +491,5 @@ export class CVAIEnhancementService {
   }
 }
 
+// ✅ Exportar instancia singleton para facilitar uso
 export const cvAIEnhancementService = new CVAIEnhancementService();
