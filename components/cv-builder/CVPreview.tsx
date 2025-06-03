@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CVData } from '@/types/cv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Mail, Phone, MapPin, Linkedin, Globe, Star } from 'lucide-react';
@@ -53,10 +53,41 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
       </div>
     );
   };
-
   const getSkillsByCategory = (category: string) => {
     return cvData.skills.filter(skill => skill.category === category);
+  };  // Función para organizar habilidades por categorías específicas del formato Harvard
+  const getSkillsForHarvardFormat = () => {
+    const softwareSkills = cvData.skills.filter(skill => 
+      skill.category === 'Technical'
+    );
+    const projectManagementSkills = cvData.skills.filter(skill => 
+      skill.category === 'Leadership' || skill.category === 'Analytical'
+    );
+    const languageSkills = cvData.skills.filter(skill => 
+      skill.category === 'Language'
+    );
+    const otherSkills = cvData.skills.filter(skill => 
+      skill.category === 'Research' || skill.category === 'Communication'
+    );
+
+    return {
+      software: softwareSkills,
+      projectManagement: projectManagementSkills,
+      languages: languageSkills,
+      other: otherSkills
+    };
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   return (
     <Card className="w-full max-w-4xl">
@@ -66,137 +97,161 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
           Vista Previa - Formato Harvard
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="bg-white p-8 shadow-lg border space-y-6 text-sm">          {/* Header - Información Personal - Formato Harvard */}
-          <header className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-wide">
+      <CardContent>        <div className="bg-white p-8 shadow-lg border space-y-6 text-sm">
+          {/* Header - Información Personal - Formato Harvard */}
+          <header className="text-center border-b border-gray-300 pb-4">
+            <h1 className="text-2xl font-bold text-black mb-3 tracking-normal font-serif">
               {cvData.personalInfo.fullName || 'Tu Nombre Completo'}
             </h1>
             
-            <div className="flex flex-wrap justify-center gap-4 text-gray-600">
-              {cvData.personalInfo.email && (
-                <div className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  <span>{cvData.personalInfo.email}</span>
-                </div>
-              )}
-              {cvData.personalInfo.phone && (
-                <div className="flex items-center gap-1">
-                  <Phone className="h-4 w-4" />
-                  <span>{cvData.personalInfo.phone}</span>
-                </div>
-              )}
-              {cvData.personalInfo.address && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{cvData.personalInfo.address}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap justify-center gap-4 mt-2 text-gray-600">
-              {cvData.personalInfo.linkedIn && (
-                <div className="flex items-center gap-1">
-                  <Linkedin className="h-4 w-4" />
-                  <span>{cvData.personalInfo.linkedIn}</span>
-                </div>
-              )}
-              {cvData.personalInfo.website && (
-                <div className="flex items-center gap-1">
-                  <Globe className="h-4 w-4" />
-                  <span>{cvData.personalInfo.website}</span>
-                </div>
-              )}
+            {/* Contacto en una sola línea */}
+            <div className="text-gray-700 text-sm font-serif">
+              {[
+                cvData.personalInfo.email,
+                cvData.personalInfo.phone,
+                cvData.personalInfo.address,
+                cvData.personalInfo.linkedIn,
+                cvData.personalInfo.website
+              ].filter(Boolean).join(' • ')}
             </div>
           </header>
 
-          {/* Resumen Profesional */}
+          {/* Resumen (sin título) */}
           {cvData.personalInfo.summary && (
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                RESUMEN PROFESIONAL
-              </h2>
-              <p className="text-gray-700 leading-relaxed">
-                {cvData.personalInfo.summary}
-              </p>
-            </section>
-          )}
+            <section className="text-gray-800 leading-relaxed text-justify font-serif">
+              {cvData.personalInfo.summary}
+            </section>          )}
 
-          {/* Experiencia Laboral */}
-          {cvData.workExperience.length > 0 && (
+          {/* Experiencia Laboral y Proyectos - Sección combinada */}
+          {(cvData.workExperience.length > 0 || cvData.projects.length > 0) && (
             <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                EXPERIENCIA PROFESIONAL
+              <h2 className="text-lg font-semibold text-center text-black pb-2 mb-4 font-serif">
+                Experiencia
               </h2>
-              <div className="space-y-4">
-                {cvData.workExperience.map((exp, index) => (
-                  <div key={exp.id}>
-                    <div className="flex justify-between items-start mb-1">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{exp.position}</h3>
-                        <p className="text-gray-700 font-medium">{exp.company}</p>
+              
+              {/* Experiencia Laboral */}
+              {cvData.workExperience.length > 0 && (
+                <div className="mb-6">
+                  <div className="space-y-4">
+                    {cvData.workExperience.map((exp, index) => (
+                      <div key={exp.id}>
+                        {/* Empresa */}
+                        <h4 className="font-bold text-black font-serif">{exp.company}</h4>
+                        {/* Descripción de la empresa */}
+                        {exp.description && (
+                          <p className="text-black italic font-serif mb-1">{exp.description}</p>
+                        )}
+                        {/* Puesto y fechas en la misma línea */}
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-semibold text-black font-serif">{exp.position}</span>
+                          <span className="text-black font-serif">{formatDate(exp.startDate)} - {exp.current ? 'Presente' : formatDate(exp.endDate)}</span>
+                        </div>
+                        {/* Sub-secciones (si existen) */}
+                        {exp.sections && exp.sections.length > 0 ? (
+                          <div className="space-y-3">
+                            {exp.sections.map((section, sectionIndex) => (
+                              <div key={sectionIndex}>
+                                <h5 className="font-semibold text-black font-serif mb-1">{section.title}</h5>
+                                {section.achievements && section.achievements.length > 0 && (
+                                  <ul className="list-disc list-inside text-black space-y-1 font-serif ml-4">
+                                    {section.achievements.map((achievement, achIndex) => (
+                                      <li key={achIndex}>{achievement}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          exp.achievements && exp.achievements.length > 0 && (
+                            <ul className="list-disc list-inside text-black space-y-1 font-serif">
+                              {exp.achievements.map((achievement, achIndex) => (
+                                <li key={achIndex}>{achievement}</li>
+                              ))}
+                            </ul>
+                          )
+                        )}
+                        {/* Tecnologías */}
+                        {exp.technologies && exp.technologies.length > 0 && (
+                          <div className="mt-2">
+                            <span className="text-black font-medium font-serif">Tecnologías: </span>
+                            <span className="text-black font-serif">{exp.technologies.join(', ')}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right text-gray-600">
-                        <p>
-                          {formatDate(exp.startDate)} - {exp.current ? 'Presente' : formatDate(exp.endDate)}
-                        </p>
-                        {exp.location && <p className="text-sm">{exp.location}</p>}
-                      </div>
-                    </div>
-                    
-                    {exp.description && (
-                      <p className="text-gray-700 mb-2">{exp.description}</p>
-                    )}
-                    
-                    {exp.achievements && exp.achievements.length > 0 && (
-                      <ul className="list-disc list-inside text-gray-700 space-y-1">
-                        {exp.achievements.map((achievement, achIndex) => (
-                          <li key={achIndex}>{achievement}</li>
-                        ))}
-                      </ul>
-                    )}
-                    
-                    {exp.technologies && exp.technologies.length > 0 && (
-                      <div className="mt-2">
-                        <span className="text-gray-600 font-medium">Tecnologías: </span>
-                        <span className="text-gray-700">{exp.technologies.join(', ')}</span>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </div>
+              )}
 
-          {/* Educación */}
+              {/* Proyectos */}
+              {cvData.projects.length > 0 && (
+                <div>
+                  <h3 className="text-base font-semibold text-black mb-3 font-serif">Proyectos Destacados</h3>
+                  <div className="space-y-3">
+                    {cvData.projects.map((project, index) => (
+                      <div key={project.id}>
+                        <div className="flex justify-between items-start mb-1">
+                          <div>
+                            <h4 className="font-bold text-black font-serif">{project.name}</h4>
+                          </div>
+                          <div className="text-right text-black">
+                            <p className="font-medium font-serif">
+                              {formatDate(project.startDate)} - {project.current ? 'En curso' : formatDate(project.endDate)}
+                            </p>
+                            {project.url && (
+                              <a href={project.url} className="text-blue-600 text-sm hover:underline font-serif">
+                                Ver proyecto
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {project.description && (
+                          <p className="text-black mb-2 font-serif">{project.description}</p>
+                        )}
+                        
+                        {project.highlights && project.highlights.length > 0 && (
+                          <ul className="list-disc list-inside text-black space-y-1 mb-2 font-serif">
+                            {project.highlights.map((highlight, hlIndex) => (
+                              <li key={hlIndex}>{highlight}</li>
+                            ))}
+                          </ul>                        )}
+                        
+                        {project.technologies && project.technologies.length > 0 && (
+                          <div>
+                            <span className="text-black font-medium font-serif">Tecnologías: </span>
+                            <span className="text-black font-serif">{project.technologies.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}          {/* Educación */}
           {cvData.education.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                FORMACIÓN ACADÉMICA
+              <h2 className="text-lg text-center font-semibold text-black pb-2 mb-4 font-serif">
+                Educación
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {cvData.education.map((edu, index) => (
                   <div key={edu.id}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
-                        <p className="text-gray-700">{edu.institution}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-black font-serif">
+                        {edu.institution}
                         {edu.fieldOfStudy && (
-                          <p className="text-gray-600">{edu.fieldOfStudy}</p>
+                          <span className="font-normal text-black font-serif"> — {edu.fieldOfStudy}</span>
                         )}
-                        {edu.gpa && (
-                          <p className="text-gray-600">GPA: {edu.gpa}</p>
-                        )}
-                      </div>
-                      <div className="text-right text-gray-600">
-                        <p>
-                          {formatDate(edu.startDate)} - {edu.current ? 'En curso' : formatDate(edu.endDate)}
-                        </p>
-                      </div>
+                      </span>
+                      <span className="font-normal text-black font-serif">
+                        {edu.startDate ? `${formatDate(edu.startDate)}${edu.current ? ' – Actualidad' : edu.endDate ? ` – ${formatDate(edu.endDate)}` : ''}` : ''}
+                      </span>
                     </div>
-                    
                     {edu.achievements && edu.achievements.length > 0 && (
-                      <ul className="list-disc list-inside text-gray-700 mt-1 space-y-1">
+                      <ul className="list-disc list-inside text-black mt-1 space-y-1 font-serif">
                         {edu.achievements.map((achievement, achIndex) => (
                           <li key={achIndex}>{achievement}</li>
                         ))}
@@ -206,114 +261,73 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
                 ))}
               </div>
             </section>
-          )}
-
-          {/* Proyectos */}
-          {cvData.projects.length > 0 && (
+          )}          {/* Habilidades y Certificaciones - Sección reorganizada */}
+          {(cvData.skills.length > 0 || cvData.certifications.length > 0 || (cvData as any).hobbies?.length > 0) && (
             <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                PROYECTOS DESTACADOS
+              <h2 className="text-lg font-semibold text-center text-black pb-2 mb-4 font-serif">
+                Habilidades & Certificaciones
               </h2>
-              <div className="space-y-3">
-                {cvData.projects.map((project, index) => (
-                  <div key={project.id}>                    <div className="flex justify-between items-start mb-1">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                      </div>
-                      <div className="text-right text-gray-600">
-                        <p>
-                          {formatDate(project.startDate)} - {project.current ? 'En curso' : formatDate(project.endDate)}
-                        </p>
-                        {project.url && (
-                          <a href={project.url} className="text-blue-600 text-sm hover:underline">
-                            Ver proyecto
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {project.description && (
-                      <p className="text-gray-700 mb-2">{project.description}</p>
-                    )}
-                    
-                    {project.highlights && project.highlights.length > 0 && (
-                      <ul className="list-disc list-inside text-gray-700 space-y-1 mb-2">
-                        {project.highlights.map((highlight, hlIndex) => (
-                          <li key={hlIndex}>{highlight}</li>
-                        ))}
-                      </ul>
-                    )}
-                    
-                    {project.technologies && project.technologies.length > 0 && (
-                      <div>
-                        <span className="text-gray-600 font-medium">Tecnologías: </span>
-                        <span className="text-gray-700">{project.technologies.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Habilidades */}
-          {cvData.skills.length > 0 && (
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                HABILIDADES Y COMPETENCIAS
-              </h2>
-                {['Técnica', 'Blanda', 'Idioma'].map((category) => {
-                const categorySkills = getSkillsByCategory(category);
-                if (categorySkills.length === 0) return null;
-                
-                const categoryNames = {
-                  'Técnica': 'Técnicas',
-                  'Blanda': 'Interpersonales', 
-                  'Idioma': 'Idiomas'
-                };
-                
+              {(() => {
+                const skillsOrganized = getSkillsForHarvardFormat();
                 return (
-                  <div key={category} className="mb-3">
-                    <h4 className="font-medium text-gray-900 mb-2">{categoryNames[category as keyof typeof categoryNames]}</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {categorySkills.map((skill, index) => (
-                        <div key={skill.id} className="flex items-center justify-between">
-                          <span className="text-gray-700">{skill.name}</span>
-                          {renderSkillLevel(skill.level)}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-2">
+                    {/* Software */}
+                    {skillsOrganized.software.length > 0 && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Software:</span> {skillsOrganized.software.map(skill =>
+                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                        ).join(', ')}
+                      </p>
+                    )}
+                    {/* Gestión de proyectos */}
+                    {skillsOrganized.projectManagement.length > 0 && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Gestión de Proyectos:</span> {skillsOrganized.projectManagement.map(skill =>
+                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                        ).join(', ')}
+                      </p>
+                    )}
+                    {/* Certificaciones */}
+                    {cvData.certifications.length > 0 && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Certificaciones:</span> {cvData.certifications.map(cert => {
+                          let certText = cert.name;
+                          if (cert.issuer) certText += ` - ${cert.issuer}`;
+                          if (cert.date) certText += ` (${formatDate(cert.date)})`;
+                          return certText;
+                        }).join(', ')}
+                      </p>
+                    )}
+                    {/* Idiomas */}
+                    {((cvData.languages && cvData.languages.length > 0) || skillsOrganized.languages.length > 0) && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Idiomas:</span> {[
+                          ...(cvData.languages?.map(lang =>
+                            `${lang.language} (${lang.proficiency})`
+                          ) || []),
+                          ...skillsOrganized.languages.map(skill =>
+                            `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                          )
+                        ].join(', ')}
+                      </p>
+                    )}
+                    {/* Hobbies */}
+                    {(cvData as any).hobbies && (cvData as any).hobbies.length > 0 && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Hobbies:</span> {(cvData as any).hobbies.join(', ')}
+                      </p>
+                    )}
+                    {/* Otras habilidades */}
+                    {skillsOrganized.other.length > 0 && (
+                      <p className="text-black font-serif leading-relaxed">
+                        <span className="font-semibold">Otras Competencias:</span> {skillsOrganized.other.map(skill =>
+                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                        ).join(', ')}
+                      </p>
+                    )}
                   </div>
                 );
-              })}
-            </section>
-          )}
-
-          {/* Certificaciones */}
-          {cvData.certifications.length > 0 && (
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-1 mb-3">
-                CERTIFICACIONES
-              </h2>
-              <div className="space-y-2">
-                {cvData.certifications.map((cert, index) => (
-                  <div key={cert.id} className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{cert.name}</h3>
-                      <p className="text-gray-700">{cert.issuer}</p>
-                      {cert.credentialId && (
-                        <p className="text-gray-600 text-sm">ID: {cert.credentialId}</p>
-                      )}
-                    </div>
-                    <div className="text-right text-gray-600">
-                      <p>{formatDate(cert.date)}</p>
-                      {cert.expiryDate && (
-                        <p className="text-sm">Expira: {formatDate(cert.expiryDate)}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              })()}
             </section>
           )}
         </div>

@@ -22,15 +22,12 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
     const newEducation: Education = {
       id: Date.now().toString(),
       institution: '',
-      degree: '',
+      degree: '', // requerido por el tipo, pero no se muestra en el formulario
       fieldOfStudy: '',
       startDate: '',
       endDate: '',
       current: false,
-      gpa: '',
-      achievements: [],
-      honors: '',
-      relevantCourses: []
+      achievements: []
     };
     onUpdate([...education, newEducation]);
     setEditingIndex(education.length);
@@ -116,8 +113,8 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
                     <Label>Institución *</Label>
                     <Input
                       value={edu.institution}
@@ -126,35 +123,12 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       className="mt-1"
                     />
                   </div>
-                  
-                  <div>
-                    <Label>Título/Grado *</Label>
-                    <Input
-                      value={edu.degree}
-                      onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                      placeholder="Ej: Bachiller en Ingeniería de Sistemas"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
+                  <div className="flex-1">
                     <Label>Campo de Estudio</Label>
                     <Input
                       value={edu.fieldOfStudy}
                       onChange={(e) => updateEducation(index, 'fieldOfStudy', e.target.value)}
                       placeholder="Ej: Ingeniería de Software"
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label>Promedio/GPA (Opcional)</Label>
-                    <Input
-                      value={edu.gpa || ''}
-                      onChange={(e) => updateEducation(index, 'gpa', e.target.value)}
-                      placeholder="Ej: 16.5 / 20"
                       className="mt-1"
                     />
                   </div>
@@ -204,16 +178,6 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <Label>Honores/Reconocimientos (Opcional)</Label>
-                  <Input
-                    value={edu.honors || ''}
-                    onChange={(e) => updateEducation(index, 'honors', e.target.value)}
-                    placeholder="Ej: Summa Cum Laude, Mención Honorífica"
-                    className="mt-1"
-                  />
-                </div>
-
                 {/* Logros y Actividades */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
@@ -228,7 +192,6 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       Agregar
                     </Button>
                   </div>
-                  
                   {edu.achievements?.map((achievement, achIndex) => (
                     <div key={achIndex} className="flex gap-2 mb-2">
                       <Input

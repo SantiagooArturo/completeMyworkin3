@@ -42,13 +42,13 @@ export default function SkillsForm({ skills, onUpdate }: SkillsFormProps) {
     { value: 'Avanzado', label: 'Dominio Profesional', description: 'Experiencia sustancial y liderazgo' },
     { value: 'Experto', label: 'Experticia Reconocida', description: 'Autoridad en la materia' }
   ];
-
   const skillCategories = [
     { value: 'Technical', label: 'Competencias Técnicas', description: 'Habilidades específicas de la profesión' },
     { value: 'Analytical', label: 'Habilidades Analíticas', description: 'Capacidad de análisis y resolución' },
     { value: 'Leadership', label: 'Liderazgo y Gestión', description: 'Dirección y gestión de equipos' },
     { value: 'Communication', label: 'Comunicación', description: 'Habilidades interpersonales' },
-    { value: 'Research', label: 'Investigación', description: 'Metodología y análisis académico' }
+    { value: 'Research', label: 'Investigación', description: 'Metodología y análisis académico' },
+    { value: 'Language', label: 'Idiomas', description: 'Competencias lingüísticas y comunicación internacional' }
   ];
 
   const addSkill = () => {

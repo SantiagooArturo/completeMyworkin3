@@ -51,7 +51,7 @@ export interface Skill {
   id: string;
   name: string;
   level: 'Básico' | 'Intermedio' | 'Avanzado' | 'Experto';
-  category: 'Technical' | 'Analytical' | 'Leadership' | 'Communication' | 'Research';
+  category: 'Technical' | 'Analytical' | 'Leadership' | 'Communication' | 'Research' | 'Language';
   proficiency?: number;     // Nivel de competencia (1-5)
   certifications?: string[]; // Certificaciones relacionadas
 }

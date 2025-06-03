@@ -50,9 +50,9 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cvTitle, setCVTitle] = useState('Mi CV');
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (cvId && user) {
@@ -60,14 +60,35 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
     }
   }, [cvId, user]);
 
+  // Detectar cambios no guardados
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [cvData, cvTitle]);
+
+  // Evento beforeunload para advertir sobre cambios no guardados
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   const loadExistingCV = async () => {
     try {
-      setIsLoading(true);
-      const savedCV = await cvBuilderService.getCV(cvId!);
+      setIsLoading(true);      const savedCV = await cvBuilderService.getCV(cvId!);
       if (savedCV) {
         // Cargar datos del CV
         setCVData(savedCV.data as CVData);
         setCVTitle(savedCV.title);
+        setHasUnsavedChanges(false); // No hay cambios no guardados al cargar
       }
     } catch (error) {
       console.error('Error cargando CV:', error);
@@ -120,54 +141,46 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const validateStudentCV = (cvData: CVData): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
-    // Validar información personal obligatoria
-    if (!cvData.personalInfo.fullName.trim()) {
-      errors.push('El nombre completo es obligatorio');
-    }
-    if (!cvData.personalInfo.email.trim()) {
-      errors.push('El correo electrónico es obligatorio');
-    }
-    if (!cvData.personalInfo.phone.trim()) {
-      errors.push('El teléfono es obligatorio');
-    }
-    if (!cvData.personalInfo.summary.trim()) {
-      errors.push('El resumen profesional es obligatorio');
+    // Validar información personal obligatoria SOLO si todos los campos están vacíos
+    const personal = cvData.personalInfo;
+    const personalFields = [personal.fullName, personal.email, personal.phone, personal.summary];
+    if (personalFields.every(f => !f.trim())) {
+      errors.push('Completa al menos un campo de información personal');
     }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (cvData.personalInfo.email && !emailRegex.test(cvData.personalInfo.email)) {
-      errors.push('El formato del correo electrónico no es válido');
+    // Validar que tenga al menos una educación si la sección no está vacía
+    if (cvData.education.length > 0) {
+      cvData.education.forEach((edu, index) => {
+        if (!edu.institution.trim()) {
+          errors.push(`La institución en educación ${index + 1} es obligatoria`);
+        }
+      });
     }
 
-    // Validar que tenga al menos una educación
-    if (cvData.education.length === 0) {
-      errors.push('Debe incluir al menos una formación académica');
+    // Experiencia o proyectos: solo si hay datos, validar campos mínimos
+    // Solo validar que el nombre de la empresa o proyecto no esté vacío, pero permitir guardar aunque falten otros campos
+    // No validar logros, fechas, ni otros detalles para permitir guardado parcial
+    if (cvData.workExperience.length > 0) {
+      cvData.workExperience.forEach((exp, index) => {
+        if (!exp.company.trim()) {
+          errors.push(`La empresa en experiencia ${index + 1} es obligatoria`);
+        }
+      });
     }
-
-    // Validar educación
-    cvData.education.forEach((edu, index) => {
-      if (!edu.institution.trim()) {
-        errors.push(`La institución en educación ${index + 1} es obligatoria`);
-      }
-      if (!edu.degree.trim()) {
-        errors.push(`El título en educación ${index + 1} es obligatorio`);
-      }
-    });
-
-    // Para estudiantes: Validar que tenga EXPERIENCIA O PROYECTOS (no ambos obligatorios)
-    const hasWorkExperience = cvData.workExperience.length > 0 && 
-      cvData.workExperience.some(exp => exp.company.trim() && exp.position.trim());
-    const hasProjects = cvData.projects.length > 0 && 
-      cvData.projects.some(proj => proj.name.trim() && proj.description.trim());
-
-    if (!hasWorkExperience && !hasProjects) {
-      errors.push('Como estudiante, debes incluir al menos experiencia laboral O proyectos académicos/personales');
+    if (cvData.projects.length > 0) {
+      cvData.projects.forEach((proj, index) => {
+        if (!proj.name.trim()) {
+          errors.push(`El nombre del proyecto ${index + 1} es obligatorio`);
+        }
+      });
     }
-
-    // Validar que tenga habilidades
-    if (cvData.skills.length === 0) {
-      errors.push('Debe incluir al menos algunas habilidades');
+    // Habilidades: solo si hay alguna, validar nombre
+    if (cvData.skills.length > 0) {
+      cvData.skills.forEach((skill, index) => {
+        if (!skill.name.trim()) {
+          errors.push(`El nombre de la habilidad ${index + 1} es obligatorio`);
+        }
+      });
     }
 
     return {
@@ -193,14 +206,13 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
-      }
-
-      if (cvId) {
+      }      if (cvId) {
         await cvBuilderService.updateCV(cvId, cvData, cvTitle);
       } else {
         await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');
       }
 
+      setHasUnsavedChanges(false); // Marcar como guardado
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
@@ -228,7 +240,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       alert('Error al generar el PDF');
     }
   };
-
   const getCompletionPercentage = () => {
     const sections = [
       { 
@@ -247,8 +258,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
           : (cvData.workExperience.length > 0 && cvData.workExperience.every(exp => exp.company && exp.position && exp.achievements.length > 0))
       },
       { 
-        key: 'skills', 
-        isComplete: cvData.skills.length > 0
+        key: 'skills_certifications', 
+        isComplete: cvData.skills.length > 0 || cvData.certifications.length > 0
       }
     ];
 

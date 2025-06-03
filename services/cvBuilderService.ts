@@ -35,6 +35,8 @@ export interface SavedCV {
   template: string;
   createdAt: any;
   updatedAt: any;
+  deleted?: boolean;
+  deletedAt?: any;
 }
 
 // Interfaz para validación específica para estudiantes
@@ -99,7 +101,6 @@ export class CVBuilderService {
       throw new Error('Error al actualizar el CV');
     }
   }
-
   // Obtener CVs del usuario
   async getUserCVs(user: User): Promise<SavedCV[]> {
     try {
@@ -118,8 +119,11 @@ export class CVBuilderService {
         ...doc.data()
       })) as SavedCV[];
 
+      // Filtrar CVs no eliminados
+      const activeCVs = cvs.filter(cv => !cv.deleted);
+
       // Ordenar por fecha de actualización más reciente
-      return cvs.sort((a, b) => {
+      return activeCVs.sort((a, b) => {
         const dateA = a.updatedAt?.toDate() || new Date(0);
         const dateB = b.updatedAt?.toDate() || new Date(0);
         return dateB.getTime() - dateA.getTime();
@@ -197,9 +201,6 @@ export class CVBuilderService {
     cvData.education.forEach((edu, index) => {
       if (!edu.institution.trim()) {
         errors.push(`La institución en educación ${index + 1} es obligatoria`);
-      }
-      if (!edu.degree.trim()) {
-        errors.push(`El título en educación ${index + 1} es obligatorio`);
       }
     });
 
