@@ -20,6 +20,8 @@ import { TabsContent } from '@/components/ui/tabs';
 import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info, GraduationCap } from 'lucide-react';
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CreditService } from '@/services/creditService';
+import { useCredits } from '@/hooks/useCredits';
 
 const  initialCVData: CVData = {
   personalInfo: {
@@ -43,6 +45,7 @@ interface CVBuilderProps {
 
 export default function CVBuilder({ cvId }: CVBuilderProps) {
   const { user } = useAuth();
+  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
   const [cvData, setCVData] = useState<CVData>(initialCVData);
   const [activeTab, setActiveTab] = useState('personal');
   const [showPreview, setShowPreview] = useState(true);
@@ -188,7 +191,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       errors
     };
   };
-
   const handleSaveCV = async () => {
     if (!user) {
       alert('Debes iniciar sesión para guardar tu CV');
@@ -206,7 +208,29 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
-      }      if (cvId) {
+      }
+
+      // Solo consumir crédito para CVs nuevos (no para ediciones)
+      if (!cvId) {
+        // Verificar si tiene suficientes créditos
+        if (!hasEnoughCredits('cv-creation')) {
+          alert('No tienes suficientes créditos para crear un CV. Necesitas 1 crédito.');
+          return;
+        }
+
+        // Consumir crédito antes de guardar
+        const consumeResult = await CreditService.consumeCredits(user, 'cv-creation', 'Creación de CV');
+        
+        if (!consumeResult.success) {
+          alert(consumeResult.message || 'Error al procesar los créditos');
+          return;
+        }
+        
+        // Actualizar balance de créditos en la UI
+        await refreshCredits();
+      }
+
+      if (cvId) {
         await cvBuilderService.updateCV(cvId, cvData, cvTitle);
       } else {
         await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');

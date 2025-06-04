@@ -7,85 +7,36 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Upload, FileText, Crown, AlertCircle } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
-import { cvReviewService, CV_PACKAGES } from "../../services/cvReviewService";
-import { mercadoPagoService } from "../../services/mercadoPagoService";
-import CVPricingModal from "../../components/CVPricingModal";
-import CVPaymentModal from "../../components/CVPaymentModal";
-import CVAccountStatus from "../../components/CVAccountStatus";
+import { useCredits } from "@/hooks/useCredits";
+import { CreditService } from "@/services/creditService";
+import CreditBalance from "@/components/CreditBalance";
+import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 
 export default function AnalizarCVPage() {
+  const { user } = useAuth();
+  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
   const [file, setFile] = useState<File | null>(null);
   const [puestoPostular, setPuestoPostular] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const { user } = useAuth();
   const [freeUsed, setFreeUsed] = useState(false);
   const [longWait, setLongWait] = useState(false);
-  const [veryLongWait, setVeryLongWait] = useState(false); // Nuevos estados para el sistema persistente
-  const [showPricingModal, setShowPricingModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [userStats, setUserStats] = useState({
-    totalReviews: 0,
-    remainingReviews: 0,
-    freeReviewUsed: false,
-    lastReviewDate: undefined as Date | undefined,
-    canUseService: true, // Inicialmente true para permitir carga
-    nextReviewType: "free" as "free" | "paid" | "none",
-  });
-  const [reviewPermission, setReviewPermission] = useState({
-    canReview: false,
-    reason: "loading",
-  });
-  const [reviewId, setReviewId] = useState<string | null>(null);
-
+  const [veryLongWait, setVeryLongWait] = useState(false);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
   useEffect(() => {
-    if (user) {
-      loadUserData();
-    } else {
+    if (!user) {
       const used = localStorage.getItem("cv_analysis_used");
       setFreeUsed(used === "true");
     }
   }, [user]);
-  const loadUserData = async () => {
-    if (!user) return;
-
-    try {
-      // Cargar datos reales del usuario
-      const stats = await cvReviewService.getUserStats(user);
-      const permission = await cvReviewService.canUserReview(user);
-
-      setUserStats({
-        totalReviews: stats.totalReviews,
-        remainingReviews: stats.remainingReviews,
-        freeReviewUsed: stats.freeReviewUsed,
-        lastReviewDate: stats.lastReviewDate || undefined,
-        canUseService: stats.canUseService,
-        nextReviewType: stats.nextReviewType,
-      });
-
-      setReviewPermission(permission);
-      setFreeUsed(stats.freeReviewUsed);
-    } catch (error) {
-      console.error("Error loading user data:", error);
-      // En caso de error, permitir al menos intentar una revisión
-      setUserStats((prev) => ({
-        ...prev,
-        canUseService: true,
-        nextReviewType: "free",
-      }));
-    }
-  };
 
   useEffect(() => {
     let longWaitTimer: NodeJS.Timeout;
@@ -142,7 +93,6 @@ export default function AnalizarCVPage() {
       }
     }
   };
-
   const handleAnalyze = async () => {
     if (!file) {
       setError("Por favor, sube un archivo PDF");
@@ -153,66 +103,46 @@ export default function AnalizarCVPage() {
       return;
     }
 
-    // Si no hay usuario y ya usó el análisis gratuito, mostrar error
+    // Verificar autenticación para usuarios registrados
     if (!user && freeUsed) {
-      setError(
-        "Has usado tu análisis gratuito. Inicia sesión para analizar más CVs."
-      );
+      setError("Has usado tu análisis gratuito. Inicia sesión para analizar más CVs.");
       return;
-    } // Para usuarios autenticados, verificar si pueden hacer revisión
-    if (user) {
-      if (!userStats.canUseService) {
-        setShowPricingModal(true);
-        return;
-      }
     }
+
+    // Para usuarios autenticados, verificar créditos
+    if (user && !hasEnoughCredits('cv-review')) {
+      setShowInsufficientCreditsModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
     setLongWait(false);
     setVeryLongWait(false);
 
-    let currentReviewId: string | null = null;
-
     try {
+      // Para usuarios autenticados, consumir crédito
+      if (user) {
+        const consumeResult = await CreditService.consumeCredits(user, 'cv-review', 'Análisis de CV');
+        
+        if (!consumeResult.success) {
+          setError(consumeResult.message || 'Error al procesar los créditos');
+          return;
+        }
+
+        // Actualizar balance de créditos en la UI
+        await refreshCredits();
+      }
+
       // 1. Subir el archivo CV
       const cvUrl = await uploadCV(file);
 
-      // 2. Crear la revisión en el sistema (solo para usuarios autenticados)
-      if (user) {
-        currentReviewId = await cvReviewService.createReview(user, {
-          fileName: file.name,
-          position: puestoPostular,
-          status: "processing",
-          fileUrl: cvUrl,
-        });
-        setReviewId(currentReviewId);
-
-        // 3. Consumir una revisión del usuario
-        await cvReviewService.consumeReview(user);
-
-        // 4. Actualizar estadísticas locales
-        await loadUserData();
-      }
-
-      // 5. Procesar el análisis real del CV
+      // 2. Procesar el análisis del CV
       const analysisResult = await analyzeCV(cvUrl, puestoPostular);
 
-      // 6. Actualizar la revisión con el resultado (solo para usuarios autenticados)
-      if (user && currentReviewId) {
-        // Extraer la URL del resultado del análisis
-        const resultUrl =
-          analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
-
-        await cvReviewService.updateReviewResult(currentReviewId, {
-          resultUrl: resultUrl,
-          status: "completed",
-        });
-      }
-
-      // 7. Mostrar el resultado al usuario
-      const finalResultUrl =
-        analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
+      // 3. Mostrar el resultado al usuario
+      const finalResultUrl = analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
       setResult(finalResultUrl);
 
       // Marcar como usado solo después de un análisis exitoso para usuarios no logueados
@@ -221,111 +151,45 @@ export default function AnalizarCVPage() {
         localStorage.setItem("cv_analysis_used", "true");
       }
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Error al analizar el CV";
+      const errorMsg = error instanceof Error ? error.message : "Error al analizar el CV";
       setError(errorMsg);
-
-      // Si hubo error y se creó una revisión, actualizarla como fallida
-      if (user && currentReviewId) {
-        try {
-          await cvReviewService.updateReviewResult(currentReviewId, {
-            status: "failed",
-            errorMessage: errorMsg,
-          });
-        } catch (updateError) {
-          console.error(
-            "Error actualizando estado de revisión fallida:",
-            updateError
-          );
-        }
-      }
     } finally {
       setLoading(false);
     }
   };
-
   const handlePurchaseSuccess = async (purchaseData: any) => {
-    if (!user) return;
-
-    try {
-      // Agregar las revisiones compradas al usuario
-      await cvReviewService.addPurchasedReviews(user, purchaseData);
-
-      // Recargar datos del usuario
-      await loadUserData();
-
-      // Cerrar modal
-      setShowPricingModal(false);
-
-      // Mostrar mensaje de éxito
-      setError(null);
-    } catch (error) {
-      console.error("Error processing purchase:", error);
-      setError("Error al procesar la compra. Por favor, contacta soporte.");
+    // Actualizar balance de créditos después de la compra
+    if (user) {
+      await refreshCredits();
     }
   };
-  const handleSelectPackage = async (packageId: string) => {
-    if (!user) {
-      setError("Debes iniciar sesión para comprar un paquete");
-      return;
-    }
-    try {
-      // Buscar información del paquete
-      const selectedPackage = CV_PACKAGES.find((pkg) => pkg.id === packageId);
-      if (!selectedPackage) {
-        throw new Error("Paquete no encontrado");
-      }
-
-      // Crear preferencia de pago real en Mercado Pago
-      const paymentData = await mercadoPagoService.createPaymentPreference({
-        packageId,
-        userEmail: user.email || "",
-        userId: user.uid,
-        userName: user.displayName || user.email || "Usuario",
-        packageName: selectedPackage.name,
-        amount: selectedPackage.price,
-        currency: "PEN",
-      });
-
-      // Redirigir al usuario a Mercado Pago
-      if (paymentData.init_point) {
-        window.location.href = paymentData.init_point;
-      } else {
-        throw new Error("No se pudo crear el enlace de pago");
-      }
-    } catch (error) {
-      console.error("Error creating payment:", error);
-      setError("Error al procesar la compra. Por favor, intenta nuevamente.");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
-      <Navbar />
-      <div className="h-[52px]"></div>
+      <Navbar />      <div className="h-[52px]"></div>
+      
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-2xl">
           <div className="bg-white rounded-2xl p-8 shadow-xl">
-            {" "}
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-center text-gray-900">
               Analiza tu CV con{" "}
               <span className="text-[#028bbf]">Inteligencia Artificial</span>
             </h1>
             <p className="text-lg text-gray-600 mb-8 text-center">
-              Sube tu CV en PDF y recibe feedback instantáneo para el puesto que
-              deseas.
+              Sube tu CV en PDF y recibe feedback instantáneo para el puesto que deseas.
             </p>
+            
+            {!user && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-amber-800">
+                  <strong>Análisis gratuito:</strong> Los usuarios no registrados pueden hacer 1 análisis gratuito. 
+                  Regístrate para acceso completo con créditos.
+                </p>
+              </div>
+            )}
+            
             <Card className="shadow-none border-0">
               <CardContent>
                 <div className="space-y-6">
-                  {" "}
-                  {/* Estado de la cuenta para usuarios autenticados */}
-                  {user && (
-                    <CVAccountStatus
-                      userStats={userStats}
-                      onPurchaseClick={() => setShowPaymentModal(true)}
-                    />
-                  )}
                   {/* Alerta para usuarios no logueados que ya usaron su análisis gratuito */}
                   {!user && freeUsed && (
                     <Alert className="mb-6 border-amber-200 bg-amber-50">
@@ -453,36 +317,20 @@ export default function AnalizarCVPage() {
                         Analizar CV
                       </>
                     )}{" "}
-                  </Button>
-                </div>
+                  </Button>                </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </section>
-      {/* Modal de precios */}
-      {showPricingModal && (
-        <CVPricingModal
-          isOpen={showPricingModal}
-          onClose={() => setShowPricingModal(false)}
-          onSelectPackage={handleSelectPackage}
-          userEmail={user?.email ?? undefined}
-          loading={loading}
-        />
-      )}
-
-      {/* Modal de pago con MercadoPago */}
-      {showPaymentModal && (
-        <CVPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          userEmail={user?.email ?? undefined}
-          userName={user?.displayName ?? user?.email ?? undefined}
-          userId={user?.uid}
-          onPaymentSuccess={async () => {
-            await loadUserData();
-            setShowPaymentModal(false);
-          }}
+      </section>      {/* Insufficient Credits Modal */}
+      {user && (
+        <InsufficientCreditsModal
+          isOpen={showInsufficientCreditsModal}
+          onClose={() => setShowInsufficientCreditsModal(false)}
+          user={user}
+          toolType="cv-review"
+          requiredCredits={1}
+          currentCredits={credits}
         />
       )}
     </div>

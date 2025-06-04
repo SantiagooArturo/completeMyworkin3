@@ -11,6 +11,11 @@ import {
   Search,
 } from "lucide-react";
 import { matchesCV, uploadCV } from "@/src/utils/cvAnalyzer";
+import { useAuth } from "@/hooks/useAuth";
+import { useCredits } from "@/hooks/useCredits";
+import { CreditService } from "@/services/creditService";
+import CreditBalance from "@/components/CreditBalance";
+import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 
 interface Practica {
   title: string;
@@ -23,6 +28,8 @@ interface Practica {
 }
 
 export default function MatchCV() {
+  const { user } = useAuth();
+  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
   const [file, setFile] = useState<File | null>(null);
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
@@ -32,6 +39,7 @@ export default function MatchCV() {
   const [showResults, setShowResults] = useState(false);
   const [practicas, setPracticas] = useState<Practica[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
 
   // Maneja la carga del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,10 +59,10 @@ export default function MatchCV() {
     setShowInputs(true);
     setError(null);
   };
-
   // Maneja la búsqueda real de prácticas
   const handleBuscar = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!file) {
       setError("Por favor, selecciona un archivo PDF");
       return;
@@ -63,11 +71,37 @@ export default function MatchCV() {
       setError("Completa todos los campos");
       return;
     }
+
+    // Verificar autenticación
+    if (!user) {
+      setError("Debes iniciar sesión para usar esta herramienta");
+      return;
+    }
+
+    // Verificar créditos
+    if (!hasEnoughCredits('job-match')) {
+      setShowInsufficientCreditsModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setShowInputs(false);
     setShowResults(false);
+    
     try {
+      // Consumir crédito antes de procesar
+      const consumeResult = await CreditService.consumeCredits(user, 'job-match', 'Búsqueda de empleos');
+      
+      if (!consumeResult.success) {
+        setError(consumeResult.message || 'Error al procesar los créditos');
+        setShowInputs(true);
+        return;
+      }
+
+      // Actualizar balance de créditos en la UI
+      await refreshCredits();
+
       // 1. Subir el archivo y obtener la URL
       const pdfUrl = await uploadCV(file);
       // 2. Buscar prácticas con la URL
@@ -102,11 +136,18 @@ export default function MatchCV() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
       <Navbar />
       <div className="h-[52px]"></div>
+      
+      {/* Credit Balance for authenticated users */}
+      {user && (
+        <div className="container mx-auto max-w-6xl px-4 pt-4">
+          <CreditBalance />
+        </div>
+      )}
+      
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="max-w-4xl mx-auto text-center mb-16">
@@ -117,6 +158,14 @@ export default function MatchCV() {
             <p className="text-xl text-gray-600">
               Nuestra IA analiza tu CV y te conecta con las prácticas que mejor se ajustan a tu perfil.
             </p>
+            {!user && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-amber-800">
+                  <strong>Nota:</strong> Necesitas iniciar sesión y tener créditos para usar esta herramienta. 
+                  Cada búsqueda consume 1 crédito.
+                </p>
+              </div>
+            )}
           </div>
           <div className="bg-white rounded-2xl p-8 shadow-xl">
             <div className="flex items-center gap-4 mb-8">
@@ -244,10 +293,19 @@ export default function MatchCV() {
                 <p className="text-lg text-gray-600 mb-4">¿Quieres recibir alertas de prácticas en WhatsApp?</p>
                 <a href="https://mc.ht/s/SH1lIgc" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center px-6 py-3 bg-[#028bbf] text-white rounded-xl font-medium hover:bg-[#027ba8] transition-colors">Conecta con El Chambas</a>
               </div>
-            </div>
-          </div>
+            </div>          </div>
         </div>
-      </section>
+      </section>      {/* Insufficient Credits Modal */}
+      {user && (
+        <InsufficientCreditsModal
+          isOpen={showInsufficientCreditsModal}
+          onClose={() => setShowInsufficientCreditsModal(false)}
+          user={user}
+          toolType="job-match"
+          requiredCredits={1}
+          currentCredits={credits}
+        />
+      )}
     </div>
   );
 }
