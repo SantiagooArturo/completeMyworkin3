@@ -15,12 +15,11 @@ import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/services/creditService";
-import CreditBalance from "@/components/CreditBalance";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 
 export default function AnalizarCVPage() {
   const { user } = useAuth();
-  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
+  const { credits, hasEnoughCredits, refreshCredits, reserveCredits, confirmReservation, revertReservation } = useCredits(user);
   const [file, setFile] = useState<File | null>(null);
   const [puestoPostular, setPuestoPostular] = useState("");
   const [loading, setLoading] = useState(false);
@@ -121,18 +120,20 @@ export default function AnalizarCVPage() {
     setLongWait(false);
     setVeryLongWait(false);
 
+    let reservationId = '';
+
     try {
-      // Para usuarios autenticados, consumir crédito
+      // Para usuarios autenticados, RESERVAR créditos (no consumir aún)
       if (user) {
-        const consumeResult = await CreditService.consumeCredits(user, 'cv-review', 'Análisis de CV');
+        const reserveResult = await reserveCredits('cv-review', 'Análisis de CV');
         
-        if (!consumeResult.success) {
-          setError(consumeResult.message || 'Error al procesar los créditos');
+        if (!reserveResult.success) {
+          setError('No se pudieron reservar los créditos. Inténtalo de nuevo.');
           return;
         }
 
-        // Actualizar balance de créditos en la UI
-        await refreshCredits();
+        reservationId = reserveResult.reservationId;
+        console.log('🔒 Créditos reservados con ID:', reservationId);
       }
 
       // 1. Subir el archivo CV
@@ -141,7 +142,21 @@ export default function AnalizarCVPage() {
       // 2. Procesar el análisis del CV
       const analysisResult = await analyzeCV(cvUrl, puestoPostular);
 
-      // 3. Mostrar el resultado al usuario
+      // 3. ✅ SOLO AHORA CONFIRMAR EL CONSUMO DE CRÉDITOS (después del éxito)
+      if (user && reservationId) {
+        const confirmResult = await confirmReservation(reservationId, 'cv-review', 'Análisis de CV completado');
+        
+        if (confirmResult) {
+          console.log('✅ Créditos consumidos exitosamente');
+          // Actualizar balance de créditos en la UI
+          await refreshCredits();
+        } else {
+          console.warn('⚠️ Advertencia: Análisis exitoso pero error al confirmar créditos');
+          // El análisis fue exitoso, pero hubo un problema con los créditos
+        }
+      }
+
+      // 4. Mostrar el resultado al usuario
       const finalResultUrl = analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
       setResult(finalResultUrl);
 
@@ -150,7 +165,21 @@ export default function AnalizarCVPage() {
         setFreeUsed(true);
         localStorage.setItem("cv_analysis_used", "true");
       }
+
     } catch (error) {
+      console.error('❌ Error en análisis de CV:', error);
+      
+      // ❌ SI HAY ERROR, REVERTIR LA RESERVA DE CRÉDITOS
+      if (user && reservationId) {
+        try {
+          await revertReservation(reservationId, 'cv-review', 'Error en el servicio de análisis: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+          console.log('🔄 Reserva de créditos revertida por error en el servicio');
+        } catch (revertErr) {
+          console.error('❌ Error al revertir reserva:', revertErr);
+          // En este caso, podríamos notificar al soporte para revisión manual
+        }
+      }
+      
       const errorMsg = error instanceof Error ? error.message : "Error al analizar el CV";
       setError(errorMsg);
     } finally {

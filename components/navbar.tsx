@@ -16,6 +16,7 @@ import LoginModal from "./LoginModal";
 import Avatar from "./Avatar";
 import UserProfile from "./UserProfile";
 import StudentDashboard from "./StudentDashboard";
+import CreditBalance from "./CreditBalance";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -73,6 +74,11 @@ export default function Navbar() {
             </nav>
           </div>
           <div className="flex items-center gap-2">
+            {/* Credit Balance Badge - Solo para usuarios autenticados */}
+            {user && (
+              <CreditBalance variant="compact" className="hidden md:flex" />
+            )}
+            
             <a 
               href="https://mc.ht/s/SH1lIgc"
               target="_blank" 
@@ -127,6 +133,13 @@ export default function Navbar() {
         {/* Menú móvil */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t mt-3">
+            {/* Credit Balance Badge - Solo para usuarios autenticados en móvil */}
+            {user && (
+              <div className="mb-4 pb-3 border-b border-gray-200">
+                <CreditBalance variant="compact" />
+              </div>
+            )}
+            
             <nav className="flex flex-col gap-4">
               <Link 
                 href="/" 

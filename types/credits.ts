@@ -13,12 +13,14 @@ export interface CreditAccount {
 export interface CreditTransaction {
   id: string;
   userId: string;
-  type: 'purchase' | 'spend' | 'bonus' | 'refund';
+  type: 'purchase' | 'spend' | 'bonus' | 'refund' | 'reserve' | 'confirm' | 'revert';
   amount: number;
   tool?: 'cv-review' | 'cv-creation' | 'job-match';
   description: string;
   paymentId?: string;
   packageId?: string;
+  status?: 'pending' | 'confirmed' | 'reverted' | 'completed';
+  reservationId?: string; // Para vincular reservas, confirmaciones y reversiones
   metadata?: Record<string, any>;
   createdAt: Date;
 }

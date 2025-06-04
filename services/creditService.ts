@@ -591,4 +591,254 @@ export class CreditService {
       return [];
     }
   }
+
+  /**
+   * NUEVOS MÉTODOS PARA SISTEMA DE RESERVA DE CRÉDITOS
+   */
+
+  /**
+   * Reserva créditos para usar una herramienta (sin consumirlos aún)
+   */
+  static async reserveCredits(
+    user: User,
+    tool: ToolType,
+    description?: string
+  ): Promise<{ success: boolean; reservationId: string; remainingCredits: number; message: string }> {
+    try {
+      const requiredCredits = CREDIT_CONFIG.TOOL_COSTS[tool];
+      const reservationId = `reservation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      return await runTransaction(db, async (transaction) => {
+        const accountRef = doc(db, this.CREDIT_ACCOUNTS_COLLECTION, user.uid);
+        const accountDoc = await transaction.get(accountRef);
+        
+        if (!accountDoc.exists()) {
+          throw new Error('Cuenta de créditos no encontrada');
+        }
+        
+        const currentCredits = accountDoc.data().credits || 0;
+        
+        if (currentCredits < requiredCredits) {
+          return {
+            success: false,
+            reservationId: '',
+            remainingCredits: currentCredits,
+            message: CREDIT_CONFIG.MESSAGES.INSUFFICIENT_CREDITS
+          };
+        }
+        
+        // No actualizamos la cuenta aquí, solo registramos la reserva
+        // Los créditos siguen disponibles hasta que se confirme la reserva
+        
+        // Crear transacción de reserva
+        const transactionRef = doc(collection(db, this.CREDIT_TRANSACTIONS_COLLECTION));
+        transaction.set(transactionRef, {
+          userId: user.uid,
+          type: 'reserve',
+          amount: requiredCredits,
+          tool: tool,
+          status: 'pending',
+          reservationId: reservationId,
+          description: description || `Reserva de crédito para: ${tool}`,
+          createdAt: serverTimestamp()
+        });
+        
+        return {
+          success: true,
+          reservationId: reservationId,
+          remainingCredits: currentCredits,
+          message: 'Créditos reservados exitosamente'
+        };
+      });
+    } catch (error) {
+      console.error('Error reservando créditos:', error);
+      throw new Error('No se pudieron reservar los créditos');
+    }
+  }
+
+  /**
+   * Confirma una reserva de créditos y los consume definitivamente
+   */
+  static async confirmCreditReservation(
+    user: User,
+    reservationId: string,
+    tool: ToolType,
+    description?: string
+  ): Promise<{ success: boolean; remainingCredits: number; message: string }> {
+    try {
+      const requiredCredits = CREDIT_CONFIG.TOOL_COSTS[tool];
+      
+      return await runTransaction(db, async (transaction) => {
+        // Verificar que la reserva existe y está pendiente
+        const reservationQuery = query(
+          collection(db, this.CREDIT_TRANSACTIONS_COLLECTION),
+          where('userId', '==', user.uid),
+          where('reservationId', '==', reservationId),
+          where('type', '==', 'reserve'),
+          where('status', '==', 'pending')
+        );
+        
+        const reservationSnapshot = await getDocs(reservationQuery);
+        
+        if (reservationSnapshot.empty) {
+          return {
+            success: false,
+            remainingCredits: 0,
+            message: 'Reserva no encontrada o ya procesada'
+          };
+        }
+        
+        const accountRef = doc(db, this.CREDIT_ACCOUNTS_COLLECTION, user.uid);
+        const accountDoc = await transaction.get(accountRef);
+        
+        if (!accountDoc.exists()) {
+          throw new Error('Cuenta de créditos no encontrada');
+        }
+        
+        const currentCredits = accountDoc.data().credits || 0;
+        
+        if (currentCredits < requiredCredits) {
+          return {
+            success: false,
+            remainingCredits: currentCredits,
+            message: 'Créditos insuficientes para confirmar la reserva'
+          };
+        }
+        
+        const newCredits = currentCredits - requiredCredits;
+        
+        // Actualizar cuenta
+        transaction.update(accountRef, {
+          credits: newCredits,
+          totalSpent: increment(requiredCredits),
+          updatedAt: serverTimestamp()
+        });
+        
+        // Marcar reserva como confirmada
+        const reservationDoc = reservationSnapshot.docs[0];
+        transaction.update(reservationDoc.ref, {
+          status: 'confirmed',
+          updatedAt: serverTimestamp()
+        });
+        
+        // Crear transacción de confirmación/consumo
+        const confirmTransactionRef = doc(collection(db, this.CREDIT_TRANSACTIONS_COLLECTION));
+        transaction.set(confirmTransactionRef, {
+          userId: user.uid,
+          type: 'confirm',
+          amount: requiredCredits,
+          tool: tool,
+          status: 'completed',
+          reservationId: reservationId,
+          description: description || `Consumo confirmado para: ${tool}`,
+          createdAt: serverTimestamp()
+        });
+        
+        return {
+          success: true,
+          remainingCredits: newCredits,
+          message: CREDIT_CONFIG.MESSAGES.TOOL_SUCCESS
+        };
+      });
+    } catch (error) {
+      console.error('Error confirmando reserva de créditos:', error);
+      throw new Error('No se pudo confirmar la reserva de créditos');
+    }
+  }
+
+  /**
+   * Revierte una reserva de créditos si el servicio externo falló
+   */
+  static async revertCreditReservation(
+    user: User,
+    reservationId: string,
+    tool: ToolType,
+    reason?: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      return await runTransaction(db, async (transaction) => {
+        // Verificar que la reserva existe y está pendiente
+        const reservationQuery = query(
+          collection(db, this.CREDIT_TRANSACTIONS_COLLECTION),
+          where('userId', '==', user.uid),
+          where('reservationId', '==', reservationId),
+          where('type', '==', 'reserve'),
+          where('status', '==', 'pending')
+        );
+        
+        const reservationSnapshot = await getDocs(reservationQuery);
+        
+        if (reservationSnapshot.empty) {
+          return {
+            success: false,
+            message: 'Reserva no encontrada o ya procesada'
+          };
+        }
+        
+        // Marcar reserva como revertida
+        const reservationDoc = reservationSnapshot.docs[0];
+        transaction.update(reservationDoc.ref, {
+          status: 'reverted',
+          updatedAt: serverTimestamp()
+        });
+        
+        // Crear transacción de reversión
+        const revertTransactionRef = doc(collection(db, this.CREDIT_TRANSACTIONS_COLLECTION));
+        transaction.set(revertTransactionRef, {
+          userId: user.uid,
+          type: 'revert',
+          amount: CREDIT_CONFIG.TOOL_COSTS[tool],
+          tool: tool,
+          status: 'completed',
+          reservationId: reservationId,
+          description: reason || `Reserva revertida para: ${tool} - Servicio externo falló`,
+          createdAt: serverTimestamp()
+        });
+        
+        return {
+          success: true,
+          message: 'Reserva revertida exitosamente'
+        };
+      });
+    } catch (error) {
+      console.error('Error revirtiendo reserva de créditos:', error);
+      throw new Error('No se pudo revertir la reserva de créditos');
+    }
+  }
+
+  /**
+   * Limpia reservas antiguas que no fueron confirmadas ni revertidas (más de 1 hora)
+   */
+  static async cleanupExpiredReservations(): Promise<void> {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      
+      const expiredReservationsQuery = query(
+        collection(db, this.CREDIT_TRANSACTIONS_COLLECTION),
+        where('type', '==', 'reserve'),
+        where('status', '==', 'pending'),
+        where('createdAt', '<=', Timestamp.fromDate(oneHourAgo))
+      );
+      
+      const expiredSnapshot = await getDocs(expiredReservationsQuery);
+      
+      const batch = db.batch ? db.batch() : null;
+      if (!batch) return;
+      
+      expiredSnapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, {
+          status: 'reverted',
+          updatedAt: serverTimestamp(),
+          description: (doc.data().description || '') + ' - Expirado automáticamente'
+        });
+      });
+      
+      if (expiredSnapshot.docs.length > 0) {
+        await batch.commit();
+        console.log(`Limpiadas ${expiredSnapshot.docs.length} reservas expiradas`);
+      }
+    } catch (error) {
+      console.error('Error limpiando reservas expiradas:', error);
+    }
+  }
 }

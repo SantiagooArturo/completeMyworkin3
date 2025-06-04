@@ -299,6 +299,7 @@ export default function CreditDashboard() {
       <CreditPurchaseModal 
         isOpen={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
+        user={user}
         onSuccess={() => {
           refreshCredits();
           loadTransactions();

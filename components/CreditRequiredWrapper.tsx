@@ -165,6 +165,7 @@ export default function CreditRequiredWrapper({
         <CreditPurchaseModal
           isOpen={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
+          user={user}
           onSuccess={handlePurchaseSuccess}
         />
       </div>

@@ -62,6 +62,7 @@ export default function CreditBalance({
             isOpen={showPurchaseModal}
             onClose={() => setShowPurchaseModal(false)}
             user={user}
+            onSuccess={() => setShowPurchaseModal(false)}
           />
         )}
       </>
@@ -115,6 +116,7 @@ export default function CreditBalance({
           isOpen={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
           user={user}
+          onSuccess={() => setShowPurchaseModal(false)}
         />
       )}
     </>

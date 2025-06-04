@@ -13,8 +13,6 @@ import {
 import { matchesCV, uploadCV } from "@/src/utils/cvAnalyzer";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
-import { CreditService } from "@/services/creditService";
-import CreditBalance from "@/components/CreditBalance";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 
 interface Practica {
@@ -29,7 +27,14 @@ interface Practica {
 
 export default function MatchCV() {
   const { user } = useAuth();
-  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
+  const { 
+    credits, 
+    hasEnoughCredits, 
+    refreshCredits, 
+    reserveCredits, 
+    confirmReservation, 
+    revertReservation 
+  } = useCredits(user);
   const [file, setFile] = useState<File | null>(null);
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
@@ -89,26 +94,67 @@ export default function MatchCV() {
     setShowInputs(false);
     setShowResults(false);
     
+    let reservationId: string | null = null;
+    
     try {
-      // Consumir crédito antes de procesar
-      const consumeResult = await CreditService.consumeCredits(user, 'job-match', 'Búsqueda de empleos');
+      // 1. RESERVAR créditos antes de procesar (no consumir aún)
+      console.log("🔒 Reservando créditos para job matching...");
+      const reserveResult = await reserveCredits('job-match', 'Búsqueda de empleos');
       
-      if (!consumeResult.success) {
-        setError(consumeResult.message || 'Error al procesar los créditos');
+      if (!reserveResult.success) {
+        setError('Error al reservar créditos');
         setShowInputs(true);
         return;
       }
+      
+      reservationId = reserveResult.reservationId;
+      console.log(`✅ Créditos reservados con ID: ${reservationId}`);
 
+      // 2. Intentar servicios externos
+      console.log("📤 Subiendo CV...");
+      const pdfUrl = await uploadCV(file);
+      console.log("✅ CV subido exitosamente");
+      
+      console.log("🔍 Buscando prácticas...");
+      const trabajos = await matchesCV(pdfUrl, puesto, telefono);
+      console.log(`✅ Encontradas ${trabajos.length} prácticas`);
+      
+      // 3. CONFIRMAR consumo de créditos solo después del éxito
+      console.log("💳 Confirmando consumo de créditos...");
+      const confirmResult = await confirmReservation(reservationId, 'job-match', 'Búsqueda de empleos completada');
+      
+      if (!confirmResult) {
+        console.warn("⚠️ No se pudo confirmar el consumo de créditos, pero el servicio fue exitoso");
+      } else {
+        console.log("✅ Créditos confirmados y consumidos");
+      }
+      
       // Actualizar balance de créditos en la UI
       await refreshCredits();
-
-      // 1. Subir el archivo y obtener la URL
-      const pdfUrl = await uploadCV(file);
-      // 2. Buscar prácticas con la URL
-      const trabajos = await matchesCV(pdfUrl, puesto, telefono);
+      
+      // Mostrar resultados
       setPracticas(trabajos);
       setShowResults(true);
+      
     } catch (err: any) {
+      console.error("❌ Error en job matching:", err);
+      
+      // REVERTIR reserva de créditos en caso de error
+      if (reservationId) {
+        try {
+          console.log("🔄 Revirtiendo reserva de créditos...");
+          const revertResult = await revertReservation(reservationId, 'job-match', `Error: ${err.message}`);
+          
+          if (revertResult) {
+            console.log("✅ Reserva de créditos revertida exitosamente");
+          } else {
+            console.warn("⚠️ No se pudo revertir la reserva de créditos");
+          }
+        } catch (revertError) {
+          console.error("❌ Error al revertir reserva:", revertError);
+        }
+      }
+      
       setError(err.message || "Error inesperado");
       setShowInputs(true);
     } finally {
@@ -140,13 +186,6 @@ export default function MatchCV() {
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
       <Navbar />
       <div className="h-[52px]"></div>
-      
-      {/* Credit Balance for authenticated users */}
-      {user && (
-        <div className="container mx-auto max-w-6xl px-4 pt-4">
-          <CreditBalance />
-        </div>
-      )}
       
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-6xl">

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, Star, CheckCircle, Loader2, Lock, ArrowLeft, Zap, Crown, Gift } from 'lucide-react';
 import { CREDIT_CONFIG } from '@/types/credits';
-import { CreditService } from '@/services/creditService';
 import { useCredits } from '@/hooks/useCredits';
 import { User } from 'firebase/auth';
 
@@ -35,6 +34,7 @@ export default function CreditPurchaseModal({
   const [showCardForm, setShowCardForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mpInstance, setMpInstance] = useState<any>(null);
+  const [userReady, setUserReady] = useState(false);
   const [cardData, setCardData] = useState<CardFormData>({
     cardNumber: '',
     expiryDate: '',
@@ -55,6 +55,30 @@ export default function CreditPurchaseModal({
     }
   }, [user?.email]);
 
+  // Verificar que el usuario esté completamente cargado
+  useEffect(() => {
+    if (user && user.uid) {
+      setUserReady(true);
+      console.log('✅ Usuario listo para compra:', user.email || user.uid);
+    } else {
+      setUserReady(false);
+      console.log('⏳ Esperando datos del usuario...', { user, uid: user?.uid, email: user?.email });
+    }
+  }, [user]);
+
+  // Debug cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🔍 Modal de créditos abierto. Estado del usuario:', {
+        user: user,
+        email: user?.email,
+        uid: user?.uid,
+        displayName: user?.displayName,
+        userReady: userReady
+      });
+    }
+  }, [isOpen, user, userReady]);
+
   // Inicializar MercadoPago SDK
   useEffect(() => {
     if (isOpen && !mpInstance) {
@@ -72,7 +96,14 @@ export default function CreditPurchaseModal({
   }, [isOpen, mpInstance]);
 
   const handleSelectPackage = (packageData: typeof CREDIT_CONFIG.CREDIT_PACKAGES[0]) => {
-    if (!user) {
+    console.log('🔍 Debug usuario en handleSelectPackage:', {
+      user: user,
+      email: user?.email,
+      uid: user?.uid,
+      userReady: userReady
+    });
+    
+    if (!user || !user.uid) {
       alert('Por favor, inicia sesión para continuar con la compra');
       return;
     }
@@ -213,6 +244,19 @@ export default function CreditPurchaseModal({
   };
 
   if (!isOpen) return null;
+
+  // Si no hay usuario o no está listo, mostrar loading muy brevemente
+  if (isOpen && (!user || !user.uid)) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg p-6 text-center max-w-sm w-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#028bbf] mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Preparando compra</h3>
+          <p className="text-gray-600">Cargando datos del usuario...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

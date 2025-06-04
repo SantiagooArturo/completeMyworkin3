@@ -17,6 +17,11 @@ export interface UseCreditReturn {
   hasEnoughCredits: (tool: ToolType) => boolean;
   loadTransactionHistory: () => Promise<void>;
   
+  // Nuevos métodos para reserva de créditos
+  reserveCredits: (tool: ToolType, description?: string) => Promise<{ success: boolean; reservationId: string }>;
+  confirmReservation: (reservationId: string, tool: ToolType, description?: string) => Promise<boolean>;
+  revertReservation: (reservationId: string, tool: ToolType, reason?: string) => Promise<boolean>;
+  
   // Utilidades
   shouldShowLowCreditsWarning: boolean;
 }
@@ -131,6 +136,100 @@ export function useCredits(user: User | null): UseCreditReturn {
     }
   };
 
+  // Nuevos métodos para el sistema de reserva de créditos
+  const reserveCredits = async (tool: ToolType, description?: string): Promise<{ success: boolean; reservationId: string }> => {
+    if (!user) {
+      setError('Usuario no autenticado');
+      return { success: false, reservationId: '' };
+    }
+
+    try {
+      setError(null);
+      
+      const result = await CreditService.reserveCredits(user, tool, description);
+      
+      if (result.success) {
+        // No actualizamos el balance aquí, solo marcamos la reserva
+        return { success: true, reservationId: result.reservationId };
+      } else {
+        setError(result.message);
+        return { success: false, reservationId: '' };
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al reservar créditos';
+      setError(errorMessage);
+      console.error('Error reservando créditos:', err);
+      return { success: false, reservationId: '' };
+    }
+  };
+
+  const confirmReservation = async (reservationId: string, tool: ToolType, description?: string): Promise<boolean> => {
+    if (!user) {
+      setError('Usuario no autenticado');
+      return false;
+    }
+
+    try {
+      setError(null);
+      
+      const result = await CreditService.confirmCreditReservation(user, reservationId, tool, description);
+      
+      if (result.success) {
+        // Actualizar el balance después de confirmar
+        setCredits(result.remainingCredits);
+        
+        if (account) {
+          setAccount({
+            ...account,
+            credits: result.remainingCredits,
+            totalSpent: account.totalSpent + 1,
+            updatedAt: new Date()
+          });
+        }
+        
+        // Verificar warning después del consumo
+        const showWarning = await CreditService.shouldShowLowCreditsWarning(user);
+        setShouldShowLowCreditsWarning(showWarning);
+        
+        return true;
+      } else {
+        setError(result.message);
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al confirmar la reserva';
+      setError(errorMessage);
+      console.error('Error confirmando reserva:', err);
+      return false;
+    }
+  };
+
+  const revertReservation = async (reservationId: string, tool: ToolType, reason?: string): Promise<boolean> => {
+    if (!user) {
+      setError('Usuario no autenticado');
+      return false;
+    }
+
+    try {
+      setError(null);
+      
+      const result = await CreditService.revertCreditReservation(user, reservationId, tool, reason);
+      
+      if (result.success) {
+        // Los créditos no se habían consumido, así que no necesitamos actualizar el balance
+        return true;
+      } else {
+        setError(result.message);
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al revertir la reserva';
+      setError(errorMessage);
+      console.error('Error revirtiendo reserva:', err);
+      return false;
+    }
+  };
+
   return {
     // Estado
     credits,
@@ -144,6 +243,11 @@ export function useCredits(user: User | null): UseCreditReturn {
     consumeCredits,
     hasEnoughCredits,
     loadTransactionHistory,
+    
+    // Nuevos métodos para reserva de créditos
+    reserveCredits,
+    confirmReservation,
+    revertReservation,
     
     // Utilidades
     shouldShowLowCreditsWarning
