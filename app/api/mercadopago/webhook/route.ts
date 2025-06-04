@@ -180,21 +180,32 @@ export async function POST(request: NextRequest) {
         paymentId,
         timestamp 
       }, { status: 200 }); // ✅ SIEMPRE 200
-    }
-
-    // Procesar pago aprobado
+    }    // Procesar pago aprobado
     console.log('✅ Pago aprobado - procesando...');
-    const result = await procesarPagoAprobado(paymentData);
+    
+    // Determinar el tipo de pago basado en metadata
+    const metadata = paymentData.metadata;
+    let result;
+    
+    if (metadata?.package_id && metadata?.credits_amount) {
+      // Es una compra de créditos
+      console.log('💳 Procesando compra de créditos...');
+      result = await procesarCompraCreditos(paymentData);
+    } else {
+      // Es una compra de revisiones CV (lógica existente)
+      console.log('📄 Procesando compra de revisiones CV...');
+      result = await procesarPagoAprobado(paymentData);
+    }
     
     const processingTime = Date.now() - startTime;
     console.log(`✅ WEBHOOK EXITOSO en ${processingTime}ms`);
-    
-    return NextResponse.json({
+      return NextResponse.json({
       success: true, // ✅ Éxito total
       received: true,
       status: 'processed',
       user: result.userEmail,
-      revisionsAdded: result.revisionsAdded,
+      creditsAdded: 'creditsAdded' in result ? result.creditsAdded : 0,
+      revisionsAdded: 'revisionsAdded' in result ? result.revisionsAdded : 0,
       processingTime,
       timestamp
     }, { status: 200 }); // ✅ SIEMPRE 200
@@ -344,6 +355,83 @@ async function procesarPagoAprobado(paymentData: any) {
   } catch (firebaseError) {
     console.error('❌ Error crítico actualizando Firestore:', firebaseError);
     throw new Error(`Error de base de datos: ${firebaseError instanceof Error ? firebaseError.message : 'Unknown'}`);
+  }
+}
+
+async function procesarCompraCreditos(paymentData: any) {
+  const { CreditService } = await import('@/services/creditService');
+  
+  const metadata = paymentData.metadata;
+  const userId = metadata?.user_id;
+  const packageId = metadata?.package_id;
+  const creditsAmount = parseInt(metadata?.credits_amount || '0');
+  
+  console.log('🪙 Procesando compra de créditos:', {
+    userId,
+    packageId,
+    creditsAmount,
+    paymentId: paymentData.id
+  });
+
+  if (!userId || !packageId || !creditsAmount) {
+    throw new Error('Datos de compra de créditos incompletos en metadata');
+  }
+
+  // Verificar que el usuario existe en Firebase Auth
+  const auth = getAuth();
+  let user;
+  
+  try {
+    console.log('👤 Buscando usuario para créditos:', userId);
+    if (userId.includes('@')) {
+      user = await auth.getUserByEmail(userId);
+      console.log('✅ Usuario encontrado por email:', user.uid);
+    } else {
+      user = await auth.getUser(userId);
+      console.log('✅ Usuario encontrado por UID:', user.uid);
+    }
+  } catch (userError) {
+    console.error('❌ Usuario no encontrado:', userId, userError);
+    throw new Error(`Usuario no encontrado en Firebase Auth: ${userId}`);
+  }
+
+  // Procesar la compra de créditos usando CreditService
+  try {
+    const creditService = new CreditService();
+    
+    // Verificar si ya se procesó este pago
+    const db = getFirestore();
+    const transactionsRef = db.collection('creditTransactions');
+    const existingTransaction = await transactionsRef
+      .where('paymentId', '==', paymentData.id.toString())
+      .limit(1)
+      .get();
+      
+    if (!existingTransaction.empty) {
+      console.log('⚠️ Compra de créditos ya procesada anteriormente, saltando...');
+      return { userEmail: user.email, creditsAdded: 0 };
+    }
+      // Procesar la compra
+    const result = await CreditService.processApprovedCreditPurchase(
+      user.uid,
+      packageId,
+      paymentData.id.toString(),
+      paymentData.transaction_amount
+    );
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Error procesando créditos');
+    }
+      console.log(`✅✅ ÉXITO: +${result.creditsAdded} créditos agregados a ${user.email}`);
+    
+    return {
+      userEmail: user.email,
+      creditsAdded: result.creditsAdded
+    };
+    
+  } catch (creditError) {
+    console.error('❌ Error crítico procesando créditos:', creditError);
+    throw new Error(`Error procesando créditos: ${creditError instanceof Error ? creditError.message : 'Unknown'}`);
   }
 }
 
