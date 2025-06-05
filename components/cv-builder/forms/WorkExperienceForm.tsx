@@ -10,6 +10,7 @@ import { Plus, Trash2, Briefcase, Calendar, MapPin, Building, Sparkles } from 'l
 import { Checkbox } from '@/components/ui/checkbox';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { useState } from 'react';
+import MonthPicker from '@/components/ui/month-picker';
 
 interface WorkExperienceFormProps {
   workExperience: WorkExperience[];
@@ -362,37 +363,58 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div>
-                      <Label className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Fecha de Inicio *
-                      </Label>
-                      <Input
-                        type="month"
-                        value={exp.startDate}
-                        onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                        className="mt-1"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Fecha de Fin
-                      </Label>
-                      <Input
-                        type="month"
-                        value={exp.endDate}
-                        onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                        disabled={exp.current}
-                        className="mt-1"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {/* COLUMNA 1: Fechas - Más espacio */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Fecha de Inicio *
+                        </Label>
+                        <MonthPicker
+                          value={exp.startDate}
+                          onChange={(date) => updateWorkExperience(index, 'startDate', date)}
+                          placeholder="Selecciona fecha de inicio"
+                          className="mt-1"
+                          required
+                          maxDate={exp.endDate || undefined}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Fecha de Fin
+                        </Label>
+                        <MonthPicker
+                          value={exp.endDate}
+                          onChange={(date) => updateWorkExperience(index, 'endDate', date)}
+                          placeholder="Selecciona fecha de fin"
+                          disabled={exp.current}
+                          className="mt-1"
+                          minDate={exp.startDate || undefined}
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col justify-center">
-                      <div className="flex items-center space-x-2">
+                    {/* COLUMNA 2: Ubicación + Trabajo actual */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Ubicación *
+                        </Label>
+                        <Input
+                          value={exp.location}
+                          onChange={(e) => updateWorkExperience(index, 'location', e.target.value)}
+                          placeholder="Ej: Lima, Perú"
+                          className="mt-1"
+                          required
+                        />
+                      </div>
+
+                      {/* Checkbox "Trabajo actual" */}
+                      <div className="flex items-center space-x-2 pt-2">
                         <Checkbox
                           id={`current-job-${index}`}
                           checked={exp.current}
@@ -407,20 +429,6 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                           Trabajo actual
                         </Label>
                       </div>
-                    </div>
-
-                    <div>
-                      <Label className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        Ubicación *
-                      </Label>
-                      <Input
-                        value={exp.location}
-                        onChange={(e) => updateWorkExperience(index, 'location', e.target.value)}
-                        placeholder="Ej: Lima, Perú"
-                        className="mt-1"
-                        required
-                      />
                     </div>
                   </div>
 

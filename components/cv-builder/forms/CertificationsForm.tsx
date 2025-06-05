@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Award, Calendar, Building } from 'lucide-react';
+import MonthPicker from '@/components/ui/month-picker';
 
 interface CertificationsFormProps {
   certifications: Certification[];
@@ -128,11 +129,13 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                       <Calendar className="h-4 w-4" />
                       Fecha de Obtención *
                     </Label>
-                    <Input
-                      type="month"
+                    <MonthPicker
                       value={cert.date}
-                      onChange={(e) => updateCertification(index, 'date', e.target.value)}
+                      onChange={(date) => updateCertification(index, 'date', date)}
+                      placeholder="Selecciona fecha de obtención"
                       className="mt-1"
+                      required
+                      maxDate={cert.expiryDate || new Date().toISOString().slice(0, 7)} // No puede ser después del vencimiento o futuro
                     />
                   </div>
                   
@@ -141,11 +144,12 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                       <Calendar className="h-4 w-4" />
                       Fecha de Vencimiento (Opcional)
                     </Label>
-                    <Input
-                      type="month"
-                      value={cert.expiryDate}
-                      onChange={(e) => updateCertification(index, 'expiryDate', e.target.value)}
+                    <MonthPicker
+                      value={cert.expiryDate || ''}
+                      onChange={(date) => updateCertification(index, 'expiryDate', date)}
+                      placeholder="Selecciona fecha de vencimiento"
                       className="mt-1"
+                      minDate={cert.date || new Date().toISOString().slice(0, 7)} // No puede ser antes de la obtención
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Solo si la certificación tiene fecha de vencimiento

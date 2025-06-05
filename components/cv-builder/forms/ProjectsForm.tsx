@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar } from 'lucide-react';
+import MonthPicker from '@/components/ui/month-picker';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ProjectsFormProps {
   projects: Project[];
@@ -23,7 +25,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
       technologies: [],
       startDate: '',
       endDate: '',
-      current: false,
+      current: false, // ✅ Explícitamente false
       url: '',
       highlights: []
     };
@@ -31,9 +33,16 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
   };
 
   const updateProject = (index: number, field: keyof Project, value: string | string[] | boolean) => {
-    const updatedProjects = projects.map((project, i) => 
-      i === index ? { ...project, [field]: value } : project
-    );
+    const updatedProjects = projects.map((project, i) => {
+      if (i === index) {
+        // ✅ Manejar específicamente el campo current
+        if (field === 'current') {
+          return { ...project, [field]: Boolean(value) };
+        }
+        return { ...project, [field]: value };
+      }
+      return project;
+    });
     onUpdate(updatedProjects);
   };
 
@@ -107,47 +116,6 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                   </div>
                   <div>
                     <Label className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Fecha de Inicio
-                    </Label>
-                    <Input
-                      type="month"
-                      value={project.startDate}
-                      onChange={(e) => updateProject(index, 'startDate', e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Fecha de Fin
-                    </Label>
-                    <Input
-                      type="month"
-                      value={project.endDate}
-                      onChange={(e) => updateProject(index, 'endDate', e.target.value)}
-                      disabled={project.current}
-                      className="mt-1"
-                    />
-                    <div className="flex items-center mt-2">
-                      <input
-                        type="checkbox"
-                        id={`current-${index}`}
-                        checked={project.current}
-                        onChange={(e) => updateProject(index, 'current', e.target.checked)}
-                        className="mr-2"
-                      />
-                      <Label htmlFor={`current-${index}`} className="text-sm">
-                        Proyecto en curso
-                      </Label>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="flex items-center gap-2">
                       <LinkIcon className="h-4 w-4" />
                       URL del Proyecto (Opcional)
                     </Label>
@@ -158,6 +126,54 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       className="mt-1"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Fecha de Inicio
+                    </Label>
+                    <MonthPicker
+                      value={project.startDate}
+                      onChange={(date) => updateProject(index, 'startDate', date)}
+                      placeholder="Selecciona fecha de inicio"
+                      className="mt-1"
+                      maxDate={project.endDate || undefined}
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Fecha de Fin
+                    </Label>
+                    <MonthPicker
+                      value={project.endDate}
+                      onChange={(date) => updateProject(index, 'endDate', date)}
+                      placeholder="Selecciona fecha de fin"
+                      disabled={project.current}
+                      className="mt-1"
+                      minDate={project.startDate || undefined}
+                    />
+                    
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Checkbox
+                        id={`current-project-${index}`}
+                        checked={Boolean(project.current)} // ✅ Asegurar que sea boolean
+                        onCheckedChange={(checked) => {
+                          console.log('Checkbox clicked:', checked); // 🔍 Debug
+                          updateProject(index, 'current', Boolean(checked));
+                          if (checked) {
+                            updateProject(index, 'endDate', '');
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`current-project-${index}`} className="text-sm cursor-pointer">
+                        Proyecto en curso
+                      </Label>
+                    </div>
+                  </div>
+                  
                 </div>
                 
                 <div className="mt-4">

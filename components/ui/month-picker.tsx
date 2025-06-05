@@ -1,0 +1,193 @@
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface MonthPickerProps {
+  value: string; // Formato: "YYYY-MM"
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  minDate?: string; // Formato: "YYYY-MM"
+  maxDate?: string; // Formato: "YYYY-MM"
+  required?: boolean;
+}
+
+const months = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+export default function MonthPicker({
+  value,
+  onChange,
+  placeholder = 'Selecciona mes y año',
+  disabled = false,
+  className = '',
+  minDate,
+  maxDate,
+  required = false
+}: MonthPickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(() => {
+    if (value) {
+      return parseInt(value.split('-')[0]);
+    }
+    return new Date().getFullYear();
+  });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Formatear valor para mostrar
+  const formatDisplayValue = (value: string) => {
+    if (!value) return '';
+    const [year, month] = value.split('-');
+    const monthIndex = parseInt(month) - 1;
+    return `${months[monthIndex]} ${year}`;
+  };
+
+  // Verificar si un mes está habilitado
+  const isMonthEnabled = (year: number, monthIndex: number) => {
+    const monthValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    
+    if (minDate && monthValue < minDate) return false;
+    if (maxDate && monthValue > maxDate) return false;
+    
+    return true;
+  };
+
+  // Manejar selección de mes
+  const handleMonthSelect = (year: number, monthIndex: number) => {
+    if (!isMonthEnabled(year, monthIndex)) return;
+    
+    const monthValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    onChange(monthValue);
+    setIsOpen(false);
+  };
+
+  // Navegar años
+  const handlePrevYear = () => {
+    setViewYear(prev => prev - 1);
+  };
+
+  const handleNextYear = () => {
+    setViewYear(prev => prev + 1);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Input Field */}
+      <div
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+          "cursor-pointer select-none",
+          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          isOpen && "ring-2 ring-ring ring-offset-2",
+          className
+        )}
+      >
+        <div className="flex items-center w-full">
+          <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+          <span className={cn(
+            "flex-1",
+            !value && "text-muted-foreground"
+          )}>
+            {value ? formatDisplayValue(value) : placeholder}
+          </span>
+          <ChevronDown className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform",
+            isOpen && "transform rotate-180"
+          )} />
+        </div>
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg">
+          <div className="p-3">
+            {/* Header con navegación de año */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={handlePrevYear}
+                className="p-1 hover:bg-accent rounded"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              
+              <span className="font-medium text-sm">
+                {viewYear}
+              </span>
+              
+              <button
+                type="button"
+                onClick={handleNextYear}
+                className="p-1 hover:bg-accent rounded"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Grid de meses */}
+            <div className="grid grid-cols-3 gap-1">
+              {months.map((month, index) => {
+                const isSelected = value === `${viewYear}-${String(index + 1).padStart(2, '0')}`;
+                const isEnabled = isMonthEnabled(viewYear, index);
+
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleMonthSelect(viewYear, index)}
+                    disabled={!isEnabled}
+                    className={cn(
+                      "p-2 text-xs rounded transition-colors",
+                      "hover:bg-accent hover:text-accent-foreground",
+                      "disabled:text-muted-foreground disabled:cursor-not-allowed disabled:hover:bg-transparent",
+                      isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                      !isEnabled && "opacity-50"
+                    )}
+                  >
+                    {month}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Botón para limpiar */}
+            {value && (
+              <div className="mt-3 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange('');
+                    setIsOpen(false);
+                  }}
+                  className="w-full p-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Limpiar selección
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

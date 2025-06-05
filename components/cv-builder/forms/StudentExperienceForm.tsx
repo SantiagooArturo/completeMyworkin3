@@ -80,15 +80,15 @@ export default function StudentExperienceForm({
             <Lightbulb className="h-4 w-4" />
             Guía
           </TabsTrigger>
-          <TabsTrigger value="projects" className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4" />
-            Proyectos
-            {hasProjects && <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{projects.length}</span>}
-          </TabsTrigger>
           <TabsTrigger value="experience" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Experiencia
             {hasExperience && <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">{workExperience.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="flex items-center gap-2">
+            <FolderOpen className="h-4 w-4" />
+            Proyectos
+            {hasProjects && <span className="ml-1 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{projects.length}</span>}
           </TabsTrigger>
         </TabsList>
 
@@ -154,24 +154,6 @@ export default function StudentExperienceForm({
                   </ul>
                 </div>
               </div>
-
-              {!hasAnyExperience && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="font-medium text-blue-900">¿No tienes proyectos todavía?</h5>
-                      <p className="text-sm text-blue-700 mt-1">Te ayudamos con un ejemplo para que empieces</p>
-                    </div>
-                    <Button 
-                      onClick={addSampleProject}
-                      className="bg-[#028bbf] hover:bg-[#027ba8] text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Agregar Ejemplo
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

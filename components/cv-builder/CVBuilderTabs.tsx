@@ -43,7 +43,7 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
     },    
     {
       id: 'experience_projects',
-      label: isStudentMode ? 'Experiencia/Proyectos' : 'Experiencia',
+      label: isStudentMode ? 'Experiencia' : 'Experiencia',
       icon: FolderOpen,  
       isComplete: isStudentMode 
         ? (cvData.projects.length > 0 || cvData.workExperience.length > 0)

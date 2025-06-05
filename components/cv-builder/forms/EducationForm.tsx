@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GraduationCap, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import MonthPicker from '@/components/ui/month-picker';
 
 interface EducationFormProps {
   education: Education[];
@@ -140,11 +141,13 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio *
                     </Label>
-                    <Input
-                      type="month"
+                    <MonthPicker
                       value={edu.startDate}
-                      onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
+                      onChange={(date) => updateEducation(index, 'startDate', date)}
+                      placeholder="Selecciona fecha de inicio"
                       className="mt-1"
+                      required
+                      maxDate={edu.endDate || undefined}
                     />
                   </div>
                   
@@ -153,13 +156,15 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Calendar className="h-4 w-4" />
                       Fecha de Fin
                     </Label>
-                    <Input
-                      type="month"
+                    <MonthPicker
                       value={edu.endDate}
-                      onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
+                      onChange={(date) => updateEducation(index, 'endDate', date)}
+                      placeholder="Selecciona fecha de fin"
                       disabled={edu.current}
                       className="mt-1"
+                      minDate={edu.startDate || undefined}
                     />
+                    
                     <div className="flex items-center space-x-2 mt-2">
                       <Checkbox
                         id={`current-${index}`}
