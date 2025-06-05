@@ -82,7 +82,7 @@ export default function InsufficientCreditsModal({
               <div className="flex items-center space-x-3">
                 <ToolIcon className="h-5 w-5 text-gray-600" />
                 <div>
-                  <p className="font-medium">{toolLabel}</p>
+                  <p className="font-medium text-gray-800">{toolLabel}</p>
                   <p className="text-sm text-gray-600">Herramienta solicitada</p>
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default function InsufficientCreditsModal({
           </div>
 
           <DialogFooter className="space-x-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" className='text-gray-800' onClick={onClose}>
               Cancelar
             </Button>
             <Button onClick={handlePurchaseClick} className="flex items-center space-x-2">

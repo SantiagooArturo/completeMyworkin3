@@ -50,7 +50,7 @@ export default function CreditBalance({
               size="sm"
               variant="outline"
               onClick={() => setShowPurchaseModal(true)}
-              className="h-6 px-2"
+              className="h-6 px-2 text-gray-600"
             >
               <Plus className="h-3 w-3" />
             </Button>

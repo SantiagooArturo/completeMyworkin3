@@ -9,11 +9,22 @@ import {
   Briefcase,
   Users,
   Search,
+  Lock,
+  UserPlus,
+  Coins,
+  AlertCircle,
+  ExternalLink,
+  MapPin,
+  Calendar,
+  Star
 } from "lucide-react";
 import { matchesCV, uploadCV } from "@/src/utils/cvAnalyzer";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 
 interface Practica {
   title: string;
@@ -35,6 +46,98 @@ export default function MatchCV() {
     confirmReservation, 
     revertReservation 
   } = useCredits(user);
+
+  // PROTECCIÓN: Si no hay usuario, mostrar pantalla de login
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <Navbar />
+        <div className="h-16"></div>
+        
+        <div className="max-w-4xl mx-auto px-4 py-16">
+          <Card className="text-center bg-white shadow-xl">
+            <CardContent className="p-12">
+              <div className="mb-8">
+                <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                  <Lock className="h-12 w-12 text-blue-600" />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                  Búsqueda de Empleos Premium
+                </h1>
+                <p className="text-lg text-gray-600 mb-6">
+                  Esta herramienta está disponible exclusivamente para usuarios registrados.
+                  Encuentra las mejores oportunidades laborales con IA avanzada.
+                </p>
+              </div>
+
+              {/* Características premium */}
+              <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Bot className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">IA Avanzada</h3>
+                  <p className="text-sm text-gray-600">
+                    Análisis inteligente de tu CV contra miles de ofertas laborales
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Target className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Matching Preciso</h3>
+                  <p className="text-sm text-gray-600">
+                    Porcentajes de compatibilidad detallados para cada posición
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Briefcase className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Oportunidades Reales</h3>
+                  <p className="text-sm text-gray-600">
+                    Acceso a ofertas laborales actualizadas y verificadas
+                  </p>
+                </div>
+              </div>
+
+              {/* Pricing info */}
+              <div className="bg-blue-50 rounded-lg p-6 mb-8">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Coins className="h-5 w-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">Solo 1 crédito por búsqueda</span>
+                </div>
+                <p className="text-sm text-blue-700">
+                  Paquetes desde S/. 10 - Úsalos en cualquier herramienta
+                </p>
+              </div>
+
+              {/* Call to action buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/login">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
+                    <UserPlus className="h-5 w-5 mr-2" />
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3">
+                    Crear Cuenta Gratis
+                  </Button>
+                </Link>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-6">
+                ¿Ya tienes cuenta? <Link href="/login" className="text-blue-600 hover:underline">Inicia sesión aquí</Link>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // RESTO DEL CÓDIGO ORIGINAL PARA USUARIOS AUTENTICADOS
   const [file, setFile] = useState<File | null>(null);
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
@@ -193,18 +296,9 @@ export default function MatchCV() {
             <h1 className="text-4xl md:text-5xl font-bold mb-8">
               <span className="text-black">Encuentra las </span>
               <span className="text-[#028bbf]">Prácticas Ideales</span>
-            </h1>
-            <p className="text-xl text-gray-600">
+            </h1>            <p className="text-xl text-gray-600">
               Nuestra IA analiza tu CV y te conecta con las prácticas que mejor se ajustan a tu perfil.
             </p>
-            {!user && (
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-amber-800">
-                  <strong>Nota:</strong> Necesitas iniciar sesión y tener créditos para usar esta herramienta. 
-                  Cada búsqueda consume 1 crédito.
-                </p>
-              </div>
-            )}
           </div>
           <div className="bg-white rounded-2xl p-8 shadow-xl">
             <div className="flex items-center gap-4 mb-8">

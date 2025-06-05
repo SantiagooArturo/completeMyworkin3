@@ -51,6 +51,10 @@ export const CREDIT_CONFIG = {
     'cv-creation': 1,
     'job-match': 1
   } as ToolCost,
+
+  // Cambiar WELCOME_CREDITS de 3 a 1
+  WELCOME_CREDITS: 1, // ✅ Ahora los usuarios nuevos empiezan con 1 crédito
+
   // Paquetes de créditos disponibles
   CREDIT_PACKAGES: [
     {
@@ -100,7 +104,8 @@ export const CREDIT_CONFIG = {
     INSUFFICIENT_CREDITS: 'No tienes suficientes créditos para usar esta herramienta. Recarga tu cuenta para continuar.',
     PURCHASE_SUCCESS: 'Créditos agregados exitosamente a tu cuenta',
     TOOL_SUCCESS: 'Herramienta utilizada. Se ha descontado 1 crédito de tu cuenta.',
-    LOW_CREDITS: 'Te quedan pocos créditos. Considera recargar tu cuenta.'
+    LOW_CREDITS: 'Te quedan pocos créditos. Considera recargar tu cuenta.',
+    WELCOME_CREDITS: '¡Bienvenido! Has recibido 1 crédito gratuito para comenzar.' // ✅ Actualizado el mensaje
   }
 };
 

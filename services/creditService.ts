@@ -13,7 +13,9 @@ import {
   increment,
   runTransaction,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  onSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db } from '../firebase/config';
@@ -45,19 +47,27 @@ export class CreditService {
           totalSpent: data.totalSpent || 0,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date()
-        };
-      } else {
-        // Crear cuenta nueva con 0 créditos
+        };      } else {
+        // Crear cuenta nueva con crédito de bienvenida
         const newAccount: CreditAccount = {
           userId: user.uid,
-          credits: 0,
-          totalEarned: 0,
+          credits: CREDIT_CONFIG.WELCOME_CREDITS,
+          totalEarned: CREDIT_CONFIG.WELCOME_CREDITS,
           totalSpent: 0,
           createdAt: new Date(),
           updatedAt: new Date()
         };
+          await this.createCreditAccount(newAccount);
         
-        await this.createCreditAccount(newAccount);
+        // Registrar transacción de crédito de bienvenida
+        await addDoc(collection(db, this.CREDIT_TRANSACTIONS_COLLECTION), {
+          userId: user.uid,
+          type: 'bonus',
+          amount: CREDIT_CONFIG.WELCOME_CREDITS,
+          description: 'Crédito de bienvenida para nuevos usuarios',
+          createdAt: serverTimestamp()
+        });
+        
         return newAccount;
       }
     } catch (error) {
@@ -819,11 +829,9 @@ export class CreditService {
         where('status', '==', 'pending'),
         where('createdAt', '<=', Timestamp.fromDate(oneHourAgo))
       );
+        const expiredSnapshot = await getDocs(expiredReservationsQuery);
       
-      const expiredSnapshot = await getDocs(expiredReservationsQuery);
-      
-      const batch = db.batch ? db.batch() : null;
-      if (!batch) return;
+      const batch = writeBatch(db);
       
       expiredSnapshot.docs.forEach((doc) => {
         batch.update(doc.ref, {
@@ -837,8 +845,26 @@ export class CreditService {
         await batch.commit();
         console.log(`Limpiadas ${expiredSnapshot.docs.length} reservas expiradas`);
       }
-    } catch (error) {
-      console.error('Error limpiando reservas expiradas:', error);
+    } catch (error) {      console.error('Error limpiando reservas expiradas:', error);
     }
+  }
+
+  /**
+   * Suscribe a cambios en tiempo real de los créditos del usuario
+   */
+  static subscribeToCredits(userId: string, callback: (credits: number) => void): () => void {
+    const accountRef = doc(db, this.CREDIT_ACCOUNTS_COLLECTION, userId);
+    
+    return onSnapshot(accountRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        callback(data.credits || 0);
+      } else {
+        callback(0);
+      }
+    }, (error) => {
+      console.error('Error en suscripción de créditos:', error);
+      callback(0);
+    });
   }
 }

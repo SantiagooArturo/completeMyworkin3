@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import { CreditService } from '../services/creditService';
 import { CreditAccount, CreditTransaction, ToolType } from '../types/credits';
@@ -49,9 +49,14 @@ export function useCredits(user: User | null): UseCreditReturn {
     }
   }, [user]);
 
-  const refreshCredits = async (): Promise<void> => {
-    if (!user) return;
-    
+  const refreshCredits = useCallback(async (): Promise<void> => {
+    if (!user) {
+      setCredits(0);
+      setAccount(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -72,7 +77,7 @@ export function useCredits(user: User | null): UseCreditReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const consumeCredits = async (tool: ToolType, description?: string): Promise<boolean> => {
     if (!user) {
@@ -229,6 +234,17 @@ export function useCredits(user: User | null): UseCreditReturn {
       return false;
     }
   };
+
+  // ✅ NUEVA FUNCIÓN: Escuchar cambios en tiempo real
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = CreditService.subscribeToCredits(user.uid, (newCredits) => {
+      setCredits(newCredits);
+    });
+
+    return () => unsubscribe?.();
+  }, [user]);
 
   return {
     // Estado
