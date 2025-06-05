@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// ✅ SEGURO: API Key solo en el servidor
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Sin NEXT_PUBLIC_
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(request: NextRequest) {

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// ✅ SEGURO: API Key solo en el servidor
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Sin NEXT_PUBLIC_
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(request: NextRequest) {
@@ -17,40 +16,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Como experto en optimización ATS (Applicant Tracking System), analiza el siguiente CV y proporciona recomendaciones sobre palabras clave:
+    const prompt = `Como experto en optimización ATS y reclutamiento, analiza este CV de estudiante/profesional junior:
 
-CV a analizar:
+DATOS DEL CV:
 ${JSON.stringify(cvData, null, 2)}
 
-${targetJobDescription ? `Descripción del puesto objetivo:\n${targetJobDescription}\n` : ''}
+${targetJobDescription ? `PUESTO OBJETIVO:\n${targetJobDescription}\n` : ''}
 
-Proporciona un análisis detallado que incluya:
+CONTEXTO: Este es un CV de estudiante/recién graduado en tecnología.
 
-1. PALABRAS CLAVE IDENTIFICADAS: Lista las palabras clave técnicas y habilidades que ya están presentes en el CV
-2. PALABRAS CLAVE FALTANTES: Si hay descripción del puesto, identifica palabras clave importantes que faltan
-3. DENSIDAD DE KEYWORDS: Evalúa si hay suficiente repetición de términos importantes
-4. RECOMENDACIONES ESPECÍFICAS: Sugiere dónde y cómo incorporar nuevas palabras clave
-5. SCORE ATS: Califica de 1-100 qué tan optimizado está el CV para ATS
-6. ÁREAS DE MEJORA: Secciones específicas que necesitan más keywords
+Proporciona análisis enfocado en:
+1. Keywords técnicas actuales vs. requeridas
+2. Habilidades blandas identificables  
+3. Palabras clave de industria tech
+4. Optimización específica para junior roles
+5. Score ATS realista para nivel junior
 
-Devuelve la respuesta en formato JSON:
+FORMATO JSON REQUERIDO:
 {
-  "currentKeywords": ["keyword1", "keyword2", ...],
-  "missingKeywords": ["missing1", "missing2", ...],
-  "keywordDensity": {
-    "technical": "low/medium/high",
-    "skills": "low/medium/high",
-    "industry": "low/medium/high"
-  },
-  "atsScore": 85,
-  "recommendations": [
-    {
-      "section": "Sección del CV",
-      "suggestion": "Recomendación específica",
-      "keywords": ["keyword1", "keyword2"]
-    }
-  ],
-  "improvementAreas": ["área1", "área2", ...]
+  "currentKeywords": ["react", "javascript", ...],
+  "missingKeywords": ["keyword faltante", ...],
+  "juniorFocusKeywords": ["entry-level", "intern", "junior", ...],
+  "atsScore": 75,
+  "recommendations": [...],
+  "industryAlignment": "high/medium/low"
 }`;
 
     const completion = await openai.chat.completions.create({
