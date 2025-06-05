@@ -170,10 +170,11 @@ export default function ProfilePage() {
       }
     >
       <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Alineado con las columnas del contenido */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex justify-between items-center py-6">
+            {/* Lado izquierdo: Navegación y título */}
             <div className="flex items-center space-x-4">
               <Link 
                 href="/dashboard"
@@ -183,9 +184,13 @@ export default function ProfilePage() {
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
             </div>
-            <Link href="/">
-              <img src="/MyWorkIn-web.png" alt="MyWorkIn Logo" className="h-8" />
-            </Link>
+
+            {/* Lado derecho: Logo */}
+            <div className="flex items-center">
+              <Link href="/dashboard">
+                <img src="/MyWorkIn-web.png" alt="MyWorkIn Logo" className="h-8 hover:opacity-80 transition" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>

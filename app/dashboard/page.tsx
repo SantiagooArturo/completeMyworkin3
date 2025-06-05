@@ -24,10 +24,14 @@ import {
   CheckCircle,
   Clock
 } from "lucide-react";
+import { useCredits } from "../../hooks/useCredits";
 
 export default function DashboardPage() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
+  
+  const { credits, loading: creditsLoading } = useCredits(user);
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'credits'>('overview');
   const [cvStats, setCvStats] = useState({
     totalReviews: 0,
@@ -117,7 +121,6 @@ export default function DashboardPage() {
               <Link href="/">
                 <img src="/MyWorkIn-web.png" alt="MyWorkIn Logo" className="h-8" />
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button className="p-2 text-gray-400 hover:text-gray-600 transition">
@@ -237,19 +240,34 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Estado Gratuito</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '-' : (cvStats.freeReviewUsed ? 'Usado' : 'Disponible')}
-                </p>
-              </div>
-              <div className={`p-3 rounded-lg ${cvStats.freeReviewUsed ? 'bg-red-100' : 'bg-green-100'}`}>
-                <Award className={`h-6 w-6 ${cvStats.freeReviewUsed ? 'text-red-600' : 'text-green-600'}`} />
+          <Link href="/credits" className="block">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#028bbf] transition-all duration-200 cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-700">Créditos Disponibles</p>
+                  <p className="text-2xl font-bold text-gray-900 group-hover:text-[#028bbf] transition-colors">
+                    {creditsLoading ? '-' : credits}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {credits === 0 ? 'Haz clic para recargar' : 
+                     credits === 1 ? '1 crédito restante' : 
+                     `${credits} créditos restantes`}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-lg transition-colors group-hover:scale-105 transform duration-200 ${
+                  credits === 0 ? 'bg-red-100 group-hover:bg-red-200' : 
+                  credits <= 2 ? 'bg-orange-100 group-hover:bg-orange-200' : 
+                  'bg-green-100 group-hover:bg-green-200'
+                }`}>
+                  <Award className={`h-6 w-6 transition-colors ${
+                    credits === 0 ? 'text-red-600' : 
+                    credits <= 2 ? 'text-orange-600' : 
+                    'text-green-600'
+                  }`} />
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
 
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
