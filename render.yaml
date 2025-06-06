@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: myworkin-app
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: 1
+      - key: PNPM_FLAGS
+        value: --frozen-lockfile
+    autoDeploy: true
+    buildFilter:
+      paths:
+      - app/**
+      - components/**
+      - lib/**
+      - public/**
+      - styles/**
+      - package.json
+      - pnpm-lock.yaml
+      - next.config.js
+      ignoredPaths:
+      - README.md
+      - .env.example
