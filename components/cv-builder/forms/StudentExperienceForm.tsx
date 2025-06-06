@@ -41,7 +41,7 @@ export default function StudentExperienceForm({
       id: Date.now().toString(),
       name: 'Proyecto de Tesis',
       description: 'Desarrollo de una aplicación web para la gestión de inventarios utilizando tecnologías modernas',
-      technologies: ['React', 'Node.js', 'MongoDB'],
+      technologies: 'React, Node.js, MongoDB',
       startDate: new Date().getFullYear().toString(),
       endDate: new Date().getFullYear().toString(),
       current: false,

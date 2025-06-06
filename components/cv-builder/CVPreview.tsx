@@ -347,6 +347,51 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
               })()}
             </section>
           )}
+
+          {/* Sección de Voluntariado */}
+          {cvData.volunteer && cvData.volunteer.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold border-b border-gray-300 pb-1 mb-3 text-[#028bbf]">
+                VOLUNTARIADO
+              </h3>
+              <div className="space-y-4">
+                {cvData.volunteer.map((vol: any, index: number) => (
+                  <div key={index}>
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-semibold">{vol.position}</h4>
+                      <span className="text-sm text-gray-600">
+                        {vol.startDate} - {vol.currentlyVolunteering ? 'Presente' : vol.endDate}
+                      </span>
+                    </div>
+                    <div className="text-gray-700 mb-1">
+                      <span className="font-medium">{vol.organization}</span>
+                      {vol.location && <span className="text-gray-500"> • {vol.location}</span>}
+                    </div>
+                    {vol.description && (
+                      <p className="text-sm text-gray-600 mb-2">{vol.description}</p>
+                    )}
+                    {vol.impact && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        <strong>Impacto:</strong> {vol.impact}
+                      </p>
+                    )}
+                    {vol.skills && vol.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {vol.skills.map((skill: string, skillIndex: number) => (
+                          <span
+                            key={skillIndex}
+                            className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

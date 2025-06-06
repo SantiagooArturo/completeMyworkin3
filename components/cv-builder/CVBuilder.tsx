@@ -35,6 +35,9 @@ const  initialCVData: CVData = {
   education: [],
   workExperience: [],
   skills: [],
+  hobbies: [],
+  languages: [],
+  volunteer: [],
   projects: [],
   certifications: []
 };

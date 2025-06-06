@@ -549,16 +549,6 @@ export default function CreditPurchaseModal({
                   )}
                   {isLoading ? 'Procesando pago...' : `Pagar S/ ${selectedPackage?.price}`}
                 </button>
-
-                {/* Tarjetas de prueba */}
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">🧪 Tarjetas de prueba:</h4>
-                  <div className="text-xs text-yellow-700 space-y-1">
-                    <div><strong>Visa (Aprobada):</strong> 4509 9535 6623 3704</div>
-                    <div><strong>Mastercard (Aprobada):</strong> 5031 7557 3453 0604</div>
-                    <div><strong>CVV:</strong> 123 | <strong>Fecha:</strong> 11/25 | <strong>Nombre:</strong> APRO</div>
-                  </div>
-                </div>
               </div>
             </div>
           )}

@@ -92,6 +92,19 @@ export interface Project {
   methodology?: string;  // Metodología utilizada
 }
 
+export interface Volunteer {
+  id: string;
+  organization: string;
+  position: string;
+  startDate: string;
+  endDate: string;
+  currentlyVolunteering: boolean;
+  description: string;
+  skills: string[];
+  impact?: string; // Impacto o logros del voluntariado
+  location?: string;
+}
+
 // Certificaciones profesionales
 export interface Certification {
   id: string;
@@ -132,129 +145,8 @@ export interface CVData {
   skills: Skill[];
   projects: Project[];
   certifications: Certification[];
+  volunteer : Volunteer[],
   languages?: Language[];   // ✅ Agregado para completitud
   references?: Reference[]; // ✅ Agregado para completitud
   hobbies?: string[];      // ✅ NUEVO: Hobbies e intereses
 }
-
-
-// ✅ NUEVO: Datos de ejemplo para Francesco Lucchesi
-export const francescoLucchesiCV: CVData = {
-  personalInfo: {
-    fullName: "Francesco Lucchesi Via",
-    email: "flucchesi88@gmail.com",
-    phone: "+51 954600805",
-    address: "Lima, Perú",
-    linkedIn: "linkedin.com/in/francesco-lucchesi/",
-    summary: "Estudiante de octavo ciclo de Administración de Empresas en la Universidad de Lima. A lo largo de mi recorrido académico y profesional, he forjado una mentalidad dedicada y analítica. Mi trayectoria ha sido un proceso de aprendizaje constante, y me entusiasma la idea de continuar desarrollándome profesionalmente en áreas como administración y desarrollo de productos."
-  },
-  education: [
-    {
-      id: "edu-1",
-      institution: "Universidad de Lima",
-      degree: "Bachiller",
-      fieldOfStudy: "Administración de Empresas",
-      startDate: "2020",
-      endDate: "",
-      current: true,
-      achievements: ["Tercio superior en la actualidad"]
-    },
-    {
-      id: "edu-2",
-      institution: "Colegio Alpamayo",
-      degree: "Bachillerato",
-      fieldOfStudy: "",
-      startDate: "2008",
-      endDate: "2019",
-      current: false
-    }
-  ],
-  workExperience: [
-    {
-      id: "exp-1",
-      company: "Yape",
-      position: "Practicante de Tribu Producto",
-      startDate: "2024-01",
-      endDate: "",
-      current: true,
-      description: "La Fintech más grande del Perú con más de 14 millones de usuarios.",
-      achievements: [
-        "Creación de un piloto para fomentar la sinergia entre dos entidades bancarias, con el objetivo de potenciar transacciones de los usuarios.",
-        "Creación de informes diarios, semanales y mensuales para una base de más de 1000 clientes, proporcionando análisis detallados y personalizados sobre las principales funcionalidades de Yape."
-      ]
-    },
-    {
-      id: "exp-2",
-      company: "Community Brands",
-      position: "Practicante de Recursos humanos y Finanzas",
-      startDate: "2023-07",
-      endDate: "2024-01",
-      current: false,
-      description: "Un emprendimiento peruano localmente reconocido por sus marcas: Amaru Superfoods, Al Trono y Postres en Casa.",
-      achievements: [],
-      sections: [
-        {
-          title: "Recursos humanos",
-          achievements: [
-            "Reclutamiento y Selección de Personal: Responsable de identificar y atraer talento excepcional, así como de llevar a cabo procesos de evaluación rigurosos y la selección de candidatos destacados.",
-            "Supervisión de procesos de Recursos Humanos, incluyendo la gestión del proceso de reclutamiento de personal, administración de nóminas y acuerdos contractuales."
-          ]
-        },
-        {
-          title: "Finanzas",
-          achievements: [
-            "Preparación de Informes Trimestrales: Elaboración de informes financieros trimestrales que ofrecen una visión detallada del rendimiento financiero, incluyendo análisis de tendencias y proyecciones.",
-            "Gestión Financiera y Conciliaciones Bancarias: Responsable de realizar conciliaciones bancarias periódicas para garantizar la integridad y precisión de los registros financieros."
-          ]
-        }
-      ]
-    }
-  ],
-  skills: [
-    {
-      id: "skill-1",
-      name: "Microsoft Excel",
-      level: "Avanzado",
-      category: "Technical",
-      proficiency: 5,
-      certifications: ["cert-1"]
-    },
-    {
-      id: "skill-2",
-      name: "Análisis de Datos",
-      level: "Intermedio",
-      category: "Analytical",
-      proficiency: 4
-    },
-    {
-      id: "skill-3",
-      name: "Gestión de Proyectos",
-      level: "Intermedio",
-      category: "Leadership",
-      proficiency: 4
-    }
-  ],
-  projects: [],
-  certifications: [
-    {
-      id: "cert-1",
-      name: "Advanced Intermediate Excel Course",
-      issuer: "A2 Capacitación",
-      date: "2023",
-      description: "Certificación en Excel nivel intermedio avanzado"
-    }
-  ],
-  languages: [
-    {
-      id: "lang-1",
-      language: "Español",
-      proficiency: "Nativo"
-    },
-    {
-      id: "lang-2",
-      language: "Inglés",
-      proficiency: "Avanzado"
-    }
-  ],
-  hobbies: ["Jugar fútbol", "golf", "tenis", "escuchar podcasts", "ver películas"]
-};
