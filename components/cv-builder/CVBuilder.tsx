@@ -461,6 +461,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                     <SkillsForm
                       skills={cvData.skills}
                       onUpdate={updateSkills}
+                      cvData={cvData} // Pasar el contexto completo del CV
                     />
                     <CertificationsForm 
                       certifications={cvData.certifications}

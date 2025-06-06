@@ -8,21 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Wrench, Sparkles } from 'lucide-react';
-import { OpenAIService } from '@/services/openaiService';
-
 
 const HarvardSkillsGuide = () => {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
-      <h4 className="font-medium text-amber-900 mb-2">🎓 Formato Harvard - Habilidades:</h4>
-      <ul className="text-sm text-amber-800 space-y-1">
-        <li>• Clasifica las habilidades en categorías claras y relevantes</li>
-        <li>• Prioriza las habilidades más pertinentes para tu campo</li>
-        <li>• Usa verbos de acción y términos específicos del sector</li>
-        <li>• Demuestra progresión y dominio con niveles claros</li>
-        <li>• Incluye tanto habilidades técnicas como transferibles</li>
-        <li>• Mantén la objetividad en la evaluación de niveles</li>
-        <li>• Relaciona las habilidades con logros concretos</li>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+      <h4 className="font-medium text-blue-900 mb-2">🎓 Formato Harvard - Habilidades:</h4>
+      <ul className="text-sm text-blue-800 space-y-1">
+        <li>• <strong>Software:</strong> Microsoft Office (Excel - Avanzado), SQL, Power BI</li>
+        <li>• <strong>Gestión de Proyectos:</strong> Microsoft Project, Metodologías Ágiles</li>
+        <li>• <strong>Idiomas:</strong> Inglés - Avanzado, Francés - Intermedio</li>
+        <li>• Enfócate en herramientas específicas que dominas</li>
+        <li>• Incluye el nivel de competencia cuando sea relevante</li>
       </ul>
     </div>
   );
@@ -31,24 +27,35 @@ const HarvardSkillsGuide = () => {
 interface SkillsFormProps {
   skills: Skill[];
   onUpdate: (skills: Skill[]) => void;
+  cvData?: any;
 }
 
-export default function SkillsForm({ skills, onUpdate }: SkillsFormProps) {
+export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps) {
   const [isSuggestingSkills, setIsSuggestingSkills] = useState(false);
 
   const skillLevels = [
-    { value: 'Básico', label: 'Conocimiento Básico', description: 'Comprensión fundamental de conceptos' },
-    { value: 'Intermedio', label: 'Competencia Práctica', description: 'Aplicación efectiva en proyectos' },
-    { value: 'Avanzado', label: 'Dominio Profesional', description: 'Experiencia sustancial y liderazgo' },
-    { value: 'Experto', label: 'Experticia Reconocida', description: 'Autoridad en la materia' }
+    { value: 'Básico', label: 'Básico' },
+    { value: 'Intermedio', label: 'Intermedio' },
+    { value: 'Avanzado', label: 'Avanzado' },
+    { value: 'Experto', label: 'Experto' }
   ];
+
   const skillCategories = [
-    { value: 'Technical', label: 'Competencias Técnicas', description: 'Habilidades específicas de la profesión' },
-    { value: 'Analytical', label: 'Habilidades Analíticas', description: 'Capacidad de análisis y resolución' },
-    { value: 'Leadership', label: 'Liderazgo y Gestión', description: 'Dirección y gestión de equipos' },
-    { value: 'Communication', label: 'Comunicación', description: 'Habilidades interpersonales' },
-    { value: 'Research', label: 'Investigación', description: 'Metodología y análisis académico' },
-    { value: 'Language', label: 'Idiomas', description: 'Competencias lingüísticas y comunicación internacional' }
+    { 
+      value: 'Technical', 
+      label: 'Software',
+      icon: '💻'
+    },
+    { 
+      value: 'Leadership', 
+      label: 'Gestión de Proyectos',
+      icon: '📋'
+    },
+    { 
+      value: 'Language', 
+      label: 'Idiomas',
+      icon: '🌐'
+    }
   ];
 
   const addSkill = () => {
@@ -76,122 +83,230 @@ export default function SkillsForm({ skills, onUpdate }: SkillsFormProps) {
     try {
       setIsSuggestingSkills(true);
       const skillNames = skills.map(skill => skill.name);
-      const suggestions = await OpenAIService.suggestSkills('harvard', skillNames);
       
-      if (typeof suggestions === 'string') {
-        const suggestedSkillNames = suggestions.split('\n')
-          .map(s => s.trim())
-          .filter(s => s && !skillNames.includes(s));
-
-        const newSkills: Skill[] = suggestedSkillNames.map(name => ({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-          name,
-          level: 'Intermedio',
-          category: 'Technical'
-        }));
+      const response = await fetch('/api/ai/suggest-skills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          currentSkills: skillNames,
+          format: 'Harvard',
+          role: 'Administración y Gestión',
+          cvContext: {
+            personalInfo: cvData?.personalInfo,
+            education: cvData?.education,
+            workExperience: cvData?.workExperience,
+            projects: cvData?.projects,
+            certifications: cvData?.certifications
+          }
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.suggestions) {
+        const newSkills = processCategorizedSuggestions(data.suggestions, skillNames);
         
-        onUpdate([...skills, ...newSkills]);
+        if (newSkills.length > 0) {
+          onUpdate([...skills, ...newSkills]);
+        } else {
+          alert('No se encontraron habilidades nuevas para sugerir');
+        }
       }
     } catch (error) {
       console.error('Error al sugerir habilidades:', error);
+      alert('Error al obtener sugerencias. Inténtalo de nuevo.');
     } finally {
       setIsSuggestingSkills(false);
     }
   };
+
+  const processCategorizedSuggestions = (suggestions: string, existingSkills: string[]): Skill[] => {
+    const newSkills: Skill[] = [];
+    const sections = suggestions.split('\n\n');
+    
+    sections.forEach(section => {
+      const lines = section.trim().split('\n');
+      const header = lines[0];
+      
+      let category: 'Technical' | 'Leadership' | 'Language' = 'Technical';
+      
+      if (header.includes('SOFTWARE')) {
+        category = 'Technical';
+      } else if (header.includes('GESTIÓN DE PROYECTOS')) {
+        category = 'Leadership';
+      } else if (header.includes('IDIOMAS')) {
+        category = 'Language';
+      }
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('- ')) {
+          const skillText = line.substring(2).trim();
+          
+          if (!existingSkills.some(existing => 
+            existing.toLowerCase().includes(skillText.toLowerCase()) ||
+            skillText.toLowerCase().includes(existing.toLowerCase())
+          )) {
+            let skillName = skillText;
+            let level = 'Intermedio';
+            
+            if (skillText.includes('(') && skillText.includes(')')) {
+              const parts = skillText.split('(');
+              skillName = parts[0].trim();
+              const levelPart = parts[1].replace(')', '').trim();
+              if (['Básico', 'Intermedio', 'Avanzado'].includes(levelPart)) {
+                level = levelPart;
+              }
+            }
+            
+            if (category === 'Language' && skillText.includes(' - ')) {
+              const parts = skillText.split(' - ');
+              skillName = parts[0].trim();
+              level = parts[1] ? parts[1].trim() : 'Intermedio';
+            }
+            
+            newSkills.push({
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+              name: skillName,
+              level: level as 'Básico' | 'Intermedio' | 'Avanzado',
+              category: category
+            });
+          }
+        }
+      }
+    });
+    
+    return newSkills;
+  };
+
+  const getCategoryColors = (categoryValue: string) => {
+    switch (categoryValue) {
+      case 'Technical':
+        return 'bg-blue-100 border-blue-200';
+      case 'Leadership':
+        return 'bg-green-100 border-green-200';
+      case 'Language':
+        return 'bg-purple-100 border-purple-200';
+      default:
+        return 'bg-gray-50 border-gray-200';
+    }
+  };
+
+  // Agrupar habilidades por categoría
+  const groupedSkills = skillCategories.reduce((acc, category) => {
+    acc[category.value] = skills.filter(skill => skill.category === category.value);
+    return acc;
+  }, {} as Record<string, Skill[]>);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-[#028bbf]" />
-          Habilidades - Formato Harvard
+          Habilidades
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {skills.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No hay habilidades agregadas</p>
-            <p className="text-sm">Agrega tus habilidades profesionales siguiendo el formato Harvard</p>
+            <p className="text-sm">Agrega las herramientas y competencias que dominas</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {skills.map((skill, index) => (
-              <div key={skill.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <Input
-                      value={skill.name}
-                      onChange={(e) => updateSkill(index, 'name', e.target.value)}
-                      placeholder="Ej: Análisis de Datos, Metodología de Investigación"
-                      className="font-medium"
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeSkill(index)}
-                    className="text-red-600 hover:text-red-800 ml-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm">Categoría</Label>
-                    <Select
-                      value={skill.category}
-                      onValueChange={(value) => updateSkill(index, 'category', value)}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {skillCategories.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            <div>
-                              <div className="font-medium">{cat.label}</div>
-                              <div className="text-xs text-gray-500">{cat.description}</div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            {/* Mostrar habilidades agrupadas por categoría */}
+            {skillCategories.map(categoryInfo => {
+              const categorySkills = groupedSkills[categoryInfo.value] || [];
+              if (categorySkills.length === 0) return null;
+
+              return (
+                <div key={categoryInfo.value} className={`border rounded-lg p-4 ${getCategoryColors(categoryInfo.value)}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span>{categoryInfo.icon}</span>
+                    <h3 className="font-medium text-gray-900">{categoryInfo.label}</h3>
+                    <span className="text-sm text-gray-500">({categorySkills.length})</span>
                   </div>
                   
-                  <div>
-                    <Label className="text-sm">Nivel</Label>
-                    <Select
-                      value={skill.level}
-                      onValueChange={(value) => updateSkill(index, 'level', value)}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {skillLevels.map((level) => (
-                          <SelectItem key={level.value} value={level.value}>
-                            <div>
-                              <div className="font-medium">{level.label}</div>
-                              <div className="text-xs text-gray-500">{level.description}</div>
+                  <div className="space-y-3">
+                    {categorySkills.map((skill) => {
+                      const originalIndex = skills.findIndex(s => s.id === skill.id);
+                      return (
+                        <div key={skill.id} className="bg-white rounded border p-3">
+                          <div className="grid grid-cols-12 gap-3 items-center">
+                            <div className="col-span-5">
+                              <Input
+                                value={skill.name}
+                                onChange={(e) => updateSkill(originalIndex, 'name', e.target.value)}
+                                placeholder="Ej: Excel, Power BI, Inglés"
+                                className="border-0 bg-transparent focus:bg-gray-50"
+                              />
                             </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            
+                            <div className="col-span-3">
+                              <Select
+                                value={skill.category}
+                                onValueChange={(value) => updateSkill(originalIndex, 'category', value)}
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {skillCategories.map((cat) => (
+                                    <SelectItem key={cat.value} value={cat.value}>
+                                      {cat.icon} {cat.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="col-span-3">
+                              <Select
+                                value={skill.level}
+                                onValueChange={(value) => updateSkill(originalIndex, 'level', value)}
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {skillLevels.map((level) => (
+                                    <SelectItem key={level.value} value={level.value}>
+                                      {level.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="col-span-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSkill(originalIndex)}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             onClick={addSkill}
             variant="outline"
-            className="flex-1 border-dashed border-2 border-[#028bbf] text-[#028bbf] hover:bg-[#028bbf] hover:text-white"
+            className="flex-1 border-dashed border-2 border-gray-300 text-gray-600 hover:border-[#028bbf] hover:text-[#028bbf]"
           >
             <Plus className="h-4 w-4 mr-2" />
             Agregar Habilidad
@@ -201,14 +316,14 @@ export default function SkillsForm({ skills, onUpdate }: SkillsFormProps) {
             onClick={suggestSkillsWithAI}
             disabled={isSuggestingSkills}
             variant="outline"
-            className="flex-1 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+            className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
           >
             {isSuggestingSkills ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700 mr-2"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2"></div>
             ) : (
               <Sparkles className="h-4 w-4 mr-2" />
             )}
-            {isSuggestingSkills ? 'Sugiriendo...' : 'Sugerir con IA'}
+            {isSuggestingSkills ? 'Sugiriendo...' : 'Sugerir Habilidades'}
           </Button>
         </div>
 

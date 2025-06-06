@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    TZ: 'America/Lima', 
+  },
   // output: 'export',
   
   // ✅ Optimizaciones de Performance
@@ -164,4 +167,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig

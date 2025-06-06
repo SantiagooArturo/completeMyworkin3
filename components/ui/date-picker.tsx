@@ -135,8 +135,8 @@ export default function DatePicker({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg">
-          <div className="p-3">
+        <div className="absolute top-full left-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg min-w-[280px] max-w-[320px]">
+          <div className="p-2">
             <CalendarComponent
               mode="single"
               selected={getSelectedDate()}
@@ -144,20 +144,43 @@ export default function DatePicker({
               fromDate={getMinDate()}
               toDate={getMaxDate()}
               initialFocus
+              className="w-full"
+              classNames={{
+                months: "flex flex-col sm:flex-row space-y-2 sm:space-x-2 sm:space-y-0",
+                month: "space-y-2",
+                caption: "flex justify-center pt-1 relative items-center text-sm font-medium",
+                caption_label: "text-sm font-medium",
+                nav: "space-x-1 flex items-center",
+                nav_button: "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-6 w-6",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse space-y-1",
+                head_row: "flex",
+                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.65rem] h-6 flex items-center justify-center",
+                row: "flex w-full mt-1",
+                cell: "text-center text-xs p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 h-7 w-8",
+                day: "inline-flex items-center justify-center rounded-sm text-xs font-normal ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-7 w-8",
+                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "bg-accent text-accent-foreground font-medium",
+                day_outside: "text-muted-foreground opacity-50",
+                day_disabled: "text-muted-foreground opacity-50",
+                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                day_hidden: "invisible",
+              }}
             />
             
-            {/* Botón para limpiar */}
+            {/* Botón para limpiar - más compacto */}
             {value && (
-              <div className="mt-3 pt-2 border-t border-border">
+              <div className="mt-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => {
                     onChange('');
                     setIsOpen(false);
                   }}
-                  className="w-full p-1 text-xs text-muted-foreground hover:text-foreground"
+                  className="w-full py-1 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-sm transition-colors"
                 >
-                  Limpiar selección
+                  Limpiar fecha
                 </button>
               </div>
             )}
