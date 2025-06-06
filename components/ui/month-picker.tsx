@@ -5,14 +5,15 @@ import { ChevronDown, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MonthPickerProps {
-  value: string; // Formato: "YYYY-MM"
+  value: string; // Formato: "YYYY-MM-DD" o "YYYY-MM" (compatible con ambos)
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  minDate?: string; // Formato: "YYYY-MM"
-  maxDate?: string; // Formato: "YYYY-MM"
+  minDate?: string; // Formato: "YYYY-MM-DD" o "YYYY-MM"
+  maxDate?: string; // Formato: "YYYY-MM-DD" o "YYYY-MM"
   required?: boolean;
+  dateFormat?: 'month' | 'full'; // 'month' para YYYY-MM, 'full' para YYYY-MM-DD
 }
 
 const months = [
@@ -28,12 +29,15 @@ export default function MonthPicker({
   className = '',
   minDate,
   maxDate,
-  required = false
+  required = false,
+  dateFormat = 'month'
 }: MonthPickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [viewYear, setViewYear] = useState(() => {
+  const [isOpen, setIsOpen] = useState(false);  const [viewYear, setViewYear] = useState(() => {
     if (value) {
-      return parseInt(value.split('-')[0]);
+      const parts = value.split('-');
+      if (parts.length >= 1) {
+        return parseInt(parts[0]);
+      }
     }
     return new Date().getFullYear();
   });
@@ -51,21 +55,39 @@ export default function MonthPicker({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
   // Formatear valor para mostrar
   const formatDisplayValue = (value: string) => {
     if (!value) return '';
-    const [year, month] = value.split('-');
+    
+    // Extraer año y mes del valor (compatible con YYYY-MM-DD y YYYY-MM)
+    const dateStr = value.includes('-') ? value : '';
+    const parts = dateStr.split('-');
+    if (parts.length < 2) return value;
+    
+    const year = parts[0];
+    const month = parts[1];
     const monthIndex = parseInt(month) - 1;
+    
+    if (monthIndex < 0 || monthIndex > 11) return value;
+    
     return `${months[monthIndex]} ${year}`;
   };
 
+  // Extraer fecha en formato YYYY-MM para comparaciones
+  const extractYearMonth = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+      return `${parts[0]}-${parts[1]}`;
+    }
+    return dateStr;
+  };
   // Verificar si un mes está habilitado
   const isMonthEnabled = (year: number, monthIndex: number) => {
     const monthValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
     
-    if (minDate && monthValue < minDate) return false;
-    if (maxDate && monthValue > maxDate) return false;
+    if (minDate && monthValue < extractYearMonth(minDate)) return false;
+    if (maxDate && monthValue > extractYearMonth(maxDate)) return false;
     
     return true;
   };
@@ -74,8 +96,16 @@ export default function MonthPicker({
   const handleMonthSelect = (year: number, monthIndex: number) => {
     if (!isMonthEnabled(year, monthIndex)) return;
     
-    const monthValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-    onChange(monthValue);
+    let selectedValue;
+    if (dateFormat === 'full') {
+      // Para formato completo, usar el primer día del mes
+      selectedValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+    } else {
+      // Para formato de mes, usar YYYY-MM
+      selectedValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    }
+    
+    onChange(selectedValue);
     setIsOpen(false);
   };
 
@@ -145,9 +175,10 @@ export default function MonthPicker({
             </div>
 
             {/* Grid de meses */}
-            <div className="grid grid-cols-3 gap-1">
-              {months.map((month, index) => {
-                const isSelected = value === `${viewYear}-${String(index + 1).padStart(2, '0')}`;
+            <div className="grid grid-cols-3 gap-1">              {months.map((month, index) => {
+                const currentYearMonth = `${viewYear}-${String(index + 1).padStart(2, '0')}`;
+                const valueYearMonth = extractYearMonth(value);
+                const isSelected = valueYearMonth === currentYearMonth;
                 const isEnabled = isMonthEnabled(viewYear, index);
 
                 return (

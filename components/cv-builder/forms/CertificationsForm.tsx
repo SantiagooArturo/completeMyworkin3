@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Award, Calendar, Building } from 'lucide-react';
-import MonthPicker from '@/components/ui/month-picker';
+import DatePicker from '@/components/ui/date-picker';
 
 interface CertificationsFormProps {
   certifications: Certification[];
@@ -37,17 +37,57 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
   const removeCertification = (index: number) => {
     const updatedCertifications = certifications.filter((_, i) => i !== index);
     onUpdate(updatedCertifications);
-  };
-
-  const formatDate = (dateString: string) => {
+  };  const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+    
+    try {
+      // Si el formato es YYYY-MM-DD, formatear en dd/mm/yyyy
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        
+        return date.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+      
+      // Si es YYYY-MM, formatear en mm/yyyy
+      if (/^\d{4}-\d{2}$/.test(dateString)) {
+        const [year, month] = dateString.split('-');
+        return `${month}/${year}`;
+      }
+      
+      // Para otros formatos, agregar día ficticio
+      let safeDate = dateString;
+      if (/^\d{4}-\d{2}$/.test(dateString)) {
+        safeDate += '-01';
+      }
+      
+      const date = new Date(safeDate);
+      if (isNaN(date.getTime())) return dateString;
+      
+      return date.toLocaleDateString('es-ES', {
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
   };
-
   const isExpired = (expiryDate: string) => {
     if (!expiryDate) return false;
-    return new Date(expiryDate) < new Date();
+    
+    try {
+      let safeDate = expiryDate;
+      if (/^\d{4}-\d{2}$/.test(expiryDate)) {
+        safeDate += '-01';
+      }
+      return new Date(safeDate) < new Date();
+    } catch {
+      return false;
+    }
   };
 
   return (
@@ -121,21 +161,19 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                       className="mt-1"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                </div>                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       Fecha de Obtención *
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={cert.date}
                       onChange={(date) => updateCertification(index, 'date', date)}
                       placeholder="Selecciona fecha de obtención"
                       className="mt-1"
                       required
-                      maxDate={cert.expiryDate || new Date().toISOString().slice(0, 7)} // No puede ser después del vencimiento o futuro
+                      maxDate={cert.expiryDate || undefined}
                     />
                   </div>
                   
@@ -144,12 +182,12 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                       <Calendar className="h-4 w-4" />
                       Fecha de Vencimiento (Opcional)
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={cert.expiryDate || ''}
                       onChange={(date) => updateCertification(index, 'expiryDate', date)}
                       placeholder="Selecciona fecha de vencimiento"
                       className="mt-1"
-                      minDate={cert.date || new Date().toISOString().slice(0, 7)} // No puede ser antes de la obtención
+                      minDate={cert.date || undefined}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Solo si la certificación tiene fecha de vencimiento
@@ -172,16 +210,15 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
 
                 {/* Información adicional */}
                 {cert.date && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      <strong>Obtenida:</strong> {formatDate(cert.date + '-01')}
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">                    <p className="text-sm text-gray-600">
+                      <strong>Obtenida:</strong> {formatDate(cert.date)}
                       {cert.expiryDate && (
                         <>
                           {' • '}
                           <strong>
                             {isExpired(cert.expiryDate) ? 'Expiró' : 'Expira'}:
                           </strong>{' '}
-                          {formatDate(cert.expiryDate + '-01')}
+                          {formatDate(cert.expiryDate)}
                         </>
                       )}
                     </p>

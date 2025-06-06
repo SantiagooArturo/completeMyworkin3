@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { useState } from 'react';
 import MonthPicker from '@/components/ui/month-picker';
+import DatePicker from '@/components/ui/date-picker';
 
 interface WorkExperienceFormProps {
   workExperience: WorkExperience[];
@@ -41,6 +42,20 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
     const updated = workExperience.map((exp, i) => 
       i === index ? { ...exp, [field]: value } : exp
     );
+    onUpdate(updated);
+  };
+
+  // ✅ NUEVA: Función para manejar el estado current de forma segura
+  const updateCurrentStatus = (index: number, checked: boolean) => {
+    const updated = workExperience.map((exp, i) => 
+      i === index ? { 
+        ...exp, 
+        current: checked,
+        endDate: checked ? '' : exp.endDate
+      } : exp
+    );
+    
+    console.log('🔍 Work experience current status actualizado:', { index, checked, result: updated[index] });
     onUpdate(updated);
   };
 
@@ -370,8 +385,7 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         <Label className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Fecha de Inicio *
-                        </Label>
-                        <MonthPicker
+                        </Label>                        <DatePicker
                           value={exp.startDate}
                           onChange={(date) => updateWorkExperience(index, 'startDate', date)}
                           placeholder="Selecciona fecha de inicio"
@@ -385,8 +399,7 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         <Label className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Fecha de Fin
-                        </Label>
-                        <MonthPicker
+                        </Label>                        <DatePicker
                           value={exp.endDate}
                           onChange={(date) => updateWorkExperience(index, 'endDate', date)}
                           placeholder="Selecciona fecha de fin"
@@ -418,12 +431,7 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         <Checkbox
                           id={`current-job-${index}`}
                           checked={exp.current}
-                          onCheckedChange={(checked) => {
-                            updateWorkExperience(index, 'current', checked);
-                            if (checked) {
-                              updateWorkExperience(index, 'endDate', '');
-                            }
-                          }}
+                          onCheckedChange={(checked) => updateCurrentStatus(index, checked as boolean)}
                         />
                         <Label htmlFor={`current-job-${index}`} className="text-sm cursor-pointer">
                           Trabajo actual

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar } from 'lucide-react';
-import MonthPicker from '@/components/ui/month-picker';
+import DatePicker from '@/components/ui/date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface ProjectsFormProps {
@@ -25,7 +25,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
       technologies: [],
       startDate: '',
       endDate: '',
-      current: false, // ✅ Explícitamente false
+      current: false,
       url: '',
       highlights: []
     };
@@ -35,7 +35,6 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
   const updateProject = (index: number, field: keyof Project, value: string | string[] | boolean) => {
     const updatedProjects = projects.map((project, i) => {
       if (i === index) {
-        // ✅ Manejar específicamente el campo current
         if (field === 'current') {
           return { ...project, [field]: Boolean(value) };
         }
@@ -43,6 +42,20 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
       }
       return project;
     });
+    onUpdate(updatedProjects);
+  };
+
+  // ✅ Nueva función para manejar el estado current de forma segura
+  const updateCurrentStatus = (index: number, checked: boolean) => {
+    const updatedProjects = projects.map((project, i) => 
+      i === index ? { 
+        ...project, 
+        current: checked,
+        endDate: checked ? '' : project.endDate
+      } : project
+    );
+    
+    console.log('🔍 Project current status actualizado:', { index, checked, result: updatedProjects[index] });
     onUpdate(updatedProjects);
   };
 
@@ -126,15 +139,13 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       className="mt-1"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                </div>                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={project.startDate}
                       onChange={(date) => updateProject(index, 'startDate', date)}
                       placeholder="Selecciona fecha de inicio"
@@ -147,7 +158,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       <Calendar className="h-4 w-4" />
                       Fecha de Fin
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={project.endDate}
                       onChange={(date) => updateProject(index, 'endDate', date)}
                       placeholder="Selecciona fecha de fin"
@@ -159,14 +170,8 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                     <div className="flex items-center space-x-2 mt-2">
                       <Checkbox
                         id={`current-project-${index}`}
-                        checked={Boolean(project.current)} // ✅ Asegurar que sea boolean
-                        onCheckedChange={(checked) => {
-                          console.log('Checkbox clicked:', checked); // 🔍 Debug
-                          updateProject(index, 'current', Boolean(checked));
-                          if (checked) {
-                            updateProject(index, 'endDate', '');
-                          }
-                        }}
+                        checked={Boolean(project.current)}
+                        onCheckedChange={(checked) => updateCurrentStatus(index, checked as boolean)}
                       />
                       <Label htmlFor={`current-project-${index}`} className="text-sm cursor-pointer">
                         Proyecto en curso

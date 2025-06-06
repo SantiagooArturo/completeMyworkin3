@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GraduationCap, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import MonthPicker from '@/components/ui/month-picker';
+import DatePicker from '@/components/ui/date-picker';
 
 interface EducationFormProps {
   education: Education[];
@@ -81,6 +81,19 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
     onUpdate(updatedEducation);
   };
 
+  const updateCurrentStatus = (index: number, checked: boolean) => {
+    const updatedEducation = education.map((edu, i) => 
+      i === index ? { 
+        ...edu, 
+        current: checked,
+        endDate: checked ? '' : edu.endDate
+      } : edu
+    );
+    
+    console.log('🔍 Current status actualizado:', { index, checked, result: updatedEducation[index] });
+    onUpdate(updatedEducation);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -135,13 +148,12 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">                  <div>
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio *
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={edu.startDate}
                       onChange={(date) => updateEducation(index, 'startDate', date)}
                       placeholder="Selecciona fecha de inicio"
@@ -156,7 +168,7 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Calendar className="h-4 w-4" />
                       Fecha de Fin
                     </Label>
-                    <MonthPicker
+                    <DatePicker
                       value={edu.endDate}
                       onChange={(date) => updateEducation(index, 'endDate', date)}
                       placeholder="Selecciona fecha de fin"
@@ -169,12 +181,7 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Checkbox
                         id={`current-${index}`}
                         checked={edu.current}
-                        onCheckedChange={(checked) => {
-                          updateEducation(index, 'current', checked);
-                          if (checked) {
-                            updateEducation(index, 'endDate', '');
-                          }
-                        }}
+                        onCheckedChange={(checked) => updateCurrentStatus(index, checked as boolean)}
                       />
                       <Label htmlFor={`current-${index}`} className="text-sm">
                         Actualmente estudiando

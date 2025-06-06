@@ -9,35 +9,55 @@ interface CVPreviewProps {
   cvData: CVData;
 }
 
-export default function CVPreview({ cvData }: CVPreviewProps) {
-  const formatDate = (dateString: string) => {
+export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDate = (dateString: string) => {
     if (!dateString) return '';
     
-    // Si el formato es YYYY-MM, procesarlo correctamente
-    if (dateString.includes('-') && dateString.length === 7) {
-      const [year, month] = dateString.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1, 15); // Día 15 para evitar problemas de zona horaria
-      return date.toLocaleDateString('es-ES', { 
-        year: 'numeric',
-        month: 'long'
-      });
+    try {
+      // Si el formato es YYYY-MM-DD (fecha completa), formatear en dd/mm/yyyy
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        
+        return date.toLocaleDateString('es-ES', { 
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+      
+      // Si el formato es YYYY-MM, formatear en mm/yyyy
+      if (/^\d{4}-\d{2}$/.test(dateString)) {
+        const [year, month] = dateString.split('-');
+        return `${month}/${year}`;
+      }
+      
+      // Si el formato es solo YYYY (solo año), devolver el año
+      if (/^\d{4}$/.test(dateString)) {
+        return dateString;
+      }
+      
+      // Para otros formatos, intentar convertir y formatear
+      const date = new Date(dateString + '-01-15');
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('es-ES', { 
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+      
+      return dateString;
+    } catch {
+      return dateString;
     }
-    
-    // Para otros formatos, usar el método original pero con día fijo
-    const date = new Date(dateString + '-15');
-    return new Intl.DateTimeFormat('es-ES', { 
-      year: 'numeric',
-      month: 'long'
-    }).format(date);
-  };
-
-  const formatDateRange = (startDate: string, endDate: string, current: boolean) => {
+  };  const formatDateRange = (startDate: string, endDate: string, current: boolean) => {
     const start = formatDate(startDate);
-    if (current) {
-      return `${start} - Presente`;
+    
+    if (current === true) {
+      return `${start} - Actualidad`;
+    } else {
+      const end = formatDate(endDate);
+      return `${start} - ${end}`;
     }
-    const end = formatDate(endDate);
-    return `${start} - ${end}`;
   };
 
   const renderSkillLevel = (level: string) => {
