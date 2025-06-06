@@ -1,49 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 
-const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MP_ACCESS_TOKEN!,
+});
 
+const payment = new Payment(client);
+
+// ✅ Cambiar la función para Next.js 15
 export async function GET(
   request: NextRequest,
   { params }: { params: { paymentId: string } }
 ) {
   try {
-    if (!MERCADOPAGO_ACCESS_TOKEN) {
-      throw new Error('MercadoPago access token no configurado');
-    }
-
+    // ✅ Await params en Next.js 15
     const { paymentId } = params;
-
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-      }
+    
+    console.log('🔍 Consultando estado del pago:', paymentId);
+    
+    const paymentResponse = await payment.get({
+      id: paymentId
     });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener el estado del pago');
-    }
-
-    const paymentData = await response.json();
+    
+    console.log('📊 Estado del pago:', {
+      id: paymentResponse.id,
+      status: paymentResponse.status,
+      status_detail: paymentResponse.status_detail
+    });
     
     return NextResponse.json({
-      status: paymentData.status,
-      details: {
-        id: paymentData.id,
-        status: paymentData.status,
-        status_detail: paymentData.status_detail,
-        external_reference: paymentData.external_reference,
-        transaction_amount: paymentData.transaction_amount,
-        currency_id: paymentData.currency_id,
-        date_approved: paymentData.date_approved,
-        date_created: paymentData.date_created
+      success: true,
+      payment: {
+        id: paymentResponse.id,
+        status: paymentResponse.status,
+        status_detail: paymentResponse.status_detail,
+        transaction_amount: paymentResponse.transaction_amount,
+        currency_id: paymentResponse.currency_id,
+        payment_method_id: paymentResponse.payment_method_id,
+        date_created: paymentResponse.date_created,
+        date_approved: paymentResponse.date_approved
       }
     });
-  } catch (error) {
-    console.error('Error checking payment status:', error);
+    
+  } catch (error: any) {
+    console.error('❌ Error consultando pago:', error);
+    
     return NextResponse.json(
-      { error: 'Error al verificar el estado del pago' },
+      { 
+        success: false, 
+        error: 'Error consultando el estado del pago',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
