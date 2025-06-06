@@ -239,7 +239,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
                         {project.technologies && project.technologies.length > 0 && (
                           <div>
                             <span className="text-black font-medium font-serif">Tecnologías: </span>
-                            <span className="text-black font-serif">{project.technologies.join(', ')}</span>
+                            <span className="text-black font-serif">{project.technologies}</span>
                           </div>
                         )}
                       </div>

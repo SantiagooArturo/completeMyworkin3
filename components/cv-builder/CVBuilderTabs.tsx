@@ -39,7 +39,7 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
       id: 'education',
       label: 'Educación',
       icon: GraduationCap,
-      isComplete: cvData.education.length > 0 && cvData.education.every(edu => edu.institution && edu.degree)
+      isComplete: cvData.education.length > 0 && cvData.education.every(edu => edu.institution)
     },    
     {
       id: 'experience_projects',

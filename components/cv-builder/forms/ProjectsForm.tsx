@@ -22,7 +22,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
       id: Date.now().toString(),
       name: '',
       description: '',
-      technologies: [],
+      technologies: '',
       startDate: '',
       endDate: '',
       current: false,
@@ -65,20 +65,43 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
   };
 
   const updateTechnologies = (index: number, value: string) => {
-    // Permitir comas al final y no filtrar espacios en blanco innecesariamente
-    const technologies = value
-      .split(',')
-      .map(tech => tech.trim())
-      .filter(tech => tech.length > 0);
-    updateProject(index, 'technologies', technologies);
+    updateProject(index, 'technologies', value);
   };
 
-  const updateHighlights = (index: number, value: string) => {
-    // Permitir líneas vacías y conservar el formato
-    const highlights = value
-      .split('\n')
-      .filter(h => h.trim().length > 0);
-    updateProject(index, 'highlights', highlights);
+  const updateHighlights = (index: number, highlightIndex: number, value: string) => {
+    const updatedProjects = projects.map((project, i) => {
+      if (i === index) {
+        const updatedHighlights = [...(project.highlights || [])];
+        updatedHighlights[highlightIndex] = value;
+        return { ...project, highlights: updatedHighlights };
+      }
+      return project;
+    });
+    onUpdate(updatedProjects);
+  };
+
+  const addHighlight = (index: number) => {
+    const updatedProjects = projects.map((project, i) => {
+      if (i === index) {
+        return { 
+          ...project, 
+          highlights: [...(project.highlights || []), ''] 
+        };
+      }
+      return project;
+    });
+    onUpdate(updatedProjects);
+  };
+
+  const removeHighlight = (index: number, highlightIndex: number) => {
+    const updatedProjects = projects.map((project, i) => {
+      if (i === index) {
+        const updatedHighlights = (project.highlights || []).filter((_, hi) => hi !== highlightIndex);
+        return { ...project, highlights: updatedHighlights };
+      }
+      return project;
+    });
+    onUpdate(updatedProjects);
   };
 
   return (
@@ -182,16 +205,63 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                 </div>
                 
                 <div className="mt-4">
-                  <Label>Logros y Destacados del Proyecto</Label>
-                  <Textarea
-                    value={project.highlights?.join('\n') || ''}
-                    onChange={(e) => updateHighlights(index, e.target.value)}
-                    placeholder="• Desarrollé la interfaz de usuario que mejoró la experiencia del usuario en un 40%&#10;• Implementé un sistema de autenticación seguro&#10;• Reduje el tiempo de carga de la aplicación en un 60%"
-                    rows={4}
-                    className="mt-1 resize-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Lista tus principales logros y contribuciones (un logro por línea)
+                  <Label className="flex items-center justify-between">
+                    Logros y Destacados del Proyecto
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addHighlight(index)}
+                      className="text-[#028bbf] hover:text-[#027ba8] h-6 px-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar logro
+                    </Button>
+                  </Label>
+                  
+                  {(project.highlights || []).length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                      <p className="text-sm">No hay logros agregados</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addHighlight(index)}
+                        className="text-[#028bbf] hover:text-[#027ba8] mt-2"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Agregar primer logro
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-2">
+                      {(project.highlights || []).map((highlight, highlightIndex) => (
+                        <div key={highlightIndex} className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500 font-medium min-w-[20px]">
+                            {highlightIndex + 1}.
+                          </span>
+                          <Input
+                            value={highlight}
+                            onChange={(e) => updateHighlights(index, highlightIndex, e.target.value)}
+                            placeholder="Ej: Desarrollé la interfaz que mejoró la experiencia del usuario en un 40%"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeHighlight(index, highlightIndex)}
+                            className="text-red-600 hover:text-red-800 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Lista tus principales logros y contribuciones del proyecto
                   </p>
                 </div>
 
@@ -207,9 +277,9 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                 </div>
 
                 <div className="mt-4">
-                  <Label>Tecnologías Utilizadas</Label>
+                  <Label>Herramientas Utilizadas</Label>
                   <Input
-                    value={project.technologies?.join(', ') || ''}
+                    value={project.technologies}
                     onChange={(e) => updateTechnologies(index, e.target.value)}
                     placeholder="Ej: React, Node.js, MongoDB, AWS (separadas por comas)"
                     className="mt-1"

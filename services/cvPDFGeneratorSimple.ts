@@ -286,7 +286,7 @@ export class CVPDFGeneratorSimple {
               doc.text(techLabel, leftMargin, y);
               
               doc.setFont('times', 'normal');
-              const techText = project.technologies.join(', ');
+              const techText = project.technologies;
               const techLabelWidth = doc.getTextWidth(techLabel);
               const techLines = doc.splitTextToSize(techText, contentWidth - techLabelWidth);
               doc.text(techLines, leftMargin + techLabelWidth, y);

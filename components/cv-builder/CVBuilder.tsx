@@ -320,7 +320,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               placeholder="Nombre de tu CV"
             />
             <div className="flex items-center gap-3">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 hidden">
                 <GraduationCap className="h-5 w-5 text-[#028bbf]" />
                 <label className="text-sm font-medium text-gray-700">Modo estudiante</label>
                 <input

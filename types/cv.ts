@@ -81,7 +81,7 @@ export interface Project {
   id: string;
   name: string;            // Nombre del proyecto
   description: string;     // Descripción detallada
-  technologies: string[];  // Tecnologías utilizadas
+  technologies: string;  // Tecnologías utilizadas
   startDate: string;      // Fecha de inicio
   endDate: string;        // Fecha de finalización
   current: boolean;       // Si está en curso
