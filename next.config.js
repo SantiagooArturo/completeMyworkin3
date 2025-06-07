@@ -145,8 +145,6 @@ const nextConfig = {
   
   // ✅ Configuración experimental para performance
   experimental: {
-    // Optimización de CSS
-    optimizeCss: true,
     // Optimización de fuentes
     optimizePackageImports: ['@headlessui/react', '@heroicons/react'],
   },

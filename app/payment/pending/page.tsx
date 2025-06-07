@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from 'react-day-picker';
+import { Button } from '@/components/ui/button';
+
 
 export default function PaymentPending() {
   const router = useRouter();

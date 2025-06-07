@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { trackButtonClick, trackBotInteraction } from '@/utils/analytics';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PostularPage() {
+function PostularContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -210,5 +210,18 @@ export default function PostularPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PostularPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#028bbf]"></div>
+        <p className="ml-2">Cargando...</p>
+      </div>
+    }>
+      <PostularContent />
+    </Suspense>
   );
 }

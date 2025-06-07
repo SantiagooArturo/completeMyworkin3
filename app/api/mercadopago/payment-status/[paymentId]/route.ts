@@ -10,11 +10,11 @@ const payment = new Payment(client);
 // ✅ Cambiar la función para Next.js 15
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: { params: Promise<{ paymentId: string }> }
 ) {
   try {
-    // ✅ Await params en Next.js 15
-    const { paymentId } = params;
+    // ✅ En Next.js 15, params es una Promise que debe ser await
+    const { paymentId } = await params;
     
     console.log('🔍 Consultando estado del pago:', paymentId);
     
