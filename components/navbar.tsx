@@ -43,7 +43,7 @@ export default function Navbar() {
                 <NavigationMenuList>
                   <NavigationMenuItem>
                     <NavigationMenuTrigger className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium bg-transparent">
-                Bots de empleabilidad
+                Herramientas de empleabilidad
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
                       <div className="w-[250px] p-2">
