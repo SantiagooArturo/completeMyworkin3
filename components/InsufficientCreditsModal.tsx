@@ -23,6 +23,7 @@ interface InsufficientCreditsModalProps {
   toolType: ToolType;
   requiredCredits: number;
   currentCredits: number;
+  onPurchaseSuccess?: (purchaseData: any) => Promise<void>;
 }
 
 const TOOL_LABELS = {
@@ -43,17 +44,20 @@ export default function InsufficientCreditsModal({
   user,
   toolType,
   requiredCredits,
-  currentCredits
+  currentCredits,
+  onPurchaseSuccess
 }: InsufficientCreditsModalProps) {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   const handlePurchaseClick = () => {
     setShowPurchaseModal(true);
   };
-
-  const handlePurchaseSuccess = () => {
+  const handlePurchaseSuccessInternal = async () => {
     setShowPurchaseModal(false);
     onClose();
+    if (onPurchaseSuccess) {
+      await onPurchaseSuccess({});
+    }
   };
 
   const ToolIcon = TOOL_ICONS[toolType];
@@ -151,13 +155,11 @@ export default function InsufficientCreditsModal({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-
-      {showPurchaseModal && (
+      </Dialog>      {showPurchaseModal && (
         <CreditPurchaseModal
           isOpen={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
-          onSuccess={handlePurchaseSuccess}
+          onSuccess={handlePurchaseSuccessInternal}
           user={user}
         />
       )}

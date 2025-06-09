@@ -1,59 +1,40 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { analyzeCV, uploadCV } from "../../src/utils/cvAnalyzer";
+import { uploadCV } from "../../src/utils/cvAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, Crown, AlertCircle } from "lucide-react";
+import { Loader2, Upload, FileText, AlertCircle } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
-import { CreditService } from "@/services/creditService";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import AsyncCVAnalysisModal from "@/components/cv/AsyncCVAnalysisModal";
 
 export default function AnalizarCVPage() {
   const { user } = useAuth();
-  const { credits, hasEnoughCredits, refreshCredits, reserveCredits, confirmReservation, revertReservation } = useCredits(user);
+  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
   const [file, setFile] = useState<File | null>(null);
   const [puestoPostular, setPuestoPostular] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [freeUsed, setFreeUsed] = useState(false);
-  const [longWait, setLongWait] = useState(false);
-  const [veryLongWait, setVeryLongWait] = useState(false);
   const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+  const [showAsyncModal, setShowAsyncModal] = useState(false);
+
   useEffect(() => {
     if (!user) {
       const used = localStorage.getItem("cv_analysis_used");
       setFreeUsed(used === "true");
     }
   }, [user]);
-
-  useEffect(() => {
-    let longWaitTimer: NodeJS.Timeout;
-    let veryLongWaitTimer: NodeJS.Timeout;
-    if (loading) {
-      setLongWait(false);
-      setVeryLongWait(false);
-      longWaitTimer = setTimeout(() => setLongWait(true), 30000); // 30s
-      veryLongWaitTimer = setTimeout(() => setVeryLongWait(true), 120000); // 2min
-    } else {
-      setLongWait(false);
-      setVeryLongWait(false);
-    }
-    return () => {
-      clearTimeout(longWaitTimer);
-      clearTimeout(veryLongWaitTimer);
-    };
-  }, [loading]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -74,9 +55,9 @@ export default function AnalizarCVPage() {
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile.type === "application/pdf") {
         setFile(droppedFile);
-        setError(null);
+        setUploadError(null);
       } else {
-        setError("Por favor, sube un archivo PDF");
+        setUploadError("Por favor, sube un archivo PDF");
       }
     }
   };
@@ -86,25 +67,26 @@ export default function AnalizarCVPage() {
       const selectedFile = e.target.files[0];
       if (selectedFile.type === "application/pdf") {
         setFile(selectedFile);
-        setError(null);
+        setUploadError(null);
       } else {
-        setError("Por favor, sube un archivo PDF");
+        setUploadError("Por favor, sube un archivo PDF");
       }
     }
   };
+
   const handleAnalyze = async () => {
     if (!file) {
-      setError("Por favor, sube un archivo PDF");
+      setUploadError("Por favor, sube un archivo PDF");
       return;
     }
     if (!puestoPostular) {
-      setError("Por favor, ingresa el puesto al que postulas");
+      setUploadError("Por favor, ingresa el puesto al que postulas");
       return;
     }
 
     // Verificar autenticación para usuarios registrados
     if (!user && freeUsed) {
-      setError("Has usado tu análisis gratuito. Inicia sesión para analizar más CVs.");
+      setUploadError("Has usado tu análisis gratuito. Inicia sesión para analizar más CVs.");
       return;
     }
 
@@ -114,87 +96,51 @@ export default function AnalizarCVPage() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setLongWait(false);
-    setVeryLongWait(false);
-
-    let reservationId = '';
+    setUploading(true);
+    setUploadError(null);
+    setPdfUrl(null);
 
     try {
-      // Para usuarios autenticados, RESERVAR créditos (no consumir aún)
-      if (user) {
-        const reserveResult = await reserveCredits('cv-review', 'Análisis de CV');
-        
-        if (!reserveResult.success) {
-          setError('No se pudieron reservar los créditos. Inténtalo de nuevo.');
-          return;
-        }
-
-        reservationId = reserveResult.reservationId;
-        console.log('🔒 Créditos reservados con ID:', reservationId);
-      }
-
       // 1. Subir el archivo CV
       const cvUrl = await uploadCV(file);
+      setPdfUrl(cvUrl);
 
-      // 2. Procesar el análisis del CV
-      const analysisResult = await analyzeCV(cvUrl, puestoPostular);
+      // 2. Mostrar modal de análisis asíncrono
+      setShowAsyncModal(true);
 
-      // 3. ✅ SOLO AHORA CONFIRMAR EL CONSUMO DE CRÉDITOS (después del éxito)
-      if (user && reservationId) {
-        const confirmResult = await confirmReservation(reservationId, 'cv-review', 'Análisis de CV completado');
-        
-        if (confirmResult) {
-          console.log('✅ Créditos consumidos exitosamente');
-          // Actualizar balance de créditos en la UI
-          await refreshCredits();
-        } else {
-          console.warn('⚠️ Advertencia: Análisis exitoso pero error al confirmar créditos');
-          // El análisis fue exitoso, pero hubo un problema con los créditos
-        }
-      }
-
-      // 4. Mostrar el resultado al usuario
-      const finalResultUrl = analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
-      setResult(finalResultUrl);
-
-      // Marcar como usado solo después de un análisis exitoso para usuarios no logueados
+      // Marcar como usado para usuarios no logueados (después de subir exitosamente)
       if (!user) {
         setFreeUsed(true);
         localStorage.setItem("cv_analysis_used", "true");
       }
 
     } catch (error) {
-      console.error('❌ Error en análisis de CV:', error);
-      
-      // ❌ SI HAY ERROR, REVERTIR LA RESERVA DE CRÉDITOS
-      if (user && reservationId) {
-        try {
-          await revertReservation(reservationId, 'cv-review', 'Error en el servicio de análisis: ' + (error instanceof Error ? error.message : 'Error desconocido'));
-          console.log('🔄 Reserva de créditos revertida por error en el servicio');
-        } catch (revertErr) {
-          console.error('❌ Error al revertir reserva:', revertErr);
-          // En este caso, podríamos notificar al soporte para revisión manual
-        }
-      }
-      
-      const errorMsg = error instanceof Error ? error.message : "Error al analizar el CV";
-      setError(errorMsg);
+      console.error('❌ Error al subir CV:', error);
+      const errorMsg = error instanceof Error ? error.message : "Error al subir el CV";
+      setUploadError(errorMsg);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
+
+  const handleAsyncModalClose = () => {
+    setShowAsyncModal(false);
+    setPdfUrl(null);
+    setFile(null);
+    setPuestoPostular("");
+  };
+
   const handlePurchaseSuccess = async (purchaseData: any) => {
     // Actualizar balance de créditos después de la compra
     if (user) {
       await refreshCredits();
     }
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
-      <Navbar />      <div className="h-[52px]"></div>
+      <Navbar />
+      <div className="h-[52px]"></div>
       
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-2xl">
@@ -232,6 +178,7 @@ export default function AnalizarCVPage() {
                       </AlertDescription>
                     </Alert>
                   )}
+                  
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
                       dragActive
@@ -265,6 +212,7 @@ export default function AnalizarCVPage() {
                       </span>
                     </label>
                   </div>
+                  
                   <div className="space-y-2">
                     <label htmlFor="puesto" className="text-sm font-medium">
                       Puesto al que postulas
@@ -276,82 +224,61 @@ export default function AnalizarCVPage() {
                       placeholder="Ej: Desarrollador Frontend"
                     />
                   </div>
-                  {error && (
+                  
+                  {uploadError && (
                     <Alert variant="destructive">
                       <AlertTitle>Error</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
+                      <AlertDescription>{uploadError}</AlertDescription>
                     </Alert>
                   )}
-                  {loading && (
+                  
+                  {uploading && (
                     <Alert>
-                      <AlertTitle>Analizando tu CV...</AlertTitle>
+                      <AlertTitle>Subiendo CV...</AlertTitle>
                       <AlertDescription>
-                        <div className="flex flex-col gap-2 items-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-[#028bbf] mb-2" />
-                          <span>
-                            Estamos analizando tu CV. Esto puede demorar hasta 2
-                            minutos.
-                          </span>
-                          {longWait && !veryLongWait && (
-                            <span className="text-sm text-gray-500">
-                              Sigue esperando, esto puede demorar un poco más de
-                              lo normal...
-                            </span>
-                          )}
-                          {veryLongWait && (
-                            <span className="text-sm text-red-500">
-                              El análisis está tardando demasiado. Puedes
-                              intentarlo más tarde o revisar tu conexión.
-                            </span>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-[#028bbf]" />
+                          <span>Preparando tu CV para el análisis...</span>
                         </div>
                       </AlertDescription>
                     </Alert>
                   )}
-                  {result && (
-                    <Alert>
-                      <AlertTitle>¡Análisis completado!</AlertTitle>
-                      <AlertDescription>
-                        <div className="flex flex-col items-center gap-2 mt-2">
-                          <p>
-                            Tu CV ha sido analizado correctamente. Puedes ver el
-                            resultado en el siguiente enlace:
-                          </p>
-                          <a
-                            href={result}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors shadow"
-                          >
-                            <FileText className="h-5 w-5" />
-                            Ver PDF generado
-                          </a>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}{" "}
+                  
                   <Button
                     onClick={handleAnalyze}
-                    disabled={loading || !file || !puestoPostular}
+                    disabled={uploading || !file || !puestoPostular || (!user && freeUsed)}
                     className="w-full"
                   >
-                    {loading ? (
+                    {uploading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analizando...
+                        Subiendo...
                       </>
                     ) : (
                       <>
                         <FileText className="mr-2 h-4 w-4" />
                         Analizar CV
                       </>
-                    )}{" "}
-                  </Button>                </div>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </section>      {/* Insufficient Credits Modal */}
+      </section>
+      
+      {/* Modal de análisis asíncrono */}
+      {pdfUrl && (
+        <AsyncCVAnalysisModal
+          isOpen={showAsyncModal}
+          onClose={handleAsyncModalClose}
+          pdfUrl={pdfUrl}
+          position={puestoPostular}
+        />
+      )}
+
+      {/* Modal de créditos insuficientes */}
       {user && (
         <InsufficientCreditsModal
           isOpen={showInsufficientCreditsModal}
@@ -360,6 +287,7 @@ export default function AnalizarCVPage() {
           toolType="cv-review"
           requiredCredits={1}
           currentCredits={credits}
+          onPurchaseSuccess={handlePurchaseSuccess}
         />
       )}
     </div>
