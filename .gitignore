@@ -16,3 +16,4 @@ tsconfig.tsbuildinfo
 # Other sensitive files
 *.pem
 *.key
+.vercel
