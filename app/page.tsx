@@ -51,7 +51,7 @@ export default function Home() {
               </h1>
               <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8">
                 Optimiza tu CV, practica entrevistas y recibe alertas de trabajos desde WhatsApp.
-                Más de 2,000 jóvenes ya lo están usando.
+                Más de 6,000 jóvenes ya lo están usando.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
