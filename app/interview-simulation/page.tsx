@@ -25,6 +25,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { interviewService, InterviewQuestion } from '@/services/interviewService';
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
+import InsufficientCreditsModal from '@/components/InsufficientCreditsModal';
 
 // Local interfaces for component state
 interface Question extends InterviewQuestion {
@@ -47,53 +48,89 @@ interface InterviewSession {
     timestamp: string;
 }
 
-export default function InterviewSimulationPage() {
-    const { user, loading: authLoading } = useAuth();
-    const { credits, loading: creditsLoading, refreshCredits, consumeCredits } = useCredits(user);
+export default function InterviewSimulationPage() {    const { user, loading: authLoading } = useAuth();
+    const { 
+        credits, 
+        loading: creditsLoading, 
+        refreshCredits, 
+        consumeCredits, 
+        hasEnoughCredits: hasEnoughCreditsFunc,
+        reserveCredits,
+        confirmReservation,
+        revertReservation
+    } = useCredits(user);
 
     const [jobTitle, setJobTitle] = useState('');
     const [currentStep, setCurrentStep] = useState<'input' | 'interview' | 'completed'>('input');
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
+    const [isRecording, setIsRecording] = useState(false);    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
-
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    // Check if user has enough credits
-    const requiredCredits = 0; // Cambiar a 0 para hacer la simulación gratuita
-    const hasEnoughCredits = true; // Siempre true para acceso gratuito
-    const generateQuestions = async () => {
+      // ✅ CAMBIO: Ahora las entrevistas cuestan 1 crédito
+    const requiredCredits = 1;
+    const hasEnoughCredits = hasEnoughCreditsFunc('interview-simulation');const generateQuestions = async () => {
         if (!jobTitle.trim()) {
             setError('Por favor, ingresa un título de trabajo');
+            return;
+        }        // ✅ Verificar créditos antes de continuar
+        if (!hasEnoughCredits) {
+            setShowInsufficientCreditsModal(true);
             return;
         }
 
         setIsLoading(true);
         setError(null);
+        let reservationId: string | null = null;
 
         try {
-            // Eliminar el cobro de créditos - hacer simulación gratuita
-            // const creditConsumed = await consumeCredits('interview-simulation', `Simulación de entrevista para ${jobTitle}`);
-            // if (!creditConsumed) {
-            //     setError('No se pudo procesar el cobro de créditos. Inténtalo de nuevo.');
-            //     return;
-            // }
-
+            // ✅ NUEVO: Reservar créditos antes de generar preguntas
+            console.log("💳 Reservando créditos para simulación de entrevista...");
+            const reserveResult = await reserveCredits('interview-simulation', `Simulación de entrevista para ${jobTitle}`);
+            
+            if (!reserveResult.success) {
+                setError('No tienes suficientes créditos para realizar la simulación');
+                setIsLoading(false);
+                return;
+            }
+            
+            reservationId = reserveResult.reservationId;
+            console.log(`✅ Créditos reservados con ID: ${reservationId}`);            // Generar preguntas
             const generatedQuestions = await interviewService.generateQuestions(jobTitle);
             const newQuestions: Question[] = generatedQuestions.map((text: string) => ({ text }));
 
             setQuestions(newQuestions);
             setCurrentStep('interview');
             setCurrentQuestionIndex(0);
-        } catch (error) {
+            
+            // ✅ IMPORTANTE: Guardar reservationId en el estado para usarlo después
+            sessionStorage.setItem('interviewReservationId', reservationId);
+            
+        } catch (error: any) {
+            console.error('❌ Error generando preguntas:', error);
+            
+            // ✅ Revertir reserva de créditos en caso de error
+            if (reservationId) {
+                try {
+                    console.log("🔄 Revirtiendo reserva de créditos...");
+                    const revertResult = await revertReservation(reservationId, 'interview-simulation', `Error: ${error.message}`);
+                    
+                    if (revertResult) {
+                        console.log("✅ Reserva revertida exitosamente");
+                    } else {
+                        console.warn("⚠️ No se pudo revertir la reserva de créditos");
+                    }
+                } catch (revertError) {
+                    console.error("❌ Error revirtiendo reserva:", revertError);
+                }
+            }
+            
             setError('Error al generar preguntas. Inténtalo de nuevo.');
-            console.error('Error generating questions:', error);
         } finally {
             setIsLoading(false);
         }
@@ -213,10 +250,26 @@ export default function InterviewSimulationPage() {
             setProcessingAudio(false);
             setProcessingStep('');
         }
-    };
-    const completeInterview = async (finalQuestions: Question[]) => {
+    };    const completeInterview = async (finalQuestions: Question[]) => {
         try {
             const totalScore = finalQuestions.reduce((sum, q) => sum + (q.evaluation?.score || 0), 0) / finalQuestions.length;
+
+            // ✅ NUEVO: Confirmar el consumo de créditos al completar la entrevista
+            const reservationId = sessionStorage.getItem('interviewReservationId');
+            
+            if (reservationId) {
+                console.log("💳 Confirmando consumo de créditos...");
+                const confirmResult = await confirmReservation(reservationId, 'interview-simulation', 'Simulación de entrevista completada');
+                
+                if (!confirmResult) {
+                    console.warn("⚠️ No se pudo confirmar el consumo de créditos, pero la entrevista fue exitosa");
+                } else {
+                    console.log("✅ Créditos confirmados y consumidos");
+                }
+                
+                // Limpiar la reserva del sessionStorage
+                sessionStorage.removeItem('interviewReservationId');
+            }
 
             const interviewData = {
                 userId: user!.uid,
@@ -224,7 +277,7 @@ export default function InterviewSimulationPage() {
                 questions: finalQuestions,
                 totalScore,
                 timestamp: new Date().toISOString(),
-                creditsUsed: 0, // Cambiar a 0 para simulación gratuita
+                creditsUsed: 1, // ✅ CAMBIO: Ahora registra 1 crédito usado
             };
 
             await interviewService.saveInterviewSession(interviewData);
@@ -235,6 +288,14 @@ export default function InterviewSimulationPage() {
             console.error('Error completing interview:', error);
         }
     };    const resetSimulation = () => {
+        // ✅ NUEVO: Limpiar cualquier reserva de créditos pendiente
+        const reservationId = sessionStorage.getItem('interviewReservationId');
+        if (reservationId) {
+            sessionStorage.removeItem('interviewReservationId');
+            // Nota: No revertimos aquí porque el usuario simplemente está reseteando
+            // La reserva expirará automáticamente si no se confirma
+        }
+        
         setJobTitle('');
         setCurrentStep('input');
         setQuestions([]);
@@ -285,15 +346,13 @@ export default function InterviewSimulationPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
             <Navbar />
+            <div className="h-[52px]"></div>
             <div className="container mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">
                         Simulación de Entrevistas
                     </h1>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Practica tus habilidades de entrevista con IA avanzada y recibe feedback personalizado - <span className="font-semibold text-green-600">¡Completamente GRATIS!</span>
-                    </p>
                     <div className="flex items-center justify-center gap-4 mt-4">
                         <Badge variant="outline" className="text-sm">
                             <Clock className="h-4 w-4 mr-1" />
@@ -338,21 +397,23 @@ export default function InterviewSimulationPage() {
                                         onKeyDown={(e) => e.key === 'Enter' && generateQuestions()}
                                         className="w-full"
                                     />
-                                </div>
-
-                                <div className="bg-blue-50 p-4 rounded-lg">
+                                </div>                                <div className="bg-blue-50 p-4 rounded-lg">
                                     <h3 className="font-semibold text-blue-900 mb-2">¿Qué incluye la simulación?</h3>
                                     <ul className="text-sm text-blue-800 space-y-1">
                                         <li>• 4 preguntas personalizadas para tu puesto</li>
                                         <li>• Grabación de audio o video de tus respuestas</li>
                                         <li>• Transcripción automática con IA</li>
                                         <li>• Evaluación detallada y feedback personalizado</li>
-                                        <li>• <span className="font-semibold text-green-600">¡Completamente GRATIS!</span></li>
+                                        <li>• <strong>Costo: {requiredCredits} crédito</strong></li>
                                     </ul>
                                 </div>
 
-                                {/* Eliminar el mensaje de créditos insuficientes */}
-                                {/* {!hasEnoughCredits && (
+                                {/* ✅ Mostrar balance actual de créditos */}
+                                <div className="bg-green-50 p-3 rounded-lg flex items-center justify-between">
+                                    <span className="text-sm text-green-800">Balance actual:</span>
+                                    <span className="font-semibold text-green-900">{credits} créditos</span>
+                                </div>{/* ✅ RESTAURAR: Alerta de créditos insuficientes */}
+                                {!hasEnoughCredits && (
                                     <Alert>
                                         <AlertCircle className="h-4 w-4" />
                                         <AlertDescription>
@@ -362,14 +423,14 @@ export default function InterviewSimulationPage() {
                                             </Link>
                                         </AlertDescription>
                                     </Alert>
-                                )} */}
+                                )}
 
                                 <Button
                                     onClick={generateQuestions}
-                                    disabled={isLoading || !jobTitle.trim()}
+                                    disabled={isLoading || !jobTitle.trim() || !hasEnoughCredits}
                                     className="w-full"
                                 >
-                                    {isLoading ? 'Generando preguntas...' : 'Comenzar Simulación GRATIS'}
+                                    {isLoading ? 'Generando preguntas...' : 'Comenzar Simulación de Entrevista'}
                                 </Button>
                             </div>
                         </CardContent>
@@ -721,9 +782,20 @@ export default function InterviewSimulationPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                )}
+                    </div>                )}
             </div>
+
+            {/* Insufficient Credits Modal */}
+            {user && (
+                <InsufficientCreditsModal
+                    isOpen={showInsufficientCreditsModal}
+                    onClose={() => setShowInsufficientCreditsModal(false)}
+                    user={user}
+                    toolType="interview-simulation"
+                    requiredCredits={requiredCredits}
+                    currentCredits={credits}
+                />
+            )}
         </div>
     );
 }

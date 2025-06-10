@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/firebase/config';
+import { 
+  collection, 
+  addDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('💾 === GUARDANDO ENTREVISTA (MÉTODO SIMPLIFICADO) ===');
+    console.log('💾 === GUARDANDO ENTREVISTA EN FIREBASE ===');
     
     const { userId, interviewData } = await request.json();
     console.log('📝 Datos recibidos:', { userId, jobTitle: interviewData?.jobTitle });
@@ -14,24 +20,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Por ahora, retornamos éxito sin guardar realmente en Firebase
-    // El frontend manejará el guardado local temporalmente
-    const interviewId = `interview_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    // Preparar documento para Firebase siguiendo el mismo patrón que CVs
+    const interviewDoc = {
+      userId,
+      jobTitle: interviewData.jobTitle,
+      questions: interviewData.questions || [],
+      totalScore: interviewData.totalScore || 0,
+      creditsUsed: 0, // Actualmente gratuito
+      status: 'completed',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    // Guardar en Firebase usando la misma estructura que CVs
+    const docRef = await addDoc(collection(db, 'userInterviews'), interviewDoc);
     
-    console.log('✅ Entrevista procesada con ID temporal:', interviewId);
+    console.log('✅ Entrevista guardada en Firebase con ID:', docRef.id);
     console.log('🆓 Entrevista gratuita - no se descontaron créditos');
 
     return NextResponse.json({ 
       success: true, 
-      interviewId: interviewId,
-      message: 'Entrevista completada exitosamente (modo gratuito)'
+      interviewId: docRef.id,
+      message: 'Entrevista completada y guardada exitosamente (modo gratuito)'
     });
 
   } catch (error: any) {
-    console.error('❌ Error processing interview:', error);
+    console.error('❌ Error saving interview:', error);
     
     return NextResponse.json(
-      { error: 'Failed to process interview: ' + error.message },
+      { error: 'Failed to save interview: ' + error.message },
       { status: 500 }
     );
   }
@@ -49,9 +66,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Por ahora, retornamos un array vacío
-    // Más tarde podemos implementar el guardado real
-    const interviews: any[] = [];
+    // Obtener entrevistas del usuario desde Firebase, mismo patrón que CVs
+    const { 
+      collection, 
+      query, 
+      where, 
+      orderBy, 
+      getDocs 
+    } = await import('firebase/firestore');
+
+    const interviewsQuery = query(
+      collection(db, 'userInterviews'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const interviewsSnapshot = await getDocs(interviewsQuery);
+    const interviews = interviewsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      // Convertir Timestamp a Date para serialización
+      createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
+      updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt
+    }));
+
+    console.log(`📊 Encontradas ${interviews.length} entrevistas para usuario ${userId}`);
 
     return NextResponse.json({ interviews });
 

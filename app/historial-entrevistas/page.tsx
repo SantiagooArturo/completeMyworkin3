@@ -190,11 +190,10 @@ export default function InterviewHistoryPage() {
                       <div className="flex-1">
                         <CardTitle className="text-lg font-semibold text-gray-900 mb-2">
                           {interview.jobTitle}
-                        </CardTitle>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        </CardTitle>                        <div className="flex items-center gap-4 text-sm text-gray-600">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            {formatDate(interview.createdAt?.toDate() || interview.timestamp)}
+                            {formatDate(interview.createdAt?.toDate() || interview.createdAt)}
                           </div>
                           <div className="flex items-center gap-1">
                             <MessageSquare className="h-4 w-4" />

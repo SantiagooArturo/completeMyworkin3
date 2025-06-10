@@ -1,4 +1,5 @@
 import { auth } from '@/firebase/config';
+import { User } from 'firebase/auth';
 import { 
   collection, 
   addDoc, 
@@ -9,7 +10,8 @@ import {
   doc,
   updateDoc,
   getDoc,
-  Timestamp 
+  Timestamp,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -34,7 +36,24 @@ export interface InterviewSession {
   totalScore?: number;
   timestamp: string;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
   creditsUsed: number;
+  status?: 'completed' | 'in-progress' | 'cancelled';
+}
+
+// Interfaz para entrevistas guardadas, siguiendo el patrón de SavedCV
+export interface SavedInterview {
+  id: string;
+  userId: string;
+  jobTitle: string;
+  questions: InterviewQuestion[];
+  totalScore?: number;
+  creditsUsed: number;
+  status: 'completed' | 'in-progress' | 'cancelled';
+  createdAt: any;
+  updatedAt: any;
+  deleted?: boolean;
+  deletedAt?: any;
 }
 
 class InterviewService {
@@ -288,10 +307,40 @@ class InterviewService {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Error saving interview');
-    }
-
-    const data = await response.json();
+    }    const data = await response.json();
     return data.interviewId;
+  }
+
+  // Guardar entrevista (siguiendo el patrón de CVBuilderService)
+  async saveInterview(user: User, interviewData: {
+    jobTitle: string;
+    questions: InterviewQuestion[];
+    totalScore?: number;
+    creditsUsed?: number;
+  }): Promise<string> {
+    try {
+      if (!user || !user.uid) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const interviewDoc: Omit<SavedInterview, 'id'> = {
+        userId: user.uid,
+        jobTitle: interviewData.jobTitle,
+        questions: interviewData.questions,
+        totalScore: interviewData.totalScore || 0,
+        creditsUsed: interviewData.creditsUsed || 0,
+        status: 'completed',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'userInterviews'), interviewDoc);
+      console.log('✅ Entrevista guardada con ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error guardando entrevista:', error);
+      throw new Error('Error al guardar la entrevista');
+    }
   }
 
   // Get user's interview history
@@ -327,48 +376,87 @@ class InterviewService {
     }
   }
 
-  // Get interview statistics
-  async getUserInterviewStats(userId: string) {
+  // Obtener entrevistas del usuario (siguiendo el patrón de CVBuilderService)
+  async getUserInterviewsFromFirebase(user: User): Promise<SavedInterview[]> {
     try {
-      const interviews = await this.getUserInterviews(userId);
-      
-      if (interviews.length === 0) {
-        return {
-          totalInterviews: 0,
-          averageScore: 0,
-          totalCreditsUsed: 0,
-          lastInterviewDate: null,
-          bestScore: 0,
-          improvementTrend: 0,
-        };
+      if (!user || !user.uid) {
+        throw new Error('Usuario no autenticado');
       }
 
-      const totalScore = interviews.reduce((sum, interview) => sum + (interview.totalScore || 0), 0);
-      const averageScore = totalScore / interviews.length;
-      const totalCreditsUsed = interviews.reduce((sum, interview) => sum + interview.creditsUsed, 0);
-      const bestScore = Math.max(...interviews.map(i => i.totalScore || 0));
-      
-      // Calculate improvement trend (last 3 vs previous 3)
-      let improvementTrend = 0;
-      if (interviews.length >= 6) {
-        const recent3 = interviews.slice(0, 3);
-        const previous3 = interviews.slice(3, 6);
-        const recentAvg = recent3.reduce((sum, i) => sum + (i.totalScore || 0), 0) / 3;
-        const previousAvg = previous3.reduce((sum, i) => sum + (i.totalScore || 0), 0) / 3;
-        improvementTrend = recentAvg - previousAvg;
-      }
+      const interviewsQuery = query(
+        collection(db, 'userInterviews'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
 
-      return {
-        totalInterviews: interviews.length,
-        averageScore: Number(averageScore.toFixed(1)),
-        totalCreditsUsed,
-        lastInterviewDate: interviews[0]?.createdAt?.toDate() || null,
-        bestScore: Number(bestScore.toFixed(1)),
-        improvementTrend: Number(improvementTrend.toFixed(1)),
-      };
+      const interviewsSnapshot = await getDocs(interviewsQuery);
+      const interviews = interviewsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SavedInterview[];
+
+      // Filtrar entrevistas no eliminadas
+      const activeInterviews = interviews.filter(interview => !interview.deleted);
+
+      // Ordenar por fecha de actualización más reciente
+      return activeInterviews.sort((a, b) => {
+        const dateA = a.updatedAt?.toDate() || new Date(0);
+        const dateB = b.updatedAt?.toDate() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
     } catch (error) {
-      console.error('Error calculating interview stats:', error);
-      throw new Error('Error calculating statistics');
+      console.error('Error obteniendo entrevistas del usuario:', error);
+      throw new Error('Error al cargar las entrevistas');
+    }
+  }
+
+  // Obtener una entrevista específica
+  async getInterview(interviewId: string): Promise<SavedInterview | null> {
+    try {
+      const interviewRef = doc(db, 'userInterviews', interviewId);
+      const interviewDoc = await getDoc(interviewRef);
+
+      if (interviewDoc.exists()) {
+        return {
+          id: interviewDoc.id,
+          ...interviewDoc.data()
+        } as SavedInterview;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error obteniendo entrevista:', error);
+      throw new Error('Error al cargar la entrevista');
+    }
+  }
+
+  // Actualizar entrevista existente
+  async updateInterview(interviewId: string, interviewData: Partial<SavedInterview>): Promise<void> {
+    try {
+      const interviewRef = doc(db, 'userInterviews', interviewId);
+      const updateData: any = {
+        ...interviewData,
+        updatedAt: serverTimestamp()
+      };
+
+      await updateDoc(interviewRef, updateData);
+    } catch (error) {
+      console.error('Error actualizando entrevista:', error);
+      throw new Error('Error al actualizar la entrevista');
+    }
+  }
+
+  // Eliminar entrevista (soft delete, siguiendo el patrón de CVs)
+  async deleteInterview(interviewId: string): Promise<void> {
+    try {
+      const interviewRef = doc(db, 'userInterviews', interviewId);
+      await updateDoc(interviewRef, {
+        deleted: true,
+        deletedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error eliminando entrevista:', error);
+      throw new Error('Error al eliminar la entrevista');
     }
   }
 
@@ -388,9 +476,7 @@ class InterviewService {
       const transcript = await this.transcribeAudio(mediaUrl);
 
       // Evaluate answer
-      const evaluation = await this.evaluateAnswer(question, transcript, jobTitle);
-
-      return {
+      const evaluation = await this.evaluateAnswer(question, transcript, jobTitle);      return {
         mediaUrl,
         transcript,
         evaluation,
@@ -398,6 +484,70 @@ class InterviewService {
     } catch (error) {
       console.error('Error processing recording:', error);
       throw error;
+    }
+  }
+
+  // Obtener estadísticas del usuario
+  async getUserInterviewStats(userId: string) {
+    try {
+      const interviews = await this.getUserInterviews(userId);
+      
+      const totalInterviews = interviews.length;
+      const totalCreditsUsed = interviews.reduce((sum, interview) => sum + interview.creditsUsed, 0);
+      
+      let averageScore = 0;
+      let bestScore = 0;
+      let lastInterviewDate = null;
+      
+      if (interviews.length > 0) {
+        const scores = interviews
+          .filter(interview => interview.totalScore !== undefined)
+          .map(interview => interview.totalScore!);
+        
+        if (scores.length > 0) {
+          averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          bestScore = Math.max(...scores);
+        }
+        
+        // Obtener fecha de la última entrevista
+        const sortedInterviews = interviews.sort((a, b) => {
+          const dateA = a.createdAt?.toDate() || new Date(0);
+          const dateB = b.createdAt?.toDate() || new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        if (sortedInterviews.length > 0) {
+          lastInterviewDate = sortedInterviews[0].createdAt?.toDate() || null;
+        }
+      }
+
+      // Calcular tendencia de mejora (diferencia entre últimas 2 entrevistas)
+      let improvementTrend = 0;
+      if (interviews.length >= 2) {
+        const recent = interviews.slice(0, 2);
+        if (recent[0].totalScore && recent[1].totalScore) {
+          improvementTrend = recent[0].totalScore - recent[1].totalScore;
+        }
+      }
+
+      return {
+        totalInterviews,
+        averageScore: Math.round(averageScore * 10) / 10,
+        totalCreditsUsed,
+        lastInterviewDate,
+        bestScore: Math.round(bestScore * 10) / 10,
+        improvementTrend: Math.round(improvementTrend * 10) / 10,
+      };
+    } catch (error) {
+      console.error('Error getting user interview stats:', error);
+      return {
+        totalInterviews: 0,
+        averageScore: 0,
+        totalCreditsUsed: 0,
+        lastInterviewDate: null,
+        bestScore: 0,
+        improvementTrend: 0,
+      };
     }
   }
 }
