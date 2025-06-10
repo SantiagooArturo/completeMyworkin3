@@ -232,15 +232,22 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                 transcription,
                 transcript: transcription, // Para compatibilidad
                 evaluation,
-            };
-
-            setQuestions(updatedQuestions);
+            };            setQuestions(updatedQuestions);
             setShowAnalysis(true);
             
-            // Si es la última pregunta, completar la entrevista
+            console.log('🔍 Debug análisis pregunta:', {
+                questionIndex: currentQuestionIndex,
+                totalQuestions: questions.length,
+                isLastQuestion: currentQuestionIndex === questions.length - 1,
+                showAnalysis: true,
+                evaluation: evaluation
+            });
+            
+            // Si es la última pregunta, NO completar automáticamente
+            // Permitir que el usuario vea el análisis primero
             if (currentQuestionIndex === questions.length - 1) {
-                setProcessingStep('Guardando resultados...');
-                await completeInterview(updatedQuestions);
+                console.log('✅ Última pregunta completada, análisis listo para mostrar');
+                // No completar automáticamente, dejar que el usuario vea el análisis
             }
 
         } catch (error: any) {
@@ -477,8 +484,7 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
                                         <div className="flex gap-4 justify-center">
                                             {!isRecording ? (
-                                                <>
-                                                    <Button
+                                                <>                                                    <Button
                                                         onClick={() => startRecording('audio')}
                                                         disabled={processingAudio}
                                                         className="flex items-center gap-2"
@@ -487,13 +493,16 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                         Grabar Audio
                                                     </Button>
                                                     <Button
-                                                        onClick={() => startRecording('video')}
-                                                        disabled={processingAudio}
+                                                        disabled={true}
                                                         variant="outline"
-                                                        className="flex items-center gap-2"
+                                                        className="flex items-center gap-2 relative cursor-not-allowed opacity-60"
+                                                        title="Funcionalidad disponible próximamente"
                                                     >
                                                         <Video className="h-4 w-4" />
                                                         Grabar Video
+                                                        <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                                            Próximamente
+                                                        </span>
                                                     </Button>
                                                 </>
                                             ) : (
@@ -537,9 +546,16 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                             </div>
                                         )}
                                     </div>
-                                )}
-
-                                {/* Show analysis immediately after processing */}
+                                )}                                {/* Show analysis immediately after processing */}
+                                {(() => {
+                                    console.log('🔍 Verificando condición análisis:', {
+                                        hasEvaluation: !!currentQuestion.evaluation,
+                                        showAnalysis,
+                                        questionIndex: currentQuestionIndex,
+                                        evaluation: currentQuestion.evaluation
+                                    });
+                                    return null;
+                                })()}
                                 {(currentQuestion.evaluation && showAnalysis) && (
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-2 text-green-600 mb-4">
@@ -635,9 +651,7 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                     </ul>
                                                 </div>
                                             </CardContent>
-                                        </Card>
-
-                                        {/* Continue Button */}
+                                        </Card>                                        {/* Continue Button */}
                                         <div className="text-center pt-4">
                                             {currentQuestionIndex < questions.length - 1 ? (
                                                 <Button
@@ -648,9 +662,19 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                     Continuar con la siguiente pregunta →
                                                 </Button>
                                             ) : (
-                                                <div className="space-y-2">
+                                                <div className="space-y-4">
                                                     <p className="text-gray-600 font-medium">¡Has completado todas las preguntas!</p>
-                                                    <p className="text-sm text-gray-500">Los resultados se están guardando...</p>
+                                                    <Button
+                                                        onClick={async () => {
+                                                            setProcessingStep('Guardando resultados...');
+                                                            await completeInterview(questions);
+                                                        }}
+                                                        className="w-full sm:w-auto px-8"
+                                                        size="lg"
+                                                        disabled={processingAudio}
+                                                    >
+                                                        {processingStep ? processingStep : 'Finalizar Entrevista y Ver Resultados'}
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>
