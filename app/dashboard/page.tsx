@@ -340,7 +340,7 @@ export default function DashboardPage() {
                       <BookOpen className="h-5 w-5 text-yellow-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Entrenar IA</h4>
+                      <h4 className="font-medium text-gray-900">Simulacion de Entrevistas</h4>
                       <p className="text-sm text-gray-600">Practica con Worky</p>
                     </div>
                   </Link>
