@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   }
 
   // const apiUrl = `https://api-cv-myworkin.onrender.com/analizar-cv?pdf_url=${encodeURIComponent(pdf_url)}&puesto_postular=${encodeURIComponent(puesto_postular)}`;
-  const apiUrl = `https://myworkin-cv.onrender.com/analizar-cv?pdf_url=${encodeURIComponent(pdf_url)}&puesto_postular=${encodeURIComponent(puesto_postular)}`;
+  const apiUrl = `https://myworkin-cv-2.onrender.com/analizar-cv?pdf_url=${encodeURIComponent(pdf_url)}&puesto_postular=${encodeURIComponent(puesto_postular)}`;
   try {
     const response = await fetch(apiUrl);
     const text = await response.text();

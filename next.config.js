@@ -138,7 +138,7 @@ const nextConfig = {
     return [
       {
         source: '/api/analizar-cv',
-        destination: 'https://api-cv-myworkin.onrender.com/analizar-cv/',
+        destination: 'https://myworkin-cv-2.onrender.com/analizar-cv/',
       },
     ];
   },

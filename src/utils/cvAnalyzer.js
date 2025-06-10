@@ -14,7 +14,7 @@ const createProxyUrl = (url) => {
 const checkServerStatus = async () => {
   try {
     // Intentamos hacer una petición al endpoint principal
-    const response = await fetch('https://api-cv-myworkin.onrender.com/analizar-cv/', {
+    const response = await fetch('https://myworkin-cv-2.onrender.com/analizar-cv/', {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
