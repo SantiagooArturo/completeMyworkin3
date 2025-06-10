@@ -15,7 +15,7 @@ export interface CreditTransaction {
   userId: string;
   type: 'purchase' | 'spend' | 'bonus' | 'refund' | 'reserve' | 'confirm' | 'revert';
   amount: number;
-  tool?: 'cv-review' | 'cv-creation' | 'job-match';
+  tool?: 'cv-review' | 'cv-creation' | 'job-match' | 'interview-simulation';
   description: string;
   paymentId?: string;
   packageId?: string;
@@ -41,15 +41,16 @@ export interface ToolCost {
   'cv-review': number;
   'cv-creation': number;
   'job-match': number;
+  'interview-simulation': number;
 }
 
 // Configuración de costos y paquetes
-export const CREDIT_CONFIG = {
-  // Costo por herramienta (en créditos)
+export const CREDIT_CONFIG = {  // Costo por herramienta (en créditos)
   TOOL_COSTS: {
     'cv-review': 1,
     'cv-creation': 1,
-    'job-match': 1
+    'job-match': 1,
+    'interview-simulation': 1
   } as ToolCost,
 
   // Cambiar WELCOME_CREDITS de 3 a 1

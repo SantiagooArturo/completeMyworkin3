@@ -110,14 +110,25 @@ export class CreditService {
 
   /**
    * Consume créditos para usar una herramienta
-   */
-  static async consumeCredits(
+   */  static async consumeCredits(
     user: User, 
     tool: ToolType, 
     description?: string
   ): Promise<{ success: boolean; remainingCredits: number; message: string }> {
     try {
       const requiredCredits = CREDIT_CONFIG.TOOL_COSTS[tool];
+      
+      // Log de depuración
+      console.log('CreditService.consumeCredits:', { 
+        tool, 
+        requiredCredits, 
+        toolCosts: CREDIT_CONFIG.TOOL_COSTS,
+        user: user.uid 
+      });
+      
+      if (requiredCredits === undefined) {
+        throw new Error(`Costo no definido para la herramienta: ${tool}`);
+      }
       
       return await runTransaction(db, async (transaction) => {
         const accountRef = doc(db, this.CREDIT_ACCOUNTS_COLLECTION, user.uid);
@@ -288,11 +299,11 @@ export class CreditService {
         where('type', '==', 'spend')
       );
       
-      const querySnapshot = await getDocs(q);
-      const stats: Record<ToolType, number> = {
+      const querySnapshot = await getDocs(q);      const stats: Record<ToolType, number> = {
         'cv-review': 0,
         'cv-creation': 0,
-        'job-match': 0
+        'job-match': 0,
+        'interview-simulation': 0
       };
       
       querySnapshot.forEach((doc) => {
@@ -304,11 +315,11 @@ export class CreditService {
       
       return stats;
     } catch (error) {
-      console.error('Error obteniendo estadísticas:', error);
-      return {
+      console.error('Error obteniendo estadísticas:', error);      return {
         'cv-review': 0,
         'cv-creation': 0,
-        'job-match': 0
+        'job-match': 0,
+        'interview-simulation': 0
       };
     }
   }

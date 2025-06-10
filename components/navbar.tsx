@@ -43,28 +43,34 @@ export default function Navbar() {
                 <NavigationMenuList>
                   <NavigationMenuItem>
                     <NavigationMenuTrigger className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium bg-transparent">
-                Herramientas de empleabilidad
+                      Herramientas de empleabilidad
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
                       <div className="w-[250px] p-2">
-                        <Link 
-                          href="/analizar-cv" 
+                        <Link
+                          href="/analizar-cv"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#028bbf] rounded-md"
                         >
                           Analizar tu CV con AI
                         </Link>
-                        <Link 
+                        <Link
                           href="/match-cv"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#028bbf] rounded-md"
                         >
                           Hacer match de tu CV con prácticas
                         </Link>
-                        <Link 
+                        <Link
                           href="/crear-cv"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#028bbf] rounded-md"
                         >
                           Crear CV
-              </Link>
+                        </Link>
+                        <Link
+                          href="/interview-simulation"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#028bbf] rounded-md"
+                        >
+                          Simulación de entrevistas
+                        </Link>
                       </div>
                     </NavigationMenuContent>
                   </NavigationMenuItem>
@@ -77,10 +83,10 @@ export default function Navbar() {
             {user && (
               <CreditBalance variant="compact" className="hidden md:flex" />
             )}
-            
-            <a 
+
+            <a
               href="https://mc.ht/s/SH1lIgc"
-              target="_blank" 
+              target="_blank"
               rel="noopener noreferrer"
               className="hidden md:flex items-center justify-center gap-2 py-1.5 px-3 bg-[#028bbf] hover:bg-[#027ba8] text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all text-sm"
             >
@@ -99,7 +105,7 @@ export default function Navbar() {
                 >
                   Panel
                 </Link>
-                
+
                 {/* User Avatar and Profile */}
                 <Link
                   href="/profile"
@@ -121,7 +127,7 @@ export default function Navbar() {
             )}
           </div>
           {/* Botón de menú hamburguesa (visible solo en móvil) */}
-          <button 
+          <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 text-gray-600 hover:text-[#028bbf] transition-colors"
           >
@@ -138,17 +144,17 @@ export default function Navbar() {
                 <CreditBalance variant="compact" />
               </div>
             )}
-            
+
             <nav className="flex flex-col gap-4">
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Inicio
               </Link>
-              <Link 
-                href="/bolsa-trabajo" 
+              <Link
+                href="/bolsa-trabajo"
                 className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -157,30 +163,30 @@ export default function Navbar() {
               <div className="space-y-2">
                 <div className="text-gray-700 font-medium text-sm">Bots de empleabilidad</div>
                 <div className="pl-4 space-y-2">
-                  <Link 
+                  <Link
                     href="/analizar-cv"
                     className="block text-gray-600 hover:text-[#028bbf] transition-colors text-sm"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Analizar tu CV con AI
                   </Link>
-                  <Link 
+                  <Link
                     href="/match-cv"
                     className="block text-gray-600 hover:text-[#028bbf] transition-colors text-sm"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Hacer match de tu CV con prácticas
-              </Link>
-              <Link 
+                  </Link>
+                  <Link
                     href="/crear-cv"
                     className="block text-gray-600 hover:text-[#028bbf] transition-colors text-sm"
-                onClick={() => setIsMenuOpen(false)}
-              >
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     Crear CV
-              </Link>
+                  </Link>
                 </div>
               </div>
-              <a 
+              <a
                 href="https://mc.ht/s/SH1lIgc"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -192,7 +198,7 @@ export default function Navbar() {
                 </svg>
                 <span>Chatea con Worky</span>
               </a>
-              
+
               {/* Opciones de usuario para móvil */}
               {user ? (
                 <div className="pt-4 border-t border-gray-200 space-y-3">
