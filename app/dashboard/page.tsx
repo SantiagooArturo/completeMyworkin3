@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from "../../hooks/useAuth";
+import { useCredits } from "../../hooks/useCredits";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -10,21 +11,20 @@ import CreditDashboard from "../../components/CreditDashboard";
 import { cvReviewService } from "../../services/cvReviewService";
 import { trackDashboardView } from "../../utils/analytics";
 import { 
-  User, 
+  Bell, 
+  LogOut, 
   FileText, 
-  Target, 
-  Briefcase, 
+  CheckCircle, 
+  Award, 
+  Clock, 
   TrendingUp, 
-  Calendar,
-  Bell,
-  Settings,
-  LogOut,
-  BookOpen,
-  Award,
-  CheckCircle,
-  Clock
-} from "lucide-react";
-import { useCredits } from "../../hooks/useCredits";
+  Briefcase, 
+  BookOpen, 
+  Calendar, 
+  User,
+  Target,
+  Settings
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -333,14 +333,14 @@ export default function DashboardPage() {
                       <p className="text-sm text-gray-600">Encuentra oportunidades</p>
                     </div>
                   </Link>                  <Link 
-                    href="/agentes-ai"
+                    href="/interview-simulation"
                     className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-[#028bbf] hover:shadow-md transition group"
                   >
                     <div className="bg-yellow-100 group-hover:bg-yellow-200 p-2 rounded-lg transition">
                       <BookOpen className="h-5 w-5 text-yellow-600" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">Simulacion de Entrevistas</h4>
+                      <h4 className="font-medium text-gray-900">Simulación de Entrevistas</h4>
                       <p className="text-sm text-gray-600">Practica con Worky</p>
                     </div>
                   </Link>
