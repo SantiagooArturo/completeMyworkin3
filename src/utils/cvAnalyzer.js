@@ -20,6 +20,7 @@ const checkServerStatus = async () => {
         'Accept': 'application/json',
       },
       mode: 'cors',
+      credentials: AbortSignal.timeout(180000),
     });
     // Si recibimos cualquier respuesta, el servidor está funcionando
     return true;
@@ -77,8 +78,17 @@ export const uploadCV = async (file) => {
 export const analyzeCV = async (pdfUrl, puestoPostular) => {
   try {
     const formattedPuesto = puestoPostular.replace(/\s+/g, '_');
-    const url = `/api/proxy-analizar-cv?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}`;
-    const response = await fetch(url);
+    //const url = `/api/proxy-analizar-cv?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}`;
+    const url = `https://myworkin-cv-2.onrender.com/analizar-cv?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      mode: 'cors'
+    });
+    //const response = await fetch(url);
     const text = await response.text();
     let data;
     try {
