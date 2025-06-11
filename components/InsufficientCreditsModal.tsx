@@ -28,13 +28,15 @@ interface InsufficientCreditsModalProps {
 const TOOL_LABELS = {
   'cv-review': 'Análisis de CV',
   'cv-creation': 'Creación de CV',
-  'job-match': 'Búsqueda de Trabajos'
+  'job-match': 'Búsqueda de Trabajos',
+  'interview-simulation': 'Simulación de Entrevistas'
 };
 
 const TOOL_ICONS = {
   'cv-review': FileText,
   'cv-creation': FileText,
-  'job-match': Search
+  'job-match': Search,
+  'interview-simulation': Target
 };
 
 export default function InsufficientCreditsModal({

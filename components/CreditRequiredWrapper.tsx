@@ -32,17 +32,18 @@ export default function CreditRequiredWrapper({
   const [isConsuming, setIsConsuming] = useState(false);
   const [hasConsumedCredits, setHasConsumedCredits] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const toolNames = {
     'cv-review': 'Análisis de CV',
     'job-match': 'Match de CV con empleos',
-    'cv-creation': 'Creación de CV'
+    'cv-creation': 'Creación de CV',
+    'interview-simulation': 'Simulación de Entrevistas'
   };
 
   const toolIcons = {
     'cv-review': '📄',
     'job-match': '🎯',
-    'cv-creation': '✨'
+    'cv-creation': '✨',
+    'interview-simulation': '🎤'
   };
 
   const handleConsumeCredits = async () => {

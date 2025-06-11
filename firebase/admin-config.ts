@@ -4,7 +4,6 @@ import { getApps } from 'firebase-admin/app';
 // Interfaces para tipado
 interface AdminConfig {
   credential: admin.credential.Credential;
-  databaseURL?: string;
   projectId: string;
 }
 
@@ -31,13 +30,19 @@ try {
     };
 
     // Inicializar Firebase Admin
-    admin.initializeApp(config);
-    console.log('✅ Firebase Admin inicializado correctamente');
+    const app = admin.initializeApp(config);
+    console.log('✅ Firebase Admin inicializado correctamente para proyecto:', serviceAccount.project_id);
   }
 
   // Obtener las instancias de Firestore y Auth
   adminDb = admin.firestore();
   adminAuth = admin.auth();
+  
+  // Configurar Firestore con configuraciones adicionales
+  adminDb.settings({
+    ignoreUndefinedProperties: true,
+  });
+  
   isInitialized = true;
 
 } catch (error) {
