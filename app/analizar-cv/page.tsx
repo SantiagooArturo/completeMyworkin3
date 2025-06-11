@@ -16,6 +16,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/services/creditService";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import { cvReviewService } from "../../services/cvReviewService";
 
 export default function AnalizarCVPage() {
   const { user } = useAuth();
@@ -142,7 +143,22 @@ export default function AnalizarCVPage() {
       // 2. Procesar el análisis del CV
       const analysisResult = await analyzeCV(cvUrl, puestoPostular);
 
-      // 3. ✅ SOLO AHORA CONFIRMAR EL CONSUMO DE CRÉDITOS (después del éxito)
+      // 3. NUEVO: Guardar en Firebase (solo para usuarios autenticados)
+      if (user) {
+        const reviewData = {
+          userId: user.uid,
+          fileName: file.name,
+          fileSize: file.size,
+          status: 'completed' as const,
+          result: analysisResult,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        const savedReview = await cvReviewService.saveReview(reviewData);
+      }
+      
+      // 4. Confirmar el consumo de créditos (después del éxito)
       if (user && reservationId) {
         const confirmResult = await confirmReservation(reservationId, 'cv-review', 'Análisis de CV completado');
         
@@ -156,7 +172,7 @@ export default function AnalizarCVPage() {
         }
       }
 
-      // 4. Mostrar el resultado al usuario
+      // 5. Mostrar el resultado al usuario
       const finalResultUrl = analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
       setResult(finalResultUrl);
 

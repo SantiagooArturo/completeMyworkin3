@@ -7,6 +7,7 @@ import Link from "next/link";
 import ClientOnly from "../../components/ClientOnly";
 import { cvReviewService } from "../../services/cvReviewService";
 import { CVReview } from "../../services/cvReviewService";
+import { trackCVHistoryView } from "../../utils/analytics";
 import { 
   FileText, 
   ArrowLeft,
@@ -26,11 +27,15 @@ export default function HistorialCVPage() {
   const router = useRouter();
   const [reviews, setReviews] = useState<CVReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    } else if (user) {
+      // Track página view cuando el usuario esté autenticado
+      trackCVHistoryView();
     }
   }, [user, loading, router]);
 
@@ -38,18 +43,27 @@ export default function HistorialCVPage() {
     const loadReviews = async () => {
       if (user) {
         try {
+          setReviewsLoading(true);
+          setError(null);
           const userReviews = await cvReviewService.getUserReviews(user.uid);
           setReviews(userReviews);
         } catch (error) {
           console.error('Error loading CV reviews:', error);
+          setError('Error al cargar el historial. Por favor, intenta de nuevo.');
+          setReviews([]);
         } finally {
           setReviewsLoading(false);
         }
+      } else {
+        setReviewsLoading(false);
+        setReviews([]);
       }
     };
 
-    loadReviews();
-  }, [user]);
+    if (!loading) {
+      loadReviews();
+    }
+  }, [user, loading]);
 
   const filteredReviews = reviews.filter(review => {
     if (filter === 'completed') return review.status === 'completed';
@@ -185,24 +199,52 @@ export default function HistorialCVPage() {
           </div>
 
           {/* Lista de revisiones */}
-          {reviewsLoading ? (
+          {error ? (
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-red-200 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar historial</h3>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-4 py-2 bg-[#028bbf] hover:bg-[#027ba8] text-white rounded-lg font-medium transition"
+              >
+                Intentar de nuevo
+              </button>
+            </div>
+          ) : reviewsLoading ? (
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#028bbf] mx-auto mb-4"></div>
               <p className="text-gray-600">Cargando historial de CV...</p>
-            </div>          ) : filteredReviews.length === 0 ? (
+              <p className="text-sm text-gray-500 mt-2">Esto puede tomar unos segundos</p>
+            </div>
+          ) : filteredReviews.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-8 sm:px-8 sm:py-12 text-center">
                 <div className="max-w-sm mx-auto">
-                  <FileText className="h-8 w-8 sm:h-10 sm:w-10 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-2">
-                    {filter === 'all' ? 'Sin revisiones' : `Sin revisiones ${filter === 'completed' ? 'completadas' : 'en proceso'}`}
+                  <FileText className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-6" />
+                  <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-3">
+                    {filter === 'all' ? 'Sin análisis de CV' : `Sin análisis ${filter === 'completed' ? 'completados' : 'en proceso'}`}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                  <p className="text-sm sm:text-base text-gray-600 mb-8 leading-relaxed">
                     {filter === 'all' 
-                      ? 'Analiza tu primer CV para obtener retroalimentación profesional.'
-                      : 'Cambia el filtro para ver otras revisiones.'
+                      ? 'Analiza tu primer CV para obtener retroalimentación profesional y mejorar tus oportunidades laborales.'
+                      : 'Cambia el filtro para ver otros análisis o realiza uno nuevo.'
                     }
                   </p>
+
+                  {/* Debug info - Solo en desarrollo */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="bg-gray-100 p-3 rounded text-xs text-left mb-4">
+                      <p><strong>Debug Info:</strong></p>
+                      <p>User ID: {user?.uid}</p>
+                      <p>User Email: {user?.email}</p>
+                      <p>Total reviews: {reviews.length}</p>
+                      <p>Filtered reviews: {filteredReviews.length}</p>
+                      <p>Filter: {filter}</p>
+                      <p>Loading: {reviewsLoading.toString()}</p>
+                    </div>
+                  )}
+                  
                   <Link
                     href="/analizar-cv"
                     className="inline-flex items-center justify-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:ring-offset-2"
@@ -211,7 +253,8 @@ export default function HistorialCVPage() {
                     <span>Analizar CV</span>
                   </Link>
                 </div>
-              </div>            </div>
+              </div>
+            </div>
           ) : (
             <div className="space-y-4">
               {filteredReviews.map((review) => (
