@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
 Las preguntas deben:
 - Ser específicas para el rol y la industria
 - Evaluar competencias técnicas y blandas relevantes
-- Variar en dificultad (1 básica, 2 intermedias, 1 avanzada)
-- Ser claras y directas
+- Variar en dificultad (3 intermedias, 1 avanzada)
+- Ser claras y directas con respecto al puesto y la industria
 - Permitir respuestas de 1-3 minutos
 
 Responde SOLO con un array JSON de exactamente 4 strings, sin texto adicional.

@@ -69,12 +69,34 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
-    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
       // ✅ CAMBIO: Ahora las entrevistas cuestan 1 crédito
     const requiredCredits = 1;
-    const hasEnoughCredits = hasEnoughCreditsFunc('interview-simulation');const generateQuestions = async () => {
+    const hasEnoughCredits = hasEnoughCreditsFunc('interview-simulation');
+
+    // useEffect para conectar stream al video preview
+    useEffect(() => {
+        if (isRecording && recordingType === 'video' && streamRef.current && videoPreviewRef.current) {
+            console.log('🎥 Conectando stream al video preview...');
+            
+            // Pequeño delay para asegurar que el video element esté listo
+            setTimeout(() => {
+                if (videoPreviewRef.current && streamRef.current) {
+                    videoPreviewRef.current.srcObject = streamRef.current;
+                    
+                    // Forzar la reproducción del video
+                    videoPreviewRef.current.play().catch(error => {
+                        console.warn('Error auto-playing video preview:', error);
+                    });
+                    
+                    console.log('✅ Stream conectado al video preview');
+                }
+            }, 100);
+        }
+    }, [isRecording, recordingType]);const generateQuestions = async () => {
         if (!jobTitle.trim()) {
             setError('Por favor, ingresa un título de trabajo');
             return;
@@ -138,13 +160,20 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
     const startRecording = async (type: 'audio' | 'video') => {
         try {
+            console.log(`🎬 Iniciando grabación de ${type}...`);
             setRecordingType(type);
             const constraints = type === 'video'
                 ? { video: true, audio: true }
                 : { audio: true };
 
+            console.log('📱 Solicitando permisos de cámara/micrófono...');
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             streamRef.current = stream;
+            
+            console.log('✅ Stream obtenido:', {
+                videoTracks: stream.getVideoTracks().length,
+                audioTracks: stream.getAudioTracks().length
+            });
 
             const mediaRecorder = new MediaRecorder(stream);
             mediaRecorderRef.current = mediaRecorder;
@@ -166,7 +195,7 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             mediaRecorder.start();
             setIsRecording(true);
         } catch (error) {
-            setError('Error al acceder al micrófono/cámara');
+            setError(`Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}`);
             console.error('Error starting recording:', error);
         }
     };
@@ -176,6 +205,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             mediaRecorderRef.current.stop();
             setIsRecording(false);
 
+            // Limpiar video preview
+            if (videoPreviewRef.current) {
+                videoPreviewRef.current.srcObject = null;
+            }
+
             // Stop all tracks
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
@@ -183,9 +217,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
         }
     };    const processRecording = async (blob: Blob) => {
         try {
+            const isVideo = blob.type.includes('video');
             console.log('🎬 Procesando grabación:', {
                 size: blob.size,
-                type: blob.type
+                type: blob.type,
+                isVideo: isVideo
             });
 
             if (blob.size === 0) {
@@ -196,15 +232,15 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             
             // Paso 1: Subiendo archivo
             setProcessingStep('Subiendo archivo...');
-            console.log('📤 Subiendo archivo...');
+            console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
             const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
             const audioUrl = await interviewService.uploadMedia(blob, filename);
             
             console.log('✅ Archivo subido:', audioUrl);
 
-            // Paso 2: Transcribiendo audio
+            // Paso 2: Transcribiendo audio (extrae audio del video si es necesario)
             setProcessingStep('Transcribiendo tu respuesta...');
-            console.log('🎤 Iniciando transcripción via API...');
+            console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
             const transcription = await interviewService.transcribeAudio(audioUrl);
             
             if (!transcription || transcription.trim() === '') {
@@ -493,16 +529,13 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                         Grabar Audio
                                                     </Button>
                                                     <Button
-                                                        disabled={true}
+                                                        onClick={() => startRecording('video')}
+                                                        disabled={processingAudio}
                                                         variant="outline"
-                                                        className="flex items-center gap-2 relative cursor-not-allowed opacity-60"
-                                                        title="Funcionalidad disponible próximamente"
+                                                        className="flex items-center gap-2"
                                                     >
                                                         <Video className="h-4 w-4" />
                                                         Grabar Video
-                                                        <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                                                            Próximamente
-                                                        </span>
                                                     </Button>
                                                 </>
                                             ) : (
@@ -517,11 +550,35 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                             )}
                                         </div>
 
+                                        {/* Video Preview - Solo cuando se graba video */}
+                                        {isRecording && recordingType === 'video' && (
+                                            <div className="flex justify-center mt-4 mb-4">
+                                                <div className="relative">
+                                                    <video
+                                                        ref={videoPreviewRef}
+                                                        autoPlay
+                                                        muted
+                                                        playsInline
+                                                        onLoadedMetadata={(e) => {
+                                                            const video = e.target as HTMLVideoElement;
+                                                            video.play().catch(console.warn);
+                                                        }}
+                                                        className="w-80 h-60 sm:w-96 sm:h-72 rounded-lg border-2 border-gray-300 shadow-lg bg-gray-900"
+                                                    />
+                                                    {/* Indicador REC en el video */}
+                                                    <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
+                                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                                        REC
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {isRecording && (
                                             <div className="text-center">
                                                 <div className="inline-flex items-center gap-2 text-red-600 font-medium">
                                                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                                                    Grabando...
+                                                    Grabando {recordingType === 'video' ? 'video' : 'audio'}...
                                                 </div>
                                             </div>
                                         )}
