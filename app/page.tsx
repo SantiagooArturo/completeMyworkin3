@@ -45,9 +45,9 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 text-gray-900">
-                Consigue tu<br />
-                primer empleo con<br />
-                <span className="text-[#028bbf]">Nuestros bots de empleabilidad</span>
+                 Prepárate, postula<br />
+                 y consigue tu<br />
+                <span className="text-[#028bbf]">Primer trabajo</span>
               </h1>
               <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8">
                 Optimiza tu CV, practica entrevistas y recibe alertas de trabajos desde WhatsApp.
