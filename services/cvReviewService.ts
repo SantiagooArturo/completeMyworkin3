@@ -27,6 +27,7 @@ export type { CVPackage };
 
 // Tipos para el sistema de revisiones CV
 export interface CVResult {
+  [x: string]: any;
   score: number;
   summary: string;
   strengths: string[];
@@ -402,13 +403,14 @@ export class CVReviewService {
         nextReviewType: 'none'
       };
     }
-  }// Obtener historial de revisiones del usuario
+  }  // Obtener historial de revisiones del usuario
   async getUserReviews(userId: string): Promise<CVReview[]> {
-    try {
-      // TEMPORAL: Sin orderBy mientras se construye el índice
+    try {      // Query optimizada para producción
       const reviewsQuery = query(
         collection(db, 'cvReviews'),
         where('userId', '==', userId),
+        // Descomentar cuando el índice esté listo en Firebase Console:
+        // orderBy('createdAt', 'desc'),
         limit(50)
       );
       
@@ -419,13 +421,17 @@ export class CVReviewService {
       })) as CVReview[];
 
       // Ordenar en memoria por fecha de creación (más reciente primero)
-      return reviews.sort((a, b) => {
+      const sortedReviews = reviews.sort((a, b) => {
         const dateA = a.createdAt?.toDate() || new Date(0);
         const dateB = b.createdAt?.toDate() || new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
+
+      return sortedReviews;
     } catch (error) {
       console.error('Error obteniendo revisiones del usuario:', error);
+      
+      // En producción, propagar el error para que la UI lo maneje
       throw new Error('Error al cargar el historial de revisiones');
     }
   }
@@ -456,6 +462,60 @@ export class CVReviewService {
       await updateDoc(reviewRef, updateData);
     } catch (error) {      console.error('Error actualizando estado de revisión:', error);
       throw new Error('Error al actualizar la revisión');
+    }
+  }
+
+  // Guardar análisis de CV completado en Firebase
+  async saveReview(reviewData: {
+    userId: string;
+    fileName: string;
+    fileSize: number;
+    status: 'completed';
+    result: CVResult;
+    createdAt: Date;
+    updatedAt: Date;
+    position?: string;
+    fileUrl?: string;
+  }): Promise<string> {
+    try {
+      // Validar datos requeridos
+      if (!reviewData.userId || !reviewData.fileName || !reviewData.result) {
+        throw new Error('Datos de revisión incompletos');
+      }
+
+      // Crear el objeto de revisión con la estructura correcta
+      const review: Omit<CVReview, 'id'> = {
+        userId: reviewData.userId,
+        userEmail: '', // Se actualizará en el siguiente paso
+        fileName: reviewData.fileName,
+        fileUrl: reviewData.fileUrl || '',
+        position: reviewData.position || 'No especificado',
+        status: 'completed',
+        createdAt: Timestamp.fromDate(reviewData.createdAt),
+        completedAt: Timestamp.fromDate(reviewData.updatedAt),
+        result: reviewData.result
+      };
+
+      // Obtener email del usuario si está disponible
+      try {
+        const userProfileRef = doc(db, 'userCVProfiles', reviewData.userId);
+        const userProfileDoc = await getDoc(userProfileRef);
+        if (userProfileDoc.exists()) {
+          review.userEmail = userProfileDoc.data().email || '';
+        }
+      } catch (profileError) {
+        console.warn('No se pudo obtener el email del usuario:', profileError);
+      }
+
+      // Guardar la revisión en Firebase
+      const reviewRef = await addDoc(collection(db, 'cvReviews'), review);
+      
+      console.log('✅ Análisis de CV guardado exitosamente:', reviewRef.id);
+      return reviewRef.id;
+
+    } catch (error) {
+      console.error('Error guardando análisis de CV:', error);
+      throw new Error(`Error al guardar el análisis: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
 }
