@@ -27,6 +27,7 @@ export type { CVPackage };
 
 // Tipos para el sistema de revisiones CV
 export interface CVResult {
+  [x: string]: any;
   score: number;
   summary: string;
   strengths: string[];

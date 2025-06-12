@@ -10,13 +10,14 @@ import {
   CardContent
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, Crown, AlertCircle } from "lucide-react";
+import { Loader2, Upload, FileText, Crown, AlertCircle, History, Clock } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/services/creditService";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import { cvReviewService } from "../../services/cvReviewService";
+import Link from "next/link";
 
 export default function AnalizarCVPage() {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ export default function AnalizarCVPage() {
   const [longWait, setLongWait] = useState(false);
   const [veryLongWait, setVeryLongWait] = useState(false);
   const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+
   useEffect(() => {
     if (!user) {
       const used = localStorage.getItem("cv_analysis_used");
@@ -93,6 +95,7 @@ export default function AnalizarCVPage() {
       }
     }
   };
+
   const handleAnalyze = async () => {
     if (!file) {
       setError("Por favor, sube un archivo PDF");
@@ -152,7 +155,9 @@ export default function AnalizarCVPage() {
           status: 'completed' as const,
           result: analysisResult,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          position: puestoPostular,
+          fileUrl: cvUrl
         };
 
         const savedReview = await cvReviewService.saveReview(reviewData);
@@ -202,32 +207,54 @@ export default function AnalizarCVPage() {
       setLoading(false);
     }
   };
+
   const handlePurchaseSuccess = async (purchaseData: any) => {
     // Actualizar balance de créditos después de la compra
     if (user) {
       await refreshCredits();
     }
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
-      <Navbar />      <div className="h-[52px]"></div>
+      <Navbar />
+      <div className="h-[52px]"></div>
       
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-2xl">
           <div className="bg-white rounded-2xl p-8 shadow-xl">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-center text-gray-900">
-              Analiza tu CV con{" "}
-              <span className="text-[#028bbf]">Inteligencia Artificial</span>
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 text-center">
-              Sube tu CV en PDF y recibe feedback instantáneo para el puesto que deseas.
-            </p>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex-1">
+                <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+                  Analiza tu CV con{" "}
+                  <span className="text-[#028bbf]">Inteligencia Artificial</span>
+                </h1>
+                <p className="text-lg text-gray-600">
+                  Sube tu CV en PDF y recibe feedback instantáneo para el puesto que deseas.
+                </p>
+              </div>
+              
+              {/* Botón de Historial - Solo para usuarios autenticados */}
+              {user && (
+                <div className="ml-4">
+                  <Link href="/historial-cv">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2 border-[#028bbf] text-[#028bbf] hover:bg-[#028bbf] hover:text-white transition-colors"
+                    >
+                      <History className="h-4 w-4" />
+                      <span className="hidden sm:inline">Historial</span>
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
             
             {!user && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-amber-800">
                   <strong>Análisis gratuito:</strong> Los usuarios no registrados pueden hacer 1 análisis gratuito. 
-                  Regístrate para acceso completo con créditos.
+                  Regístrate para acceso completo con créditos y historial de análisis.
                 </p>
               </div>
             )}
@@ -248,6 +275,7 @@ export default function AnalizarCVPage() {
                       </AlertDescription>
                     </Alert>
                   )}
+                  
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
                       dragActive
@@ -281,6 +309,7 @@ export default function AnalizarCVPage() {
                       </span>
                     </label>
                   </div>
+                  
                   <div className="space-y-2">
                     <label htmlFor="puesto" className="text-sm font-medium">
                       Puesto al que postulas
@@ -292,12 +321,14 @@ export default function AnalizarCVPage() {
                       placeholder="Ej: Desarrollador Frontend"
                     />
                   </div>
+                  
                   {error && (
                     <Alert variant="destructive">
                       <AlertTitle>Error</AlertTitle>
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
+                  
                   {loading && (
                     <Alert>
                       <AlertTitle>Analizando tu CV...</AlertTitle>
@@ -324,28 +355,52 @@ export default function AnalizarCVPage() {
                       </AlertDescription>
                     </Alert>
                   )}
+                  
                   {result && (
                     <Alert>
                       <AlertTitle>¡Análisis completado!</AlertTitle>
                       <AlertDescription>
-                        <div className="flex flex-col items-center gap-2 mt-2">
-                          <p>
+                        <div className="flex flex-col items-center gap-4 mt-2">
+                          <p className="text-center">
                             Tu CV ha sido analizado correctamente. Puedes ver el
                             resultado en el siguiente enlace:
                           </p>
-                          <a
-                            href={result}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors shadow"
-                          >
-                            <FileText className="h-5 w-5" />
-                            Ver PDF generado
-                          </a>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <a
+                              href={result}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors shadow"
+                            >
+                              <FileText className="h-5 w-5" />
+                              Ver PDF Analizado
+                            </a>
+                            
+                            {/* Botón adicional para ir al historial (solo usuarios autenticados) */}
+                            {user && (
+                              <Link href="/historial-cv">
+                                <Button 
+                                  variant="outline" 
+                                  className="flex items-center gap-2 border-[#028bbf] text-[#028bbf] hover:bg-[#028bbf] hover:text-white transition-colors"
+                                >
+                                  <History className="h-4 w-4" />
+                                  Ver Historial
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                          
+                          {user && (
+                            <p className="text-sm text-gray-600 text-center">
+                              Tu análisis se ha guardado en tu historial personal.
+                            </p>
+                          )}
                         </div>
                       </AlertDescription>
                     </Alert>
-                  )}{" "}
+                  )}
+
                   <Button
                     onClick={handleAnalyze}
                     disabled={loading || !file || !puestoPostular}
@@ -361,13 +416,16 @@ export default function AnalizarCVPage() {
                         <FileText className="mr-2 h-4 w-4" />
                         Analizar CV
                       </>
-                    )}{" "}
-                  </Button>                </div>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </section>      {/* Insufficient Credits Modal */}
+      </section>
+
+      {/* Insufficient Credits Modal */}
       {user && (
         <InsufficientCreditsModal
           isOpen={showInsufficientCreditsModal}
