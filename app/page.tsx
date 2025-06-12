@@ -55,7 +55,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
-                  href="https://wa.me/51992695109?text=Hola%2C%20Worky%21"
+                  href="/dashboard"
                   className="inline-flex items-center justify-center px-6 py-3 bg-[#028bbf] text-white rounded-full font-medium hover:bg-[#027ba8] transition-colors shadow-lg hover:shadow-xl w-full sm:w-auto"
                   onClick={() => trackButtonClick('Empezar con Worky')}
                 >
