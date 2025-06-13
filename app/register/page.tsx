@@ -5,6 +5,8 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "../../firebase/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../../firebase/config";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,16 +55,28 @@ export default function RegisterPage() {
         displayName: displayName.trim()
       });
 
-      // Opcional: Guardar información adicional en Firestore
-      // await setDoc(doc(db, 'users', userCredential.user.uid), {
-      //   displayName: displayName.trim(),
-      //   university: university.trim(),
-      //   email: email,
-      //   createdAt: new Date()
-      // });
+      // OBLIGATORIO: Guardar información en Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        displayName: displayName.trim(),
+        university: university.trim(),
+        email: email,
+        role: 'student',
+        status: 'active',
+        verified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Crear cuenta de créditos
+      const { CreditService } = await import('@/services/creditService');
+      try {
+        await CreditService.getCreditAccount(userCredential.user);
+      } catch (creditError) {
+        console.error('Error creando cuenta de créditos:', creditError);
+      }
       
       setLoading(false);
-      // Redirigir al dashboard o mostrar mensaje de éxito
+      // Redirigir al dashboard
       router.push('/dashboard');
       
     } catch (err: any) {
