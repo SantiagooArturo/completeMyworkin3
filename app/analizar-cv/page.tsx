@@ -4,13 +4,12 @@ import React, { useState, useEffect } from "react";
 import { analyzeCV, uploadCV } from "../../src/utils/cvAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, Crown, AlertCircle, History, Clock } from "lucide-react";
+import { Loader2, Upload, FileText, AlertCircle, History, Clock } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -118,7 +117,7 @@ export default function AnalizarCVPage() {
       return;
     }
 
-    setLoading(true);
+    setLoading(true); 
     setError(null);
     setResult(null);
     setLongWait(false);
@@ -137,14 +136,14 @@ export default function AnalizarCVPage() {
         }
 
         reservationId = reserveResult.reservationId;
-        console.log('🔒 Créditos reservados con ID:', reservationId);
+        console.log('🔒 Créditos reservadños con ID:', reservationId);
       }
 
       // 1. Subir el archivo CV
       const cvUrl = await uploadCV(file);
 
       // 2. Procesar el análisis del CV
-      const analysisResult = await analyzeCV(cvUrl, puestoPostular);
+      const analysisResult = await analyzeCV(cvUrl, puestoPostular, file.name);
 
       // 3. NUEVO: Guardar en Firebase (solo para usuarios autenticados)
       if (user) {
