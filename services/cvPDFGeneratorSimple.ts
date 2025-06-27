@@ -509,46 +509,17 @@ export class CVPDFGeneratorSimple {
   }  // Función auxiliar para formatear fechas
   private static formatDate(dateString: string): string {
     if (!dateString) return '';
-    
     try {
-      // Si el formato es YYYY-MM-DD (fecha completa), formatear en dd/mm/yyyy
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-        
-        return date.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-      }
-      
-      // Si el formato es YYYY-MM, formatear en mm/yyyy
-      if (/^\d{4}-\d{2}$/.test(dateString)) {
+      // Si el formato es YYYY-MM o YYYY-MM-DD, mostrar solo mes/año
+      if (/^\d{4}-\d{2}/.test(dateString)) {
         const [year, month] = dateString.split('-');
         return `${month}/${year}`;
       }
-      
-      // Para año solo (YYYY), formatear como yyyy
+      // Si el formato es solo YYYY
       if (/^\d{4}$/.test(dateString)) {
         return dateString;
       }
-      
-      // Para otros formatos, intentar convertir
-      let safeDate = dateString;
-      if (/^\d{4}-\d{2}$/.test(dateString)) {
-        safeDate += '-01';
-      } else if (/^\d{4}$/.test(dateString)) {
-        safeDate += '-01-01';
-      }
-      
-      const date = new Date(safeDate);
-      if (isNaN(date.getTime())) return dateString;
-      
-      return date.toLocaleDateString('es-ES', {
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return dateString;
     } catch {
       return dateString;
     }

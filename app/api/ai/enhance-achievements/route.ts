@@ -7,95 +7,66 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { achievements, jobTitle, industry } = await request.json();
+    const { description, position, company, industry } = await request.json();
 
-    if (!achievements || !Array.isArray(achievements) || achievements.length === 0) {
+    if (!description || !position) {
       return NextResponse.json(
-        { error: 'Se requiere un array de logros (achievements)' },
+        { error: 'Se requiere descripción y posición del cargo (description, position)' },
         { status: 400 }
       );
     }
 
-    const prompt = `Como experto en optimización de CV, mejora los siguientes logros profesionales para que sean más impactantes y específicos:
+    const prompt = `Como experto en reclutamiento y redacción de CVs para LATAM, genera 3 logros cuantificables y de alto impacto para un CV, basados en la siguiente descripción de un puesto de trabajo.
 
-Puesto: ${jobTitle || 'No especificado'}
-Industria: ${industry || 'No especificada'}
+    **Contexto:**
+    - **Puesto:** ${position}
+    - **Empresa:** ${company || 'No especificada'}
+    - **Industria:** ${industry || 'No especificada'}
+    - **Descripción del puesto:** "${description}"
 
-Logros actuales:
-${achievements.map((achievement, index) => `${index + 1}. ${achievement}`).join('\n')}
-
-Instrucciones para cada logro:
-1. Añade métricas cuantificables cuando sea posible (porcentajes, números, fechas)
-2. Usa verbos de acción fuertes en pasado
-3. Incluye el impacto específico de la acción
-4. Mantén cada logro en una línea concisa pero descriptiva
-5. Asegúrate de que sea específico para la industria mencionada
-6. Usa palabras clave relevantes para optimización ATS
-
-Devuelve SOLO los logros mejorados en formato JSON:
-{
-  "enhancedAchievements": [
-    "Logro mejorado 1",
-    "Logro mejorado 2",
-    ...
-  ]
-}`;
+    **Instrucciones:**
+    1.  Crea 3 logros específicos y creíbles.
+    2.  Usa verbos de acción fuertes en tiempo pasado (ej: "Lideré", "Desarrollé", "Incrementé").
+    3.  Cuantifica el impacto con métricas realistas (ej: %, $, número de proyectos, reducción de tiempo).
+    4.  Cada logro debe ser una sola frase, concisa y directa.
+    5.  La respuesta debe ser únicamente un array de strings en formato JSON, así: 
+        { "achievements": ["Logro 1", "Logro 2", "Logro 3"] }
+    `;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: "Eres un experto en redacción de CV especializado en transformar logros básicos en declaraciones impactantes que destacan el valor agregado del candidato."
+          content: "Eres un asistente experto en la creación de CVs que genera logros impactantes y cuantificables basados en la descripción de un trabajo. Tu respuesta debe ser siempre un JSON válido."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 800,
+      response_format: { type: "json_object" }, // Habilitar modo JSON
+      temperature: 0.8, // Aumentar un poco la creatividad
+      max_tokens: 500,
     });
 
     const responseText = completion.choices[0].message.content?.trim();
 
     if (!responseText) {
-      throw new Error('No se pudo generar logros mejorados');
+      throw new Error('La respuesta de la IA estaba vacía.');
     }
 
-    // Intentar parsear como JSON
-    let enhancedAchievements;
-    try {
-      const parsed = JSON.parse(responseText);
-      enhancedAchievements = parsed.enhancedAchievements || [];
-    } catch {
-      // Si falla el parsing, intentar extraer logros del texto
-      const lines = responseText.split('\n').filter(line => line.trim() && 
-        (line.match(/^\d+\./) || line.includes('•') || line.includes('-')));
-      enhancedAchievements = lines.map(line => 
-        line.replace(/^\d+\.\s*/, '').replace(/^[•-]\s*/, '').trim()
-      );
+    const parsed = JSON.parse(responseText);
+    const achievements = parsed.achievements || [];
+
+    if (!achievements || achievements.length === 0) {
+      throw new Error('No se pudieron generar logros válidos.');
     }
 
-    if (!enhancedAchievements || enhancedAchievements.length === 0) {
-      throw new Error('No se pudieron extraer logros válidos de la respuesta');
-    }
-
-    return NextResponse.json({
-      success: true,
-      enhancedAchievements,
-      metadata: {
-        originalCount: achievements.length,
-        enhancedCount: enhancedAchievements.length,
-        jobTitle,
-        industry,
-        model: "gpt-4",
-        timestamp: new Date().toISOString()
-      }
-    });
+    return NextResponse.json({ achievements });
 
   } catch (error: any) {
-    console.error('❌ Error mejorando logros:', error);
+    console.error('❌ Error generando logros con IA:', error);
     
     return NextResponse.json(
       { 

@@ -8,7 +8,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { description, role } = await request.json();
+    const { description, role, company, industry } = await request.json();
 
     if (!description || !role) {
       return NextResponse.json(
@@ -17,11 +17,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Mejora la siguiente descripción de trabajo para un CV en formato Harvard. 
-    El puesto es: ${role}. 
-    Descripción actual: "${description}". 
-    Haz que sea más impactante, utiliza verbos de acción, sé específico y cuantifica los logros cuando sea posible. 
-    Mantén un tono profesional y formal.`;
+    const prompt = `Eres un experto en redacción de CVs para el mercado de LATAM, especializado en el formato Harvard.
+    Mejora la siguiente descripción de trabajo para un CV, haciéndola más impactante y profesional.
+    
+    **Contexto:**
+    - **Puesto:** ${role}
+    - **Empresa:** ${company || 'No especificada'}
+    - **Industria:** ${industry || 'No especificada'}
+    
+    **Descripción actual:** 
+    "${description}"
+    
+    **Instrucciones:**
+    1.  Usa verbos de acción fuertes (ej: "Lideré", "Desarrollé", "Implementé").
+    2.  Cuantifica los logros siempre que sea posible (ej: "aumenté las ventas en un 20%", "reduje los costos en $15,000").
+    3.  Enfócate en resultados e impacto, no solo en responsabilidades.
+    4.  Mantén un tono profesional y formal, adecuado para un CV.
+    5.  La respuesta debe ser solo la descripción mejorada, sin introducciones ni texto adicional.
+    `;
 
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],

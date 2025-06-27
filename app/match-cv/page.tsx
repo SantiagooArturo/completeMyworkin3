@@ -11,12 +11,7 @@ import {
   Search,
   Lock,
   UserPlus,
-  Coins,
-  AlertCircle,
-  ExternalLink,
-  MapPin,
-  Calendar,
-  Star
+  Coins
 } from "lucide-react";
 import { matchesCV, uploadCV } from "@/src/utils/cvAnalyzer";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +41,18 @@ export default function MatchCV() {
     confirmReservation, 
     revertReservation 
   } = useCredits(user);
+
+  // TODOS LOS HOOKS DEBEN IR AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
+  const [file, setFile] = useState<File | null>(null);
+  const [telefono, setTelefono] = useState("");
+  const [puesto, setPuesto] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const [showInputs, setShowInputs] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [practicas, setPracticas] = useState<Practica[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
 
   // PROTECCIÓN: Si no hay usuario, mostrar pantalla de login
   if (!user) {
@@ -138,16 +145,6 @@ export default function MatchCV() {
   }
 
   // RESTO DEL CÓDIGO ORIGINAL PARA USUARIOS AUTENTICADOS
-  const [file, setFile] = useState<File | null>(null);
-  const [telefono, setTelefono] = useState("");
-  const [puesto, setPuesto] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
-  const [showInputs, setShowInputs] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [practicas, setPracticas] = useState<Practica[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
 
   // Maneja la carga del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

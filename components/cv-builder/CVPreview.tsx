@@ -11,40 +11,16 @@ interface CVPreviewProps {
 
 export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    
     try {
-      // Si el formato es YYYY-MM-DD (fecha completa), formatear en dd/mm/yyyy
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-        
-        return date.toLocaleDateString('es-ES', { 
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-      }
-      
-      // Si el formato es YYYY-MM, formatear en mm/yyyy
-      if (/^\d{4}-\d{2}$/.test(dateString)) {
+      // Si el formato es YYYY-MM o YYYY-MM-DD, mostrar solo mes/año
+      if (/^\d{4}-\d{2}/.test(dateString)) {
         const [year, month] = dateString.split('-');
         return `${month}/${year}`;
       }
-      
-      // Si el formato es solo YYYY (solo año), devolver el año
+      // Si el formato es solo YYYY
       if (/^\d{4}$/.test(dateString)) {
         return dateString;
       }
-      
-      // Para otros formatos, intentar convertir y formatear
-      const date = new Date(dateString + '-01-15');
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString('es-ES', { 
-          month: '2-digit',
-          year: 'numeric'
-        });
-      }
-      
       return dateString;
     } catch {
       return dateString;

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GraduationCap, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import DatePicker from '@/components/ui/date-picker';
+import MonthPicker from '@/components/ui/month-picker';
 
 interface EducationFormProps {
   education: Education[];
@@ -153,10 +153,10 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio *
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={edu.startDate}
                       onChange={(date) => updateEducation(index, 'startDate', date)}
-                      placeholder="Selecciona fecha de inicio"
+                      placeholder="Selecciona mes y año"
                       className="mt-1"
                       required
                       maxDate={edu.endDate || undefined}
@@ -168,10 +168,10 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
                       <Calendar className="h-4 w-4" />
                       Fecha de Fin
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={edu.endDate}
                       onChange={(date) => updateEducation(index, 'endDate', date)}
-                      placeholder="Selecciona fecha de fin"
+                      placeholder="Selecciona mes y año"
                       disabled={edu.current}
                       className="mt-1"
                       minDate={edu.startDate || undefined}

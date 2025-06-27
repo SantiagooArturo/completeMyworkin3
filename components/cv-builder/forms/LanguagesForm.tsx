@@ -35,10 +35,12 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
     onUpdate(updatedLanguages);
   };
   const languageLevels = [
-    { value: 'Básico', label: 'Básico (A1-A2)', description: 'Comprensión y expresión básica' },
-    { value: 'Intermedio', label: 'Intermedio (B1-B2)', description: 'Conversación fluida, lectura y escritura' },
-    { value: 'Avanzado', label: 'Avanzado (C1)', description: 'Dominio profesional del idioma' },
-    { value: 'Nativo', label: 'Nativo/Bilingüe (C2)', description: 'Dominio completo y natural' }
+    { value: 'Básico', label: 'Básico (A1-A2)', description: 'Comprensión y expresión para tareas simples.' },
+    { value: 'Intermedio', label: 'Intermedio (B1)', description: 'Capacidad para desenvolverse en la mayoría de situaciones.' },
+    { value: 'Intermedio-Avanzado', label: 'Intermedio-Avanzado (B2)', description: 'Comunicación fluida sobre temas concretos y técnicos.' },
+    { value: 'Avanzado', label: 'Avanzado (C1)', description: 'Dominio operativo eficaz y profesional del idioma.' },
+    { value: 'Proficiente', label: 'Proficiente (C2)', description: 'Dominio completo y preciso, similar a un nativo.' },
+    { value: 'Nativo', label: 'Nativo', description: 'Hablante nativo del idioma.' }
   ];
 
   const commonLanguages = [
@@ -52,8 +54,10 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'Básico': return 'bg-yellow-100 text-yellow-800';
-      case 'Intermedio': return 'bg-blue-100 text-blue-800';
+      case 'Intermedio': return 'bg-sky-100 text-sky-800';
+      case 'Intermedio-Avanzado': return 'bg-blue-100 text-blue-800';
       case 'Avanzado': return 'bg-green-100 text-green-800';
+      case 'Proficiente': return 'bg-indigo-100 text-indigo-800';
       case 'Nativo': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }

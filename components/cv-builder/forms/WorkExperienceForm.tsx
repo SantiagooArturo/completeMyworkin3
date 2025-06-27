@@ -11,7 +11,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { useState } from 'react';
 import MonthPicker from '@/components/ui/month-picker';
-import DatePicker from '@/components/ui/date-picker';
 
 interface WorkExperienceFormProps {
   workExperience: WorkExperience[];
@@ -385,10 +384,11 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         <Label className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Fecha de Inicio *
-                        </Label>                        <DatePicker
+                        </Label>
+                        <MonthPicker
                           value={exp.startDate}
                           onChange={(date) => updateWorkExperience(index, 'startDate', date)}
-                          placeholder="Selecciona fecha de inicio"
+                          placeholder="Selecciona mes y año"
                           className="mt-1"
                           required
                           maxDate={exp.endDate || undefined}
@@ -399,10 +399,11 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
                         <Label className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Fecha de Fin
-                        </Label>                        <DatePicker
+                        </Label>
+                        <MonthPicker
                           value={exp.endDate}
                           onChange={(date) => updateWorkExperience(index, 'endDate', date)}
-                          placeholder="Selecciona fecha de fin"
+                          placeholder="Selecciona mes y año"
                           disabled={exp.current}
                           className="mt-1"
                           minDate={exp.startDate || undefined}

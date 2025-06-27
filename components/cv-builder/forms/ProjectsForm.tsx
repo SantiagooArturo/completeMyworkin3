@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Project } from '@/types/cv';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar } from 'lucide-react';
-import DatePicker from '@/components/ui/date-picker';
+import MonthPicker from '@/components/ui/month-picker';
+import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface ProjectsFormProps {
@@ -17,6 +18,8 @@ interface ProjectsFormProps {
 }
 
 export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) {
+  const [optimizingIndex, setOptimizingIndex] = useState<number | null>(null);
+
   const addProject = () => {
     const newProject: Project = {
       id: Date.now().toString(),
@@ -104,6 +107,29 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
     onUpdate(updatedProjects);
   };
 
+  // Nueva función para optimizar descripción con IA
+  const optimizeDescriptionWithAI = async (index: number) => {
+    const project = projects[index];
+    if (!project.name || !project.description || project.description.length < 5) {
+      alert('Completa el nombre y una descripción inicial antes de optimizar con IA.');
+      return;
+    }
+    setOptimizingIndex(index);
+    try {
+      const techs = project.technologies ? project.technologies.split(',').map(t => t.trim()) : [];
+      const enhanced = await cvAIEnhancementService.enhanceProjectDescription(
+        project.name,
+        project.description,
+        techs
+      );
+      updateProject(index, 'description', enhanced);
+    } catch (error) {
+      alert('No se pudo optimizar la descripción. Intenta más tarde.');
+    } finally {
+      setOptimizingIndex(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -168,10 +194,10 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       <Calendar className="h-4 w-4" />
                       Fecha de Inicio
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={project.startDate}
                       onChange={(date) => updateProject(index, 'startDate', date)}
-                      placeholder="Selecciona fecha de inicio"
+                      placeholder="Selecciona mes y año"
                       className="mt-1"
                       maxDate={project.endDate || undefined}
                     />
@@ -181,10 +207,10 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                       <Calendar className="h-4 w-4" />
                       Fecha de Fin
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={project.endDate}
                       onChange={(date) => updateProject(index, 'endDate', date)}
-                      placeholder="Selecciona fecha de fin"
+                      placeholder="Selecciona mes y año"
                       disabled={project.current}
                       className="mt-1"
                       minDate={project.startDate || undefined}
@@ -263,6 +289,25 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                   <p className="text-xs text-gray-500 mt-2">
                     Lista tus principales logros y contribuciones del proyecto
                   </p>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2">
+                  <Label>Descripción del Proyecto *</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="ml-auto flex items-center gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                    onClick={() => optimizeDescriptionWithAI(index)}
+                    disabled={optimizingIndex === index}
+                  >
+                    {optimizingIndex === index ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700"></div>
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                    {optimizingIndex === index ? 'Optimizando...' : 'Optimizar con IA'}
+                  </Button>
                 </div>
 
                 <div className="mt-4">

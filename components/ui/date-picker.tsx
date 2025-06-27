@@ -46,11 +46,13 @@ export default function DatePicker({
     if (!value) return '';
     
     try {
-      const date = new Date(value);
+      // Agregar T00:00:00 para asegurar que se interprete como UTC
+      const date = new Date(`${value}T00:00:00`);
       return date.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'long',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'UTC' // Forzar zona horaria UTC
       });
     } catch {
       return value;
@@ -61,7 +63,8 @@ export default function DatePicker({
   const getSelectedDate = () => {
     if (!value) return undefined;
     try {
-      return new Date(value);
+      // Agregar T00:00:00 para asegurar que se interprete como UTC
+      return new Date(`${value}T00:00:00`);
     } catch {
       return undefined;
     }
@@ -89,7 +92,7 @@ export default function DatePicker({
   const getMinDate = () => {
     if (!minDate) return undefined;
     try {
-      return new Date(minDate);
+      return new Date(`${minDate}T00:00:00`);
     } catch {
       return undefined;
     }
@@ -98,7 +101,7 @@ export default function DatePicker({
   const getMaxDate = () => {
     if (!maxDate) return undefined;
     try {
-      return new Date(maxDate);
+      return new Date(`${maxDate}T00:00:00`);
     } catch {
       return undefined;
     }

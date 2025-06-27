@@ -23,6 +23,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CreditService } from '@/services/creditService';
 import { useCredits } from '@/hooks/useCredits';
 
+import GuidePanel from './GuidePanel';
+
 const  initialCVData: CVData = {
   personalInfo: {
     fullName: '',
@@ -408,6 +410,9 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Panel de Guía Modal */}
+      {showGuide && <GuidePanel onClose={() => setShowGuide(false)} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formularios */}
