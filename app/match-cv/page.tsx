@@ -42,7 +42,7 @@ export default function MatchCV() {
     revertReservation 
   } = useCredits(user);
 
-  // TODOS LOS HOOKS DEBEN IR AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
+  // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
   const [file, setFile] = useState<File | null>(null);
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");

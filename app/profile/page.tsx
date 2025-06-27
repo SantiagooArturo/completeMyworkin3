@@ -24,7 +24,8 @@ import {
   TrendingUp,
   FileText,
   Send,
-  Play
+  Play,
+  Briefcase
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -243,19 +244,19 @@ export default function ProfilePage() {
                 </Link>
                 
                 <Link 
-                  href="/postulaciones"
+                  href="/bolsa-trabajo"
                   className="w-full flex items-center space-x-3 p-3 bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 rounded-lg transition"
                 >
-                  <Send size={18} />
-                  <span>Postulaciones</span>
+                  <Briefcase size={18} />
+                  <span>Bolsa de Trabajo</span>
                 </Link>
                 
                 <Link 
-                  href="/entrenamientos"
+                  href="/interview-simulation"
                   className="w-full flex items-center space-x-3 p-3 bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 rounded-lg transition"
                 >
                   <Play size={18} />
-                  <span>Entrenamientos</span>
+                  <span>Simulación de Entrevistas</span>
                 </Link>
                 
                 <div className="pt-3 border-t border-gray-100">
@@ -586,12 +587,12 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Estadísticas de análisis CV */}
-                {userStats && (
+                {/* {userStats && (
                   <div className="pt-4 space-y-3 border-t border-gray-100">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Análisis CV usados</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {userStats.cvAnalyzesUsed} / {userStats.cvAnalyzesTotal}
+                        {userStats.cvAnalyzesUsed}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -604,18 +605,8 @@ export default function ProfilePage() {
                         {userStats.cvAnalyzesRemaining}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Tipo de cuenta</span>
-                      <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                        userStats.subscriptionType === 'premium' 
-                          ? 'bg-yellow-100 text-yellow-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {userStats.subscriptionType === 'premium' ? 'Premium' : 'Gratuita'}
-                      </span>
-                    </div>
                   </div>
-                )}
+                )} */}
 
                 {/* Estadísticas adicionales */}
                 {userStats && (userStats.cvsCreated || userStats.applicationsSent || userStats.trainingsCompleted) && (

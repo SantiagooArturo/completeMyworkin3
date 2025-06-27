@@ -1,15 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { PersonalInfo } from '@/types/cv';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Mail, Phone, MapPin, Linkedin, Sparkles } from 'lucide-react';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
+import { Label } from '@/components/ui/label';
 
 interface PersonalInfoFormProps {
   personalInfo: PersonalInfo;
@@ -18,6 +19,12 @@ interface PersonalInfoFormProps {
 
 export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInfoFormProps) {
   const [isEnhancingProfile, setIsEnhancingProfile] = useState(false);
+  
+  // Ref para el textarea autoajustable
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Hook para hacer el textarea autoajustable
+  useAutosizeTextArea(summaryRef, personalInfo.summary);
   
   const handleChange = (field: keyof PersonalInfo, value: string) => {
     onUpdate({
@@ -160,12 +167,13 @@ export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInf
             </Button>
           </div>
           <Textarea
+            ref={summaryRef}
             id="summary"
             value={personalInfo.summary}
             onChange={(e) => handleChange('summary', e.target.value)}
             placeholder="Breve resumen (2-3 oraciones) destacando tu experiencia profesional más relevante y objetivos profesionales específicos."
             rows={4}
-            className="resize-none mt-1"
+            className="resize-none mt-1 overflow-hidden"
             required
           />
         </div>

@@ -12,6 +12,72 @@ import Link from 'next/link';
 
 export default function CrearCV() {
   const { user } = useAuth();
+  
+  // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [editingCVId, setEditingCVId] = useState<string | undefined>();
+  const [userCVs, setUserCVs] = useState<SavedCV[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // useEffect también debe ir al inicio
+  useEffect(() => {
+    if (user) {
+      loadUserCVs();
+    }
+  }, [user]);
+
+  // Funciones auxiliares
+  const loadUserCVs = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      const cvs = await cvBuilderService.getUserCVs(user);
+      setUserCVs(cvs);
+    } catch (error) {
+      console.error('Error cargando CVs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateNew = () => {
+    setEditingCVId(undefined);
+    setShowBuilder(true);
+  };
+
+  const handleEditCV = (cvId: string) => {
+    setEditingCVId(cvId);
+    setShowBuilder(true);
+  };
+
+  const handleDeleteCV = async (cvId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este CV?')) return;
+    
+    try {
+      await cvBuilderService.deleteCV(cvId);
+      await loadUserCVs();
+    } catch (error) {
+      console.error('Error eliminando CV:', error);
+      alert('Error al eliminar el CV');
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowBuilder(false);
+    setEditingCVId(undefined);
+    loadUserCVs();
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   // PROTECCIÓN: Si no hay usuario, mostrar pantalla de login
   if (!user) {
@@ -103,70 +169,6 @@ export default function CrearCV() {
     );
   }
 
-  // RESTO DEL CÓDIGO ORIGINAL PARA USUARIOS AUTENTICADOS
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [editingCVId, setEditingCVId] = useState<string | undefined>();
-  const [userCVs, setUserCVs] = useState<SavedCV[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      loadUserCVs();
-    }
-  }, [user]);
-
-  const loadUserCVs = async () => {
-    if (!user) return;
-    
-    try {
-      setIsLoading(true);
-      const cvs = await cvBuilderService.getUserCVs(user);
-      setUserCVs(cvs);
-    } catch (error) {
-      console.error('Error cargando CVs:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateNew = () => {
-    setEditingCVId(undefined);
-    setShowBuilder(true);
-  };
-
-  const handleEditCV = (cvId: string) => {
-    setEditingCVId(cvId);
-    setShowBuilder(true);
-  };
-
-  const handleDeleteCV = async (cvId: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este CV?')) return;
-    
-    try {
-      await cvBuilderService.deleteCV(cvId);
-      await loadUserCVs();
-    } catch (error) {
-      console.error('Error eliminando CV:', error);
-      alert('Error al eliminar el CV');
-    }
-  };
-
-  const handleBackToList = () => {
-    setShowBuilder(false);
-    setEditingCVId(undefined);
-    loadUserCVs();
-  };
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   if (showBuilder) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100">
@@ -189,35 +191,6 @@ export default function CrearCV() {
           </div>
           <CVBuilder cvId={editingCVId} />
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
-        <Navbar />
-        <div className="h-[52px]"></div>
-        <section className="py-16 px-4">
-          <div className="container mx-auto max-w-4xl text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-8">
-              <span className="text-black">Crea tu </span>
-              <span className="text-[#028bbf]">CV Profesional</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Inicia sesión para acceder al creador de CV con formato Harvard
-            </p>
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <FileText className="h-16 w-16 text-[#028bbf] mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Acceso Requerido
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Para crear y gestionar tus CVs, necesitas iniciar sesión en tu cuenta.
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     );
   }

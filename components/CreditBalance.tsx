@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Coins, Plus, AlertCircle } from 'lucide-react';
 import CreditPurchaseModal from './CreditPurchaseModal';
 import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
 
 interface CreditBalanceProps {
   className?: string;
@@ -41,16 +42,18 @@ export default function CreditBalance({
     return (
       <>
         <div className={`flex items-center space-x-2 ${className}`}>
-          <Badge variant={badgeVariant} className="flex items-center space-x-1">
-            <Coins className="h-3 w-3" />
-            <span>{credits} créditos</span>
-          </Badge>
+          <Link href="/credits">
+            <Badge variant={badgeVariant} className="flex items-center space-x-1 py-2">
+              <Coins className="h-3 w-3" />
+              <span>{credits} créditos</span>
+            </Badge>
+          </Link>
           {isLowCredits && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => setShowPurchaseModal(true)}
-              className="h-6 px-2 text-gray-600"
+              className=" text-gray-600 rounded-full p-2.5"
             >
               <Plus className="h-3 w-3" />
             </Button>

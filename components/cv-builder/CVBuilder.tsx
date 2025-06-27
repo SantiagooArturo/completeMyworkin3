@@ -58,7 +58,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cvTitle, setCVTitle] = useState('Mi CV');
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 

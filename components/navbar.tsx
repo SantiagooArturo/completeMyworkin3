@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown, User, Settings, LogOut, LayoutGrid } from 'lucide-react';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -22,6 +22,7 @@ export default function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
 
   return (
@@ -98,30 +99,96 @@ export default function Navbar() {
             {/* Botón de login/logout */}
             {user ? (
               <div className="hidden md:flex items-center gap-3">
-                {/* Dashboard Button */}
-                <Link
-                  href="/dashboard"
-                  className="flex items-center justify-center gap-2 py-1.5 px-3 bg-blue-100 hover:bg-blue-200 text-[#028bbf] rounded-full font-medium shadow-md transition-all text-sm"
-                >
-                  Panel
-                </Link>
+                {/* User Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                    className="flex items-center gap-2 hover:bg-gray-50 rounded-full p-1.5 transition-colors border border-transparent hover:border-gray-200"
+                  >
+                    <Avatar user={user} size="sm" />
+                    <ChevronDown className={`h-3 w-3 text-gray-500 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
 
-                {/* User Avatar and Profile */}
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 hover:bg-gray-100 rounded-full p-1 transition-colors"
-                >
-                  <Avatar user={user} size="sm" />
-                  <span className="text-sm font-medium text-gray-700 max-w-20 truncate">
-                    {user.displayName || user.email?.split('@')[0] || 'Usuario'}
-                  </span>
-                </Link>
+                  {/* Dropdown Menu */}
+                  {isUserDropdownOpen && (
+                    <>
+                      {/* Overlay para cerrar dropdown */}
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setIsUserDropdownOpen(false)}
+                      />
+                      
+                      {/* Dropdown Content */}
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20">
+                        {/* Header del usuario */}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <Avatar user={user} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {user.displayName || 'Usuario'}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setIsUserDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <LayoutGrid className="h-4 w-4 text-gray-500" />
+                            <span>Panel de Control</span>
+                          </Link>
+                          
+                          <Link
+                            href="/profile"
+                            onClick={() => setIsUserDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span>Mi Perfil</span>
+                          </Link>
+                          
+                          <button
+                            onClick={() => setIsUserDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <Settings className="h-4 w-4 text-gray-500" />
+                            <span>Configuración</span>
+                          </button>
+                        </div>
+
+                        {/* Separator */}
+                        <div className="border-t border-gray-100 my-1" />
+
+                        {/* Logout */}
+                        <button
+                          onClick={() => {
+                            logout();
+                            setIsUserDropdownOpen(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Cerrar Sesión</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ) : (
               <Link
                 href="/login"
-                className="hidden md:flex items-center justify-center gap-2 py-1.5 px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full font-medium shadow-md transition-all text-sm"
+                className="hidden md:flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-[#028bbf] to-[#027ba8] hover:from-[#027ba8] hover:to-[#026699] text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all text-sm transform hover:scale-105"
               >
+                <User className="h-4 w-4" />
                 Iniciar sesión
               </Link>
             )}
