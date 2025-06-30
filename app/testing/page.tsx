@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 
 export default function TestingPage() {
   const { user } = useAuth();
-  const { processPackagePurchase } = useMercadoPago();
   
   const [firebaseStatus, setFirebaseStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [mercadopagoStatus, setMercadopagoStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');

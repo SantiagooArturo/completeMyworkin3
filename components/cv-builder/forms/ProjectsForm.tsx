@@ -107,24 +107,94 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
     onUpdate(updatedProjects);
   };
 
-  // Nueva función para optimizar descripción con IA
+  // Nueva función para optimizar descripción con IA usando streaming
   const optimizeDescriptionWithAI = async (index: number) => {
     const project = projects[index];
     if (!project.name || !project.description || project.description.length < 5) {
       alert('Completa el nombre y una descripción inicial antes de optimizar con IA.');
       return;
     }
+
     setOptimizingIndex(index);
+    
     try {
-      const techs = project.technologies ? project.technologies.split(',').map(t => t.trim()) : [];
-      const enhanced = await cvAIEnhancementService.enhanceProjectDescription(
-        project.name,
-        project.description,
-        techs
-      );
-      updateProject(index, 'description', enhanced);
+      const response = await fetch('/api/cv/optimize-project-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: project.description,
+          projectName: project.name,
+          technologies: project.technologies || ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Verificar si la respuesta es streaming
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('text/plain')) {
+        // Si no es streaming, tratar como respuesta JSON normal
+        const data = await response.json();
+        updateProject(index, 'description', data.description || data.text || '');
+        return;
+      }
+
+      // Manejar streaming response usando ReadableStream API
+      if (!response.body) {
+        throw new Error('No se recibió el stream de respuesta');
+      }
+
+      let result = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          
+          // Procesar el chunk del stream de Vercel AI
+          const lines = chunk.split('\n').filter(line => line.trim());
+          
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              // Formato de stream de Vercel AI: "0:"texto""
+              try {
+                const content = line.slice(2); // Remover "0:"
+                const parsed = JSON.parse(content);
+                result += parsed;
+                
+                // Actualizar la descripción en tiempo real
+                updateProject(index, 'description', result);
+              } catch (parseError) {
+                // Si no se puede parsear, agregar directamente
+                const content = line.slice(2).replace(/^"|"$/g, '');
+                result += content;
+                updateProject(index, 'description', result);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      // Asegurar que tenemos el resultado final limpio
+      if (result.trim()) {
+        const finalResult = result.trim().replace(/^"|"$/g, ''); // Limpiar comillas
+        updateProject(index, 'description', finalResult);
+      }
+      
     } catch (error) {
-      alert('No se pudo optimizar la descripción. Intenta más tarde.');
+      console.error('❌ Error al optimizar descripción:', error);
+      alert(`No se pudo optimizar la descripción: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setOptimizingIndex(null);
     }
@@ -291,27 +361,25 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                   </p>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <Label>Descripción del Proyecto *</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="ml-auto flex items-center gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-                    onClick={() => optimizeDescriptionWithAI(index)}
-                    disabled={optimizingIndex === index}
-                  >
-                    {optimizingIndex === index ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700"></div>
-                    ) : (
-                      <Plus className="h-3 w-3" />
-                    )}
-                    {optimizingIndex === index ? 'Optimizando...' : 'Optimizar con IA'}
-                  </Button>
-                </div>
-
                 <div className="mt-4">
-                  <Label>Descripción del Proyecto *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Descripción del Proyecto *</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                      onClick={() => optimizeDescriptionWithAI(index)}
+                      disabled={optimizingIndex === index}
+                    >
+                      {optimizingIndex === index ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700"></div>
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
+                      {optimizingIndex === index ? 'Optimizando...' : 'Optimizar con IA'}
+                    </Button>
+                  </div>
                   <Textarea
                     value={project.description}
                     onChange={(e) => updateProject(index, 'description', e.target.value)}

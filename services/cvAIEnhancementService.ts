@@ -278,16 +278,55 @@ export class CVAIEnhancementService {
     ];
   }
 
-  // Mejorar descripción de proyectos con IA
+  // Mejorar descripción de proyectos con IA usando streaming
   async enhanceProjectDescription(projectName: string, currentDescription: string, technologies?: string[]): Promise<string> {
     try {
-      const response = await this.callAIAPI('enhance-summary', {
-        summary: currentDescription,
-        context: 'project',
-        project_name: projectName,
-        technologies: technologies || []
+      const response = await fetch('/api/cv/optimize-project-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: currentDescription,
+          projectName,
+          technologies: technologies?.join(', ') || ''
+        })
       });
-      return response.enhanced_summary || response.description || currentDescription;
+
+      if (!response.ok) {
+        throw new Error(`Error en la API: ${response.statusText}`);
+      }
+
+      // Manejar streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No se pudo obtener el stream de respuesta');
+      }
+
+      let result = '';
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              // Extraer el contenido del stream
+              const content = line.slice(2).replace(/"/g, '');
+              result += content;
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      return result.trim() || currentDescription;
     } catch (error) {
       console.warn('Fallback to local project enhancement:', error);
       return this.enhanceProjectDescriptionLocal(projectName, currentDescription, technologies);

@@ -155,13 +155,13 @@ export default function Navbar() {
                             <span>Mi Perfil</span>
                           </Link>
                           
-                          <button
+                          {/* <button
                             onClick={() => setIsUserDropdownOpen(false)}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors w-full text-left"
                           >
                             <Settings className="h-4 w-4 text-gray-500" />
                             <span>Configuración</span>
-                          </button>
+                          </button> */}
                         </div>
 
                         {/* Separator */}
