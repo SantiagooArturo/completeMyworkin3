@@ -33,7 +33,7 @@ const Warning = ({ children }: { children: React.ReactNode }) => (
 export default function GuidePanel({ onClose }: GuidePanelProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center">
-      <Card className="w-full max-w-2xl max-h-[90vh] bg-white shadow-2xl rounded-lg flex flex-col">
+      <Card className="w-full max-w-2xl max-h-[80vh] bg-white shadow-2xl rounded-lg flex flex-col">
         <CardHeader className="flex flex-row justify-between items-center border-b p-4">
           <div className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-[#028bbf]" />

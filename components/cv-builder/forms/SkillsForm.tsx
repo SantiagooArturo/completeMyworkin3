@@ -8,21 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Wrench, Sparkles } from 'lucide-react';
-
-const HarvardSkillsGuide = () => {
-  return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-      <h4 className="font-medium text-blue-900 mb-2">🎓 Formato Harvard - Habilidades:</h4>
-      <ul className="text-sm text-blue-800 space-y-1">
-        <li>• <strong>Software:</strong> Microsoft Office (Excel - Avanzado), SQL, Power BI</li>
-        <li>• <strong>Gestión de Proyectos:</strong> Microsoft Project, Metodologías Ágiles</li>
-        <li>• <strong>Idiomas:</strong> Inglés - Avanzado, Francés - Intermedio</li>
-        <li>• Enfócate en herramientas específicas que dominas</li>
-        <li>• Incluye el nivel de competencia cuando sea relevante</li>
-      </ul>
-    </div>
-  );
-};
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface SkillsFormProps {
   skills: Skill[];
@@ -206,6 +192,7 @@ export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps
         <CardTitle className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-[#028bbf]" />
           Habilidades
+          <HarvardFormatTip section="skills" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -326,8 +313,6 @@ export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps
             {isSuggestingSkills ? 'Sugiriendo...' : 'Sugerir Habilidades'}
           </Button>
         </div>
-
-        <HarvardSkillsGuide />
       </CardContent>
     </Card>
   );

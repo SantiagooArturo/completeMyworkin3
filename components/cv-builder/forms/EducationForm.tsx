@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GraduationCap, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MonthPicker from '@/components/ui/month-picker';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface EducationFormProps {
   education: Education[];
@@ -100,6 +101,7 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
         <CardTitle className="flex items-center gap-2">
           <GraduationCap className="h-5 w-5 text-[#028bbf]" />
           Formación Académica
+          <HarvardFormatTip section="education" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -236,18 +238,6 @@ export default function EducationForm({ education, onUpdate }: EducationFormProp
           <Plus className="h-4 w-4 mr-2" />
           Agregar Formación Académica
         </Button>
-
-        {/* Consejos específicos para educación en formato Harvard */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-yellow-900 mb-2">📚 Formato Harvard - Educación:</h4>
-          <ul className="text-sm text-yellow-800 space-y-1">
-            <li>• Lista la educación en orden cronológico inverso (más reciente primero)</li>
-            <li>• Incluye el nombre completo de la institución</li>
-            <li>• Especifica el tipo de título y campo de estudio</li>
-            <li>• Menciona honores académicos si los tienes</li>
-            <li>• Para estudios en curso, indica "Esperado: [fecha]"</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

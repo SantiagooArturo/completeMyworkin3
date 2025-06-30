@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { useState } from 'react';
 import MonthPicker from '@/components/ui/month-picker';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface WorkExperienceFormProps {
   workExperience: WorkExperience[];
@@ -293,21 +294,11 @@ export default function WorkExperienceForm({ workExperience, onUpdate }: WorkExp
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="h-5 w-5 text-[#028bbf]" />
-          Experiencia Laboral - Formato Harvard
+          Experiencia Laboral
+          <HarvardFormatTip section="work-experience" />
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Harvard Format Guide */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-          <h4 className="font-medium text-amber-900 mb-2">🎓 Formato Harvard - Experiencia:</h4>
-          <ul className="text-sm text-amber-800 space-y-1">
-            <li>• Lista las experiencias en orden cronológico inverso (más reciente primero)</li>
-            <li>• Incluye el nombre completo de la empresa y tu título exacto</li>
-            <li>• Usa verbos de acción en tiempo pasado (ej: "Lideré", "Desarrollé")</li>
-            <li>• Cuantifica logros con métricas específicas (%, $, cantidades)</li>
-            <li>• Enfatiza resultados e impacto, no solo responsabilidades</li>
-          </ul>
-        </div>
 
         <div className="space-y-4">
           {workExperience.length === 0 ? (

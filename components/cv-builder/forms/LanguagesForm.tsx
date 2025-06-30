@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Globe } from 'lucide-react';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface LanguagesFormProps {
   languages: Language[];
@@ -69,6 +70,7 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
         <CardTitle className="flex items-center gap-2">
           <Globe className="h-5 w-5 text-[#028bbf]" />
           Idiomas
+          <HarvardFormatTip section="languages" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -164,19 +166,6 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
           <Plus className="h-4 w-4 mr-2" />
           Agregar Idioma
         </Button>
-
-        {/* Consejos específicos para idiomas en formato Harvard */}
-        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-teal-900 mb-2">🌍 Formato Harvard - Idiomas:</h4>
-          <ul className="text-sm text-teal-800 space-y-1">
-            <li>• Usa el Marco Común Europeo (A1-C2) para niveles precisos</li>
-            <li>• Sé honesto sobre tu nivel real de competencia</li>
-            <li>• Incluye certificaciones oficiales cuando las tengas</li>
-            <li>• Prioriza idiomas relevantes para el puesto</li>
-            <li>• Considera incluir idiomas nativos/maternos</li>
-            <li>• Ordena por nivel de dominio (de mayor a menor)</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

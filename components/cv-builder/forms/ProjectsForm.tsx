@@ -11,6 +11,7 @@ import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar, Sparkles, Loader2
 import MonthPicker from '@/components/ui/month-picker';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { Checkbox } from '@/components/ui/checkbox';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface ProjectsFormProps {
   projects: Project[];
@@ -407,6 +408,7 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
         <CardTitle className="flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-[#028bbf]" />
           Proyectos
+          <HarvardFormatTip section="projects" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -651,19 +653,6 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
           <Plus className="h-4 w-4 mr-2" />
           Agregar Proyecto
         </Button>
-
-        {/* Consejos específicos para proyectos en formato Harvard */}
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-orange-900 mb-2">📁 Formato Harvard - Proyectos:</h4>
-          <ul className="text-sm text-orange-800 space-y-1">
-            <li>• Incluye proyectos relevantes para el puesto al que aplicas</li>
-            <li>• Describe claramente tu rol y contribución específica</li>
-            <li>• Menciona los resultados o impacto del proyecto</li>
-            <li>• Incluye enlaces a repositorios o demos cuando sea posible</li>
-            <li>• Prioriza proyectos recientes y de mayor envergadura</li>
-            <li>• Usa verbos de acción para describir tu participación</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

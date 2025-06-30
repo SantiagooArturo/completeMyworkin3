@@ -428,6 +428,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
                 onTabChange={setActiveTab}
                 cvData={cvData}
                 isStudentMode={isStudentMode}
+                onSave={handleSaveCV}
+                isSaving={isSaving}
               >
                 <TabsContent value="personal" className="mt-6">
                   <PersonalInfoForm

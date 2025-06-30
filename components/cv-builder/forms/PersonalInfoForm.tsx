@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
 import { Label } from '@/components/ui/label';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface PersonalInfoFormProps {
   personalInfo: PersonalInfo;
@@ -59,7 +60,8 @@ export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInf
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5 text-[#028bbf]" />
-          Información Personal - Formato Harvard
+          Información Personal
+          <HarvardFormatTip section="personal-info" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -178,17 +180,7 @@ export default function PersonalInfoForm({ personalInfo, onUpdate }: PersonalInf
           />
         </div>
 
-        {/* Guía de Formato Harvard */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-blue-900 mb-2">📝 Formato Harvard - Información Personal:</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• El nombre debe ir en un formato claro y formal</li>
-            <li>• La información de contacto debe ser profesional y actual</li>
-            <li>• El resumen debe ser breve y enfocado en logros relevantes</li>
-            <li>• Usa un tono profesional y directo</li>
-            <li>• Adapta el resumen al puesto específico que buscas</li>
-          </ul>
-        </div>
+
       </CardContent>
     </Card>
   );

@@ -26,9 +26,11 @@ interface CVBuilderTabsProps {
   cvData: CVData;
   children: React.ReactNode;
   isStudentMode?: boolean;
+  onSave?: () => void;
+  isSaving?: boolean;
 }
 
-export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children, isStudentMode = false }: CVBuilderTabsProps) {  const baseTabs = [
+export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children, isStudentMode = false, onSave, isSaving }: CVBuilderTabsProps) {  const baseTabs = [
     {
       id: 'personal',
       label: 'Personal',
@@ -172,12 +174,26 @@ export default function CVBuilderTabs({ activeTab, onTabChange, cvData, children
           </div>
 
           <Button
-            onClick={handleNext}
-            disabled={!canGoNext}
+            onClick={canGoNext ? handleNext : onSave}
+            disabled={isSaving}
             className="flex items-center gap-2 bg-[#028bbf] hover:bg-[#027ba8]"
           >
-            Siguiente
-            <ChevronRight className="h-4 w-4" />
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Guardando...
+              </>
+            ) : canGoNext ? (
+              <>
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Guardar CV
+                <CheckCircle className="h-4 w-4" />
+              </>
+            )}
           </Button>
         </div>
       </Tabs>

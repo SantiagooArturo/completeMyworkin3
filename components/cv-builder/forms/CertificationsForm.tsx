@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Award, Calendar, Building } from 'lucide-react';
 import DatePicker from '@/components/ui/date-picker';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface CertificationsFormProps {
   certifications: Certification[];
@@ -96,6 +97,7 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
         <CardTitle className="flex items-center gap-2">
           <Award className="h-5 w-5 text-[#028bbf]" />
           Certificaciones y Licencias
+          <HarvardFormatTip section="certifications" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -237,19 +239,6 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
           <Plus className="h-4 w-4 mr-2" />
           Agregar Certificación
         </Button>
-
-        {/* Consejos específicos para certificaciones en formato Harvard */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-indigo-900 mb-2">🏆 Formato Harvard - Certificaciones:</h4>
-          <ul className="text-sm text-indigo-800 space-y-1">
-            <li>• Lista certificaciones en orden cronológico inverso</li>
-            <li>• Incluye solo certificaciones relevantes para tu campo</li>
-            <li>• Verifica que las certificaciones estén vigentes</li>
-            <li>• Menciona el nombre completo y oficial de la certificación</li>
-            <li>• Incluye la organización emisora reconocida</li>
-            <li>• Agrega ID de credencial si está disponible para verificación</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

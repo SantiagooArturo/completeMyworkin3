@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Users, Phone, Mail, Building } from 'lucide-react';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface ReferencesFormProps {
   references: Reference[];
@@ -57,6 +58,7 @@ export default function ReferencesForm({ references, onUpdate }: ReferencesFormP
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5 text-[#028bbf]" />
           Referencias Profesionales
+          <HarvardFormatTip section="references" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -201,20 +203,6 @@ export default function ReferencesForm({ references, onUpdate }: ReferencesFormP
           <Plus className="h-4 w-4 mr-2" />
           Agregar Referencia
         </Button>
-
-        {/* Consejos específicos para referencias en formato Harvard */}
-        <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-pink-900 mb-2">👥 Formato Harvard - Referencias:</h4>
-          <ul className="text-sm text-pink-800 space-y-1">
-            <li>• Incluye 2-3 referencias profesionales relevantes</li>
-            <li>• Contacta previamente a tus referencias para solicitar permiso</li>
-            <li>• Elige personas que puedan hablar específicamente de tu trabajo</li>
-            <li>• Incluye información de contacto actualizada y verificada</li>
-            <li>• Prioriza supervisores directos o colegas de nivel senior</li>
-            <li>• Evita referencias familiares o amigos personales</li>
-            <li>• Opcional: "Referencias disponibles bajo solicitud"</li>
-          </ul>
-        </div>
 
         {/* Nota sobre disponibilidad */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">

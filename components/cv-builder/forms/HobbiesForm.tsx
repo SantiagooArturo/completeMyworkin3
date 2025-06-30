@@ -13,6 +13,7 @@ import {
   Lightbulb,
   X
 } from 'lucide-react';
+import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
 
 interface HobbiesFormProps {
   hobbies: string[];
@@ -57,25 +58,10 @@ export default function HobbiesForm({ hobbies, onUpdate }: HobbiesFormProps) {
         <CardTitle className="flex items-center gap-2">
           <Heart className="h-5 w-5 text-[#028bbf]" />
           Hobbies e Intereses
+          <HarvardFormatTip section="hobbies" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Guía */}
-        <Alert className="border-green-200 bg-green-50">
-          <Lightbulb className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            <div className="space-y-2">
-              <p className="font-medium">💡 ¿Por qué incluir hobbies?</p>
-              <ul className="text-sm space-y-1">
-                <li>• Muestran tu personalidad y equilibrio vida-trabajo</li>
-                <li>• Pueden revelar habilidades transferibles (liderazgo en deportes de equipo)</li>
-                <li>• Crean puntos de conexión con reclutadores</li>
-                <li>• Demuestran compromiso y disciplina</li>
-              </ul>
-            </div>
-          </AlertDescription>
-        </Alert>
-
         {/* Hobbies sugeridos */}
         {hobbies.length < 3 && (
           <div className="space-y-3">
