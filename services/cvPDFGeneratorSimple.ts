@@ -362,12 +362,12 @@ export class CVPDFGeneratorSimple {
           doc.setFontSize(11);
           doc.setFont('times', 'bold'); // font-semibold
           doc.setTextColor(0, 0, 0);
-          const softwareLabel = 'Software: ';
+          const softwareLabel = 'Software:  ';
           doc.text(softwareLabel, leftMargin, y);
           
           doc.setFont('times', 'normal');
           const softwareSkills = skillsOrganized.software
-            .map(skill => `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`)
+            .map(skill => `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`)
             .join(', ');
           const softwareLabelWidth = doc.getTextWidth(softwareLabel);
           const softwareLines = doc.splitTextToSize(softwareSkills, contentWidth - softwareLabelWidth);
@@ -380,12 +380,12 @@ export class CVPDFGeneratorSimple {
           doc.setFontSize(11);
           doc.setFont('times', 'bold');
           doc.setTextColor(0, 0, 0);
-          const managementLabel = 'Gestión de Proyectos: ';
+          const managementLabel = 'Gestión de Proyectos:  ';
           doc.text(managementLabel, leftMargin, y);
           
           doc.setFont('times', 'normal');
           const managementSkills = skillsOrganized.projectManagement
-            .map(skill => `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`)
+            .map(skill => `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`)
             .join(', ');
           const managementLabelWidth = doc.getTextWidth(managementLabel);
           const managementLines = doc.splitTextToSize(managementSkills, contentWidth - managementLabelWidth);
@@ -398,7 +398,7 @@ export class CVPDFGeneratorSimple {
           doc.setFontSize(11);
           doc.setFont('times', 'bold');
           doc.setTextColor(0, 0, 0);
-          const certLabel = 'Certificaciones: ';
+          const certLabel = 'Certificaciones:  ';
           doc.text(certLabel, leftMargin, y);
           
           doc.setFont('times', 'normal');
@@ -422,13 +422,13 @@ export class CVPDFGeneratorSimple {
           doc.setFontSize(11);
           doc.setFont('times', 'bold');
           doc.setTextColor(0, 0, 0);
-          const langLabel = 'Idiomas: ';
+          const langLabel = 'Idiomas:  ';
           doc.text(langLabel, leftMargin, y);
           
           doc.setFont('times', 'normal');
           const allLanguages = [
             ...(cvData.languages?.map(lang => `${lang.language} (${lang.proficiency})`) || []),
-            ...skillsOrganized.languages.map(skill => `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`)
+            ...skillsOrganized.languages.map(skill => `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`)
           ];
           const languagesText = allLanguages.join(', ');
           const langLabelWidth = doc.getTextWidth(langLabel);
@@ -458,12 +458,12 @@ export class CVPDFGeneratorSimple {
           doc.setFontSize(11);
           doc.setFont('times', 'bold');
           doc.setTextColor(0, 0, 0);
-          const otherLabel = 'Otras Competencias: ';
+          const otherLabel = 'Otras Competencias:  ';
           doc.text(otherLabel, leftMargin, y);
           
           doc.setFont('times', 'normal');
           const otherSkills = skillsOrganized.other
-            .map(skill => `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`)
+            .map(skill => `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`)
             .join(', ');
           const otherLabelWidth = doc.getTextWidth(otherLabel);
           const otherLines = doc.splitTextToSize(otherSkills, contentWidth - otherLabelWidth);
@@ -475,7 +475,7 @@ export class CVPDFGeneratorSimple {
       // Generar el archivo PDF
       const fileName = `CV_${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`;
       const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
+      const url = fileName ? URL.createObjectURL(pdfBlob) : '';
       window.open(url, '_blank');
       // doc.save(fileName);
 

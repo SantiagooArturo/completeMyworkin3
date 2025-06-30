@@ -23,7 +23,7 @@ export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps
     { value: 'Básico', label: 'Básico' },
     { value: 'Intermedio', label: 'Intermedio' },
     { value: 'Avanzado', label: 'Avanzado' },
-    { value: 'Experto', label: 'Experto' }
+    { value: 'Proficiente', label: 'Proficiente' }
   ];
 
   const skillCategories = [
@@ -42,6 +42,16 @@ export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps
       label: 'Idiomas',
       icon: '🌐'
     }
+  ];
+
+  // Lista de idiomas comunes para el selector
+  const commonLanguages = [
+    'Español', 'Inglés', 'Francés', 'Alemán', 'Italiano', 'Portugués', 
+    'Chino Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Holandés',
+    'Sueco', 'Noruego', 'Danés', 'Finlandés', 'Polaco', 'Checo',
+    'Húngaro', 'Griego', 'Turco', 'Hindi', 'Bengalí', 'Tamil',
+    'Tailandés', 'Vietnamita', 'Indonesio', 'Malayo', 'Tagalo',
+    'Hebreo', 'Persa', 'Urdu', 'Swahili', 'Quechua', 'Guaraní'
   ];
 
   const addSkill = () => {
@@ -224,12 +234,30 @@ export default function SkillsForm({ skills, onUpdate, cvData }: SkillsFormProps
                         <div key={skill.id} className="bg-white rounded border p-3">
                           <div className="grid grid-cols-12 gap-3 items-center">
                             <div className="col-span-5">
-                              <Input
-                                value={skill.name}
-                                onChange={(e) => updateSkill(originalIndex, 'name', e.target.value)}
-                                placeholder="Ej: Excel, Power BI, Inglés"
-                                className="border-0 bg-transparent focus:bg-gray-50"
-                              />
+                              {skill.category === 'Language' ? (
+                                <Select
+                                  value={skill.name}
+                                  onValueChange={(value) => updateSkill(originalIndex, 'name', value)}
+                                >
+                                  <SelectTrigger className="border-0 bg-transparent focus:bg-gray-50">
+                                    <SelectValue placeholder="Selecciona un idioma" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {commonLanguages.map((lang) => (
+                                      <SelectItem key={lang} value={lang}>
+                                        {lang}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  value={skill.name}
+                                  onChange={(e) => updateSkill(originalIndex, 'name', e.target.value)}
+                                  placeholder="Ej: Excel, Power BI, JavaScript"
+                                  className="border-0 bg-transparent focus:bg-gray-50"
+                                />
+                              )}
                             </div>
                             
                             <div className="col-span-3">

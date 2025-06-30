@@ -40,13 +40,17 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
     { value: 'Intermedio', label: 'Intermedio (B1)', description: 'Capacidad para desenvolverse en la mayoría de situaciones.' },
     { value: 'Intermedio-Avanzado', label: 'Intermedio-Avanzado (B2)', description: 'Comunicación fluida sobre temas concretos y técnicos.' },
     { value: 'Avanzado', label: 'Avanzado (C1)', description: 'Dominio operativo eficaz y profesional del idioma.' },
-    { value: 'Proficiente', label: 'Proficiente (C2)', description: 'Dominio completo y preciso, similar a un nativo.' },
-    { value: 'Nativo', label: 'Nativo', description: 'Hablante nativo del idioma.' }
+    { value: 'Proficiente', label: 'Proficiente (C2)', description: 'Dominio completo y preciso, casi nivel nativo.' },
+    { value: 'Nativo', label: 'Nativo', description: 'Hablante nativo del idioma por nacimiento o inmersión total.' }
   ];
 
   const commonLanguages = [
     'Español', 'Inglés', 'Francés', 'Alemán', 'Italiano', 'Portugués', 
-    'Chino Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Quechua'
+    'Chino Mandarín', 'Japonés', 'Coreano', 'Árabe', 'Ruso', 'Holandés',
+    'Sueco', 'Noruego', 'Danés', 'Finlandés', 'Polaco', 'Checo',
+    'Húngaro', 'Griego', 'Turco', 'Hindi', 'Bengalí', 'Tamil',
+    'Tailandés', 'Vietnamita', 'Indonesio', 'Malayo', 'Tagalo',
+    'Hebreo', 'Persa', 'Urdu', 'Swahili', 'Quechua', 'Guaraní'
   ];
 
   const getLevelDescription = (level: string) => {
@@ -109,18 +113,22 @@ export default function LanguagesForm({ languages, onUpdate }: LanguagesFormProp
                     <Label className="flex items-center gap-2">
                       <Globe className="h-4 w-4" />
                       Idioma *
-                    </Label>                    <Input
+                    </Label>
+                    <Select
                       value={language.language}
-                      onChange={(e) => updateLanguage(index, 'language', e.target.value)}
-                      placeholder="Ej: Inglés"
-                      className="mt-1"
-                      list={`languages-${index}`}
-                    />
-                    <datalist id={`languages-${index}`}>
-                      {commonLanguages.map((lang) => (
-                        <option key={lang} value={lang} />
-                      ))}
-                    </datalist>
+                      onValueChange={(value) => updateLanguage(index, 'language', value)}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Selecciona un idioma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commonLanguages.map((lang) => (
+                          <SelectItem key={lang} value={lang}>
+                            {lang}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div>

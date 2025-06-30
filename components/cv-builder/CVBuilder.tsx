@@ -306,7 +306,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
@@ -324,20 +324,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
               onChange={(e) => setCVTitle(e.target.value)}
               className="text-lg font-medium bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none shadow-sm min-w-[250px]"
               placeholder="Nombre de tu CV"
-            />
-            <div className="flex items-center gap-3">
-              <div className="flex items-center space-x-2">
-                <GraduationCap className="h-5 w-5 text-[#028bbf]" />
-                <label className="text-sm font-medium text-gray-700">Modo estudiante</label>
-                <input
-                  type="checkbox"
-                  checked={isStudentMode}
-                  onChange={(e) => setIsStudentMode(e.target.checked)}
-                  className="w-4 h-4 text-[#028bbf] bg-gray-100 border-gray-300 rounded focus:ring-[#028bbf] focus:ring-2"
-                />
-              </div>
-
-            </div>
+            />``
           </div>
         </div>
 
@@ -501,6 +488,6 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

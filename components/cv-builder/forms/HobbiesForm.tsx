@@ -103,7 +103,7 @@ export default function HobbiesForm({ hobbies, onUpdate }: HobbiesFormProps) {
                   <Input
                     value={hobby}
                     onChange={(e) => updateHobby(index, e.target.value)}
-                    className="border-none bg-transparent focus:ring-0 p-1"
+                    className="border-none bg-transparent focus:ring-0 focus:border-none flex-1"
                     placeholder="Describe tu hobby..."
                   />
                   <Button

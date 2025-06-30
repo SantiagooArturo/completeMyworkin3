@@ -268,7 +268,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
                     {skillsOrganized.software.length > 0 && (
                       <p className="text-black font-serif leading-relaxed">
                         <span className="font-semibold">Software:</span> {skillsOrganized.software.map(skill =>
-                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                          `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`
                         ).join(', ')}
                       </p>
                     )}
@@ -276,7 +276,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
                     {skillsOrganized.projectManagement.length > 0 && (
                       <p className="text-black font-serif leading-relaxed">
                         <span className="font-semibold">Gestión de Proyectos:</span> {skillsOrganized.projectManagement.map(skill =>
-                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                          `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`
                         ).join(', ')}
                       </p>
                     )}
@@ -299,7 +299,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
                             `${lang.language} (${lang.proficiency})`
                           ) || []),
                           ...skillsOrganized.languages.map(skill =>
-                            `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                            `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`
                           )
                         ].join(', ')}
                       </p>
@@ -314,7 +314,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {  const formatDat
                     {skillsOrganized.other.length > 0 && (
                       <p className="text-black font-serif leading-relaxed">
                         <span className="font-semibold">Otras Competencias:</span> {skillsOrganized.other.map(skill =>
-                          `${skill.name}${skill.level !== 'Experto' ? ` (${skill.level})` : ''}`
+                          `${skill.name}${skill.level !== 'Proficiente' ? ` (${skill.level})` : ''}`
                         ).join(', ')}
                       </p>
                     )}

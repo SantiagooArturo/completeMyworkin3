@@ -50,7 +50,7 @@ export interface WorkExperience {
 export interface Skill {
   id: string;
   name: string;
-  level: 'Básico' | 'Intermedio' | 'Avanzado' | 'Experto';
+  level: 'Básico' | 'Intermedio' | 'Avanzado' | 'Proficiente';
   category: 'Technical' | 'Analytical' | 'Leadership' | 'Communication' | 'Research' | 'Language';
   proficiency?: number;     // Nivel de competencia (1-5)
   certifications?: string[]; // Certificaciones relacionadas
@@ -70,7 +70,7 @@ export interface SkillCategory {
 export interface Language {
   id: string;
   language: string;
-  proficiency: 'Básico' | 'Intermedio' | 'Avanzado' | 'Nativo';
+  proficiency: 'Básico' | 'Intermedio' | 'Intermedio-Avanzado' | 'Avanzado' | 'Proficiente' | 'Nativo';
   certifications?: string[]; // Certificaciones de idiomas
   writingLevel?: string;    // Nivel de escritura específico
   speakingLevel?: string;   // Nivel de conversación específico
