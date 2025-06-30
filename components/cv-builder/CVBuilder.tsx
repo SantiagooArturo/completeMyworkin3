@@ -405,7 +405,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formularios */}
         <div className="space-y-6">
-          <Card>
+          <Card className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
             <CardHeader>
               <CardTitle>Información del CV</CardTitle>
             </CardHeader>
