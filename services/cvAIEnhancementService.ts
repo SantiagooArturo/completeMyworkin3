@@ -528,6 +528,77 @@ export class CVAIEnhancementService {
 
     return enhanced;
   }
+
+  // Sugerir logros específicos para proyectos
+  async suggestProjectHighlights(projectName: string, description: string, technologies?: string): Promise<string[]> {
+    try {
+      console.log('🎯 Sugiriendo logros para proyecto via API interna:', projectName);
+      
+      const response = await fetch('/api/cv/suggest-project-highlights', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description,
+          projectName,
+          technologies: technologies || ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const highlights = data.highlights || [];
+      
+      console.log('✅ Logros sugeridos exitosamente:', highlights.length);
+      return highlights;
+    } catch (error) {
+      console.warn('❌ Error en API de logros, usando fallback local:', error);
+      return this.generateProjectHighlightsLocal(projectName, description, technologies);
+    }
+  }
+
+  // Método local para generar logros de proyectos (fallback)
+  private generateProjectHighlightsLocal(projectName: string, description: string, technologies?: string): string[] {
+    const highlights = [];
+    
+    // Logros basados en tecnologías mencionadas
+    if (technologies) {
+      const techs = technologies.toLowerCase();
+      if (techs.includes('react') || techs.includes('javascript')) {
+        highlights.push('Desarrollé interfaz de usuario interactiva que mejoró la experiencia del usuario');
+      }
+      if (techs.includes('database') || techs.includes('mongodb') || techs.includes('sql')) {
+        highlights.push('Implementé base de datos optimizada que redujo los tiempos de consulta');
+      }
+      if (techs.includes('api') || techs.includes('backend')) {
+        highlights.push('Creé API robusta que maneja múltiples solicitudes concurrentes');
+      }
+    }
+
+    // Logros genéricos basados en la descripción
+    if (description.toLowerCase().includes('team') || description.toLowerCase().includes('equipo')) {
+      highlights.push('Colaboré efectivamente en equipo multidisciplinario para entregar el proyecto a tiempo');
+    }
+    
+    if (description.toLowerCase().includes('problem') || description.toLowerCase().includes('problema')) {
+      highlights.push('Resolví desafíos técnicos complejos mediante soluciones innovadoras');
+    }
+
+    // Asegurar al menos 2-3 logros
+    if (highlights.length < 2) {
+      highlights.push(
+        'Implementé funcionalidades clave que cumplieron con los requerimientos del proyecto',
+        'Aplicé mejores prácticas de desarrollo para garantizar código mantenible y escalable'
+      );
+    }
+
+    return highlights.slice(0, 4); // Máximo 4 logros
+  }
 }
 
 // ✅ Exportar instancia singleton para facilitar uso

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, Link as LinkIcon, Calendar, Sparkles, Loader2 } from 'lucide-react';
 import MonthPicker from '@/components/ui/month-picker';
 import { cvAIEnhancementService } from '@/services/cvAIEnhancementService';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,6 +19,7 @@ interface ProjectsFormProps {
 
 export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) {
   const [optimizingIndex, setOptimizingIndex] = useState<number | null>(null);
+  const [suggestingHighlightsIndex, setSuggestingHighlightsIndex] = useState<number | null>(null);
 
   const addProject = () => {
     const newProject: Project = {
@@ -105,6 +106,206 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
       return project;
     });
     onUpdate(updatedProjects);
+  };
+
+  // Nueva función para sugerir logros con IA usando el servicio
+  const suggestHighlightsWithAI = async (index: number) => {
+    const project = projects[index];
+    if (!project.name || !project.description || project.description.length < 10) {
+      alert('Completa el nombre y una descripción detallada del proyecto antes de sugerir logros con IA.');
+      return;
+    }
+
+    setSuggestingHighlightsIndex(index);
+    
+    try {
+      console.log('🎯 Sugiriendo logros para proyecto:', project.name);
+      
+      // Usar el servicio de AI Enhancement para consistencia
+      const suggestedHighlights = await cvAIEnhancementService.suggestProjectHighlights(
+        project.name,
+        project.description,
+        project.technologies || ''
+      );
+
+      if (suggestedHighlights.length > 0) {
+        // Agregar los logros sugeridos a los existentes, evitando duplicados
+        const updatedProjects = projects.map((proj, i) => {
+          if (i === index) {
+            const currentHighlights = proj.highlights || [];
+            
+            // Filtrar logros duplicados de manera más inteligente
+            const newHighlights = suggestedHighlights.filter((highlight: string) => 
+              !currentHighlights.some(existing => {
+                const existingWords = existing.toLowerCase().split(' ');
+                const highlightWords = highlight.toLowerCase().split(' ');
+                
+                // Si hay más del 60% de palabras en común, considerar duplicado
+                const commonWords = existingWords.filter(word => 
+                  word.length > 3 && highlightWords.includes(word)
+                );
+                
+                return commonWords.length > Math.min(existingWords.length, highlightWords.length) * 0.6;
+              })
+            );
+
+            console.log(`✅ Agregando ${newHighlights.length} nuevos logros únicos`);
+            
+            return { 
+              ...proj, 
+              highlights: [...currentHighlights, ...newHighlights]
+            };
+          }
+          return proj;
+        });
+        onUpdate(updatedProjects);
+      } else {
+        console.warn('⚠️ No se recibieron logros sugeridos');
+        alert('No se pudieron generar logros específicos para este proyecto. Intenta con una descripción más detallada.');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al sugerir logros:', error);
+      alert(`No se pudieron sugerir logros: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setSuggestingHighlightsIndex(null);
+    }
+  };
+
+  // Función mejorada para optimizar proyecto completo con IA (descripción + logros)
+  const optimizeProjectWithAI = async (index: number) => {
+    const project = projects[index];
+    if (!project.name || !project.description || project.description.length < 5) {
+      alert('Completa el nombre y una descripción inicial antes de optimizar con IA.');
+      return;
+    }
+
+    setOptimizingIndex(index);
+    
+    try {
+      console.log('🚀 Iniciando optimización completa del proyecto:', project.name);
+      
+      // 1. Optimizar descripción primero usando streaming
+      console.log('📝 Optimizando descripción...');
+      const descriptionResponse = await fetch('/api/cv/optimize-project-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: project.description,
+          projectName: project.name,
+          technologies: project.technologies || ''
+        })
+      });
+
+      if (!descriptionResponse.ok) {
+        const errorData = await descriptionResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${descriptionResponse.status}: ${descriptionResponse.statusText}`);
+      }
+
+      // Manejar respuesta de descripción (streaming)
+      let optimizedDescription = '';
+      const contentType = descriptionResponse.headers.get('content-type');
+      
+      if (contentType?.includes('text/plain') && descriptionResponse.body) {
+        // Manejar streaming response de Vercel AI
+        const reader = descriptionResponse.body.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n').filter(line => line.trim());
+            
+            for (const line of lines) {
+              if (line.startsWith('0:')) {
+                try {
+                  const content = line.slice(2);
+                  const parsed = JSON.parse(content);
+                  optimizedDescription += parsed;
+                  
+                  // Actualizar en tiempo real para mostrar progreso
+                  updateProject(index, 'description', optimizedDescription);
+                } catch (parseError) {
+                  const content = line.slice(2).replace(/^"|"$/g, '');
+                  optimizedDescription += content;
+                  updateProject(index, 'description', optimizedDescription);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      } else {
+        // Respuesta JSON normal (fallback)
+        const data = await descriptionResponse.json();
+        optimizedDescription = data.description || data.text || project.description;
+        updateProject(index, 'description', optimizedDescription);
+      }
+
+      console.log('✅ Descripción optimizada exitosamente');
+
+      // 2. Sugerir logros basados en la descripción optimizada
+      console.log('🎯 Sugiriendo logros...');
+      const highlightsResponse = await fetch('/api/cv/suggest-project-highlights', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: optimizedDescription || project.description,
+          projectName: project.name,
+          technologies: project.technologies || ''
+        })
+      });
+
+      let suggestedHighlights: string[] = [];
+      if (highlightsResponse.ok) {
+        const highlightsData = await highlightsResponse.json();
+        suggestedHighlights = highlightsData.highlights || [];
+        console.log('✅ Logros sugeridos:', suggestedHighlights.length);
+      } else {
+        console.warn('⚠️ No se pudieron obtener sugerencias de logros, pero la descripción se optimizó');
+      }
+
+      // 3. Actualizar el proyecto con descripción optimizada y logros sugeridos
+      const updatedProjects = projects.map((proj, i) => {
+        if (i === index) {
+          const currentHighlights = proj.highlights || [];
+          
+          // Filtrar logros duplicados
+          const newHighlights = suggestedHighlights.filter(highlight => 
+            !currentHighlights.some(existing => 
+              existing.toLowerCase().includes(highlight.toLowerCase().substring(0, 20)) ||
+              highlight.toLowerCase().includes(existing.toLowerCase().substring(0, 20))
+            )
+          );
+
+          console.log(`💡 Agregando ${newHighlights.length} nuevos logros`);
+
+          return { 
+            ...proj, 
+            description: optimizedDescription.trim() || proj.description,
+            highlights: [...currentHighlights, ...newHighlights]
+          };
+        }
+        return proj;
+      });
+      
+      onUpdate(updatedProjects);
+      console.log('🎉 Optimización completa del proyecto finalizada');
+      
+    } catch (error) {
+      console.error('❌ Error al optimizar proyecto:', error);
+      alert(`No se pudo optimizar el proyecto: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setOptimizingIndex(null);
+    }
   };
 
   // Nueva función para optimizar descripción con IA usando streaming
@@ -300,34 +501,99 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                   
                 </div>
                 
+
+
                 <div className="mt-4">
-                  <Label className="flex items-center justify-between">
-                    Logros y Destacados del Proyecto
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => addHighlight(index)}
-                      className="text-[#028bbf] hover:text-[#027ba8] h-6 px-2"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Agregar logro
-                    </Button>
-                  </Label>
-                  
-                  {(project.highlights || []).length === 0 ? (
-                    <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                      <p className="text-sm">No hay logros agregados</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Descripción del Proyecto *</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1 text-xs bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100 hover:text-purple-800"
+                        onClick={() => optimizeProjectWithAI(index)}
+                        disabled={optimizingIndex === index}
+                      >
+                        {optimizingIndex === index ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        {optimizingIndex === index ? 'Optimizando proyecto...' : 'Optimizar proyecto con IA'}
+                      </Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    value={project.description}
+                    onChange={(e) => updateProject(index, 'description', e.target.value)}
+                    placeholder="Describe el proyecto, tu contribución, los desafíos que resolviste y los resultados obtenidos..."
+                    rows={4}
+                    className="mt-1 resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 La optimización con IA mejorará tanto la descripción como sugerirá logros relevantes
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Logros y Destacados del Proyecto</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => suggestHighlightsWithAI(index)}
+                        disabled={suggestingHighlightsIndex === index}
+                        className="flex items-center gap-1 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
+                      >
+                        {suggestingHighlightsIndex === index ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        {suggestingHighlightsIndex === index ? 'Sugiriendo...' : 'Sugerir con IA'}
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => addHighlight(index)}
-                        className="text-[#028bbf] hover:text-[#027ba8] mt-2"
+                        className="text-[#028bbf] hover:text-[#027ba8] h-6 px-2"
                       >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Agregar primer logro
+                        <Plus className="h-3 w-3 mr-1" />
+                        Agregar logro
                       </Button>
+                    </div>
+                  </div>
+                  
+                  {(project.highlights || []).length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg mt-2">
+                      <p className="text-sm mb-2">No hay logros agregados</p>
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => suggestHighlightsWithAI(index)}
+                          disabled={suggestingHighlightsIndex === index}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          <Sparkles className="h-4 w-4 mr-1" />
+                          Sugerir logros con IA
+                        </Button>
+                        <span className="text-gray-300">o</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addHighlight(index)}
+                          className="text-[#028bbf] hover:text-[#027ba8]"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Agregar manualmente
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-2 mt-2">
@@ -357,38 +623,9 @@ export default function ProjectsForm({ projects, onUpdate }: ProjectsFormProps) 
                   )}
                   
                   <p className="text-xs text-gray-500 mt-2">
-                    Lista tus principales logros y contribuciones del proyecto
+                    💡 Los logros con métricas específicas son más impactantes (ej: "mejoré el rendimiento en 30%")
                   </p>
                 </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Descripción del Proyecto *</Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-                      onClick={() => optimizeDescriptionWithAI(index)}
-                      disabled={optimizingIndex === index}
-                    >
-                      {optimizingIndex === index ? (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700"></div>
-                      ) : (
-                        <Plus className="h-3 w-3" />
-                      )}
-                      {optimizingIndex === index ? 'Optimizando...' : 'Optimizar con IA'}
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={project.description}
-                    onChange={(e) => updateProject(index, 'description', e.target.value)}
-                    placeholder="Describe el proyecto, tu contribución, los desafíos que resolviste y los resultados obtenidos..."
-                    rows={4}
-                    className="mt-1 resize-none"
-                  />
-                </div>
-
                 <div className="mt-4">
                   <Label>Herramientas Utilizadas</Label>
                   <Input

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// ✅ SEGURO: API Key solo en el servidor
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Sin NEXT_PUBLIC_
-});
+import { generateText } from 'ai';
+import { AI_TASK_CONFIGS, buildPrompt, createErrorResponse, processTextResponse } from '@/lib/ai-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,28 +13,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Basado en la siguiente descripción de trabajo para un/a ${role}: "${description}", 
-    sugiere 3 logros cuantificables que podrían añadirse al CV en formato Harvard. 
-    Cada logro debe ser específico, medible y relevante para el puesto. 
-    Devuelve solo los logros, uno por línea, sin numeración ni puntos.`;
+    const prompt = buildPrompt(
+      'Sugerir logros cuantificables para experiencia laboral',
+      {
+        'Puesto': role,
+        'Descripción del trabajo': description
+      },
+      [
+        'Sugiere 3 logros cuantificables que podrían añadirse al CV en formato Harvard',
+        'Cada logro debe ser específico, medible y relevante para el puesto',
+        'Usa métricas cuando sea posible (porcentajes, números, tiempos)',
+        'Enfócate en resultados e impacto, no solo en responsabilidades',
+        'Devuelve solo los logros, uno por línea, sin numeración ni puntos'
+      ],
+      [
+        'Implementé sistema que redujo costos operativos en 25%',
+        'Lideré equipo de 8 personas aumentando productividad en 40%',
+        'Desarrollé proceso que mejoró satisfacción del cliente en 30%'
+      ]
+    );
 
-    const completion = await openai.chat.completions.create({
+    const result = await generateText({
+      ...AI_TASK_CONFIGS.SUGGESTIONS,
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
     });
 
-    const achievements = completion.choices[0].message.content
-      ?.trim()
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0) || [];
+    const achievements = processTextResponse(result.text || '', { maxItems: 3 });
 
     return NextResponse.json({ achievements });
     
   } catch (error) {
-    console.error('Error al sugerir logros:', error);
     return NextResponse.json(
-      { error: 'Error al sugerir logros' },
+      createErrorResponse(error, 'sugerencias de logros'),
       { status: 500 }
     );
   }

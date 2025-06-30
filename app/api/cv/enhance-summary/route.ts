@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// ✅ SEGURO: API Key solo en el servidor
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Sin NEXT_PUBLIC_
-});
+import { generateText } from 'ai';
+import { AI_TASK_CONFIGS, buildPrompt, createErrorResponse } from '@/lib/ai-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,28 +13,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Como experto en CV, mejora el siguiente resumen profesional haciéndolo más impactante y específico:
+    const prompt = buildPrompt(
+      'Mejorar resumen profesional para CV',
+      {
+        'Resumen actual': currentSummary || 'No proporcionado',
+        'Información personal': personalInfo ? JSON.stringify(personalInfo, null, 2) : 'No proporcionada',
+        'Experiencia profesional': experience && experience.length > 0 ? JSON.stringify(experience, null, 2) : 'No proporcionada'
+      },
+      [
+        'Mantén un tono profesional y conciso',
+        'Incluye logros cuantificables cuando sea posible',
+        'Destaca habilidades técnicas relevantes',
+        'Máximo 4-5 líneas',
+        'Usa verbos de acción en presente',
+        'Personaliza según la experiencia proporcionada',
+        'Devuelve solo el resumen mejorado, sin explicaciones adicionales'
+      ]
+    );
 
-${currentSummary ? `Resumen actual: ${currentSummary}` : ''}
-
-Información personal disponible:
-${personalInfo ? JSON.stringify(personalInfo, null, 2) : 'No proporcionada'}
-
-Experiencia profesional:
-${experience && experience.length > 0 ? JSON.stringify(experience, null, 2) : 'No proporcionada'}
-
-Instrucciones:
-1. Mantén un tono profesional y conciso
-2. Incluye logros cuantificables cuando sea posible
-3. Destaca habilidades técnicas relevantes
-4. Máximo 4-5 líneas
-5. Usa verbos de acción en presente
-6. Personaliza según la experiencia proporcionada
-
-Devuelve solo el resumen mejorado, sin explicaciones adicionales.`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+    const result = await generateText({
+      ...AI_TASK_CONFIGS.ADVANCED_ANALYSIS,
       messages: [
         {
           role: "system",
@@ -48,12 +42,10 @@ Devuelve solo el resumen mejorado, sin explicaciones adicionales.`;
           role: "user",
           content: prompt
         }
-      ],
-      temperature: 0.7,
-      max_tokens: 300,
+      ]
     });
 
-    const enhancedSummary = completion.choices[0].message.content?.trim();
+    const enhancedSummary = result.text?.trim();
 
     if (!enhancedSummary) {
       throw new Error('No se pudo generar el resumen mejorado');
@@ -71,13 +63,8 @@ Devuelve solo el resumen mejorado, sin explicaciones adicionales.`;
     });
 
   } catch (error: any) {
-    console.error('❌ Error mejorando resumen:', error);
-    
     return NextResponse.json(
-      { 
-        error: error.message || 'Error interno del servidor',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+      createErrorResponse(error, 'mejora de resumen'),
       { status: 500 }
     );
   }

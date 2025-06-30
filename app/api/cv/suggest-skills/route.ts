@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// ✅ SEGURO: API Key solo en el servidor
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Sin NEXT_PUBLIC_
-});
+import { generateText } from 'ai';
+import { AI_TASK_CONFIGS, buildPrompt, createErrorResponse, processTextResponse } from '@/lib/ai-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,46 +14,62 @@ export async function POST(request: NextRequest) {
     }
 
     const skillsList = skills.join(', ');
-    const prompt = `Analiza las siguientes habilidades para un/a ${role}: ${skillsList}. 
-    1. Sugiere 3 habilidades adicionales relevantes que no estén en la lista. 
-    2. Para cada habilidad existente, sugiere una mejora en la forma de describirla para un CV en formato Harvard.
-    Formato de respuesta:
-    SUGERIDAS:
-    [habilidad1]
-    [habilidad2]
-    [habilidad3]
     
-    MEJORAS:
-    [habilidad original]: [mejora]`;
+    const prompt = buildPrompt(
+      'Analizar y mejorar habilidades para CV',
+      {
+        'Puesto objetivo': role,
+        'Habilidades actuales': skillsList
+      },
+      [
+        'Sugiere 3 habilidades adicionales relevantes que no estén en la lista actual',
+        'Para cada habilidad existente, sugiere una mejora en la forma de describirla para un CV en formato Harvard',
+        'Las habilidades deben ser específicas y relevantes para el puesto',
+        'Usa el siguiente formato de respuesta exacto:'
+      ]
+    ) + `
+SUGERIDAS:
+[habilidad1]
+[habilidad2] 
+[habilidad3]
 
-    const completion = await openai.chat.completions.create({
+MEJORAS:
+[habilidad original]: [mejora]`;
+
+    const result = await generateText({
+      ...AI_TASK_CONFIGS.SUGGESTIONS,
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
     });
 
-    const response = completion.choices[0].message.content || '';
+    const response = result.text || '';
     
-    // Procesar la respuesta
-    const [suggestedSection, improvementsSection] = response.split('\n\n');
+    // Procesar la respuesta de manera más robusta
+    const sections = response.split('\n\n');
+    const suggestedSection = sections.find(section => section.includes('SUGERIDAS:')) || '';
+    const improvementsSection = sections.find(section => section.includes('MEJORAS:')) || '';
     
-    const suggested = suggestedSection
-      .replace('SUGERIDAS:', '')
-      .trim()
-      .split('\n')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
-      
-    const improvements = improvementsSection
-      .replace('MEJORAS:', '')
-      .trim()
-      .split('\n')
-      .reduce((acc: {[key: string]: string}, line) => {
-        const [skill, improvement] = line.split(':').map(s => s.trim());
+    const suggested = processTextResponse(
+      suggestedSection.replace('SUGERIDAS:', ''),
+      { maxItems: 3 }
+    );
+    
+    // Procesar mejoras de manera más robusta
+    const improvementLines = processTextResponse(
+      improvementsSection.replace('MEJORAS:', ''),
+      { removeNumbering: false, removeBullets: false }
+    );
+    
+    const improvements = improvementLines.reduce((acc: {[key: string]: string}, line: string) => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const skill = line.substring(0, colonIndex).trim();
+        const improvement = line.substring(colonIndex + 1).trim();
         if (skill && improvement) {
           acc[skill] = improvement;
         }
-        return acc;
-      }, {});
+      }
+      return acc;
+    }, {});
 
     return NextResponse.json({
       suggested,
@@ -65,9 +77,8 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error al generar sugerencias:', error);
     return NextResponse.json(
-      { error: 'Error al generar sugerencias' },
+      createErrorResponse(error, 'sugerencias de habilidades'),
       { status: 500 }
     );
   }

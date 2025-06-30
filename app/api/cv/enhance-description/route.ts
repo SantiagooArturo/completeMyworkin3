@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// ✅ SEGURO: API Key solo en el servidor
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Sin NEXT_PUBLIC_
-});
+import { generateText } from 'ai';
+import { AI_TASK_CONFIGS, buildPrompt, createErrorResponse } from '@/lib/ai-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,38 +13,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Eres un experto en redacción de CVs para el mercado de LATAM, especializado en el formato Harvard.
-    Mejora la siguiente descripción de trabajo para un CV, haciéndola más impactante y profesional.
-    
-    **Contexto:**
-    - **Puesto:** ${role}
-    - **Empresa:** ${company || 'No especificada'}
-    - **Industria:** ${industry || 'No especificada'}
-    
-    **Descripción actual:** 
-    "${description}"
-    
-    **Instrucciones:**
-    1.  Usa verbos de acción fuertes (ej: "Lideré", "Desarrollé", "Implementé").
-    2.  Cuantifica los logros siempre que sea posible (ej: "aumenté las ventas en un 20%", "reduje los costos en $15,000").
-    3.  Enfócate en resultados e impacto, no solo en responsabilidades.
-    4.  Mantén un tono profesional y formal, adecuado para un CV.
-    5.  La respuesta debe ser solo la descripción mejorada, sin introducciones ni texto adicional.
-    `;
+    const prompt = buildPrompt(
+      'Mejorar descripción de trabajo para CV en formato Harvard',
+      {
+        'Puesto': role,
+        'Empresa': company || 'No especificada',
+        'Industria': industry || 'No especificada',
+        'Descripción actual': description
+      },
+      [
+        'Usa verbos de acción fuertes (ej: "Lideré", "Desarrollé", "Implementé")',
+        'Cuantifica los logros siempre que sea posible (ej: "aumenté las ventas en un 20%", "reduje los costos en $15,000")',
+        'Enfócate en resultados e impacto, no solo en responsabilidades',
+        'Mantén un tono profesional y formal, adecuado para un CV',
+        'La respuesta debe ser solo la descripción mejorada, sin introducciones ni texto adicional'
+      ]
+    );
 
-    const completion = await openai.chat.completions.create({
+    const result = await generateText({
+      ...AI_TASK_CONFIGS.OPTIMIZATION,
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
     });
 
-    const enhancedDescription = completion.choices[0].message.content?.trim() || '';
+    const enhancedDescription = result.text?.trim() || '';
 
     return NextResponse.json({ description: enhancedDescription });
     
   } catch (error) {
-    console.error('Error al mejorar la descripción:', error);
     return NextResponse.json(
-      { error: 'Error al mejorar la descripción' },
+      createErrorResponse(error, 'mejora de descripción'),
       { status: 500 }
     );
   }
