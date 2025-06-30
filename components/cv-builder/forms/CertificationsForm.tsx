@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Award, Calendar, Building } from 'lucide-react';
 import DatePicker from '@/components/ui/date-picker';
 import HarvardFormatTip from '@/components/cv-builder/HarvardFormatTip';
+import MonthPicker from '@/components/ui/month-picker';
 
 interface CertificationsFormProps {
   certifications: Certification[];
@@ -169,7 +170,7 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                       <Calendar className="h-4 w-4" />
                       Fecha de Obtención *
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={cert.date}
                       onChange={(date) => updateCertification(index, 'date', date)}
                       placeholder="Selecciona fecha de obtención"
@@ -182,32 +183,16 @@ export default function CertificationsForm({ certifications, onUpdate }: Certifi
                   <div>
                     <Label className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Fecha de Vencimiento (Opcional)
+                      Fecha de Vencimiento
                     </Label>
-                    <DatePicker
+                    <MonthPicker
                       value={cert.expiryDate || ''}
                       onChange={(date) => updateCertification(index, 'expiryDate', date)}
                       placeholder="Selecciona fecha de vencimiento"
                       className="mt-1"
                       minDate={cert.date || undefined}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Solo si la certificación tiene fecha de vencimiento
-                    </p>
                   </div>
-                </div>
-
-                <div className="mt-4">
-                  <Label>ID de Credencial (Opcional)</Label>
-                  <Input
-                    value={cert.credentialId}
-                    onChange={(e) => updateCertification(index, 'credentialId', e.target.value)}
-                    placeholder="Ej: AWS-SAA-12345678"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Número de credencial para verificación
-                  </p>
                 </div>
 
                 {/* Información adicional */}

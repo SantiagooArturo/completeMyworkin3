@@ -83,7 +83,6 @@ const HARVARD_TIPS = {
       'Verifica que las certificaciones estén vigentes',
       'Menciona el nombre completo y oficial de la certificación',
       'Incluye la organización emisora reconocida',
-      'Agrega ID de credencial si está disponible para verificación',
       'Destaca certificaciones de organizaciones prestigiosas'
     ]
   },
