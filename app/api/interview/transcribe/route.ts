@@ -4,17 +4,31 @@ import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import ffmpeg from 'fluent-ffmpeg';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Función para convertir a MP3
+function convertToMp3(inputPath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const outputPath = `${inputPath}.mp3`;
+    ffmpeg(inputPath)
+      .toFormat('mp3')
+      .on('end', () => resolve(outputPath))
+      .on('error', (err) => reject(err))
+      .save(outputPath);
+  });
+}
+
 export async function POST(request: NextRequest) {
-  let tempFilePath: string | null = null;
-  
+  let tempInputPath: string | null = null;
+  let tempOutputPath: string | null = null;
+
   try {
     console.log('🎤 === INICIO TRANSCRIPCIÓN API ===');
-    
+
     const { audioUrl } = await request.json();
     console.log('🎤 Procesando transcripción para URL:', audioUrl);
 
@@ -28,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Descargar el archivo de audio
     console.log('📥 Descargando archivo de audio...');
     const audioResponse = await fetch(audioUrl);
-    
+
     if (!audioResponse.ok) {
       console.error('❌ Error descargando audio:', audioResponse.status);
       return NextResponse.json(
@@ -47,32 +61,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear archivo temporal (usando el método del ejemplo)
+    // Crear archivo temporal de entrada
     const timestamp = Date.now();
     const tempFileName = `audio_${timestamp}.webm`;
-    tempFilePath = join(tmpdir(), tempFileName);
-    
-    console.log('📝 Creando archivo temporal:', tempFilePath);
-    
-    // Escribir buffer al archivo temporal
-    await writeFile(tempFilePath, Buffer.from(audioBuffer));
-    console.log('✅ Archivo temporal creado');
+    tempInputPath = join(tmpdir(), tempFileName);
 
-    // Crear stream para Whisper
-    const fileStream = createReadStream(tempFilePath);
-    
+    console.log('📝 Creando archivo temporal de entrada:', tempInputPath);
+    await writeFile(tempInputPath, Buffer.from(audioBuffer));
+    console.log('✅ Archivo temporal de entrada creado');
+
+    // Convertir a MP3
+    console.log('🔄 Convirtiendo a MP3...');
+    tempOutputPath = await convertToMp3(tempInputPath);
+    console.log('✅ Conversión a MP3 completada:', tempOutputPath);
+
+    // Crear stream para Whisper desde el archivo MP3
+    const fileStream = createReadStream(tempOutputPath);
+
     console.log('🤖 Enviando a Whisper...');
     const transcription = await openai.audio.transcriptions.create({
       file: fileStream,
       model: 'whisper-1',
       language: 'es',
-      response_format: 'text', // Directamente texto, más simple
+      response_format: 'text',
     });
 
     console.log('✅ Transcripción completada:', transcription);
-    
-    return NextResponse.json({ 
-      transcription: transcription // Ya es string directamente
+
+    return NextResponse.json({
+      transcription: transcription,
     });
 
   } catch (error: any) {
@@ -82,13 +99,21 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   } finally {
-    // Limpiar archivo temporal
-    if (tempFilePath) {
+    // Limpiar archivos temporales
+    if (tempInputPath) {
       try {
-        await unlink(tempFilePath);
-        console.log('🗑️ Archivo temporal eliminado');
+        await unlink(tempInputPath);
+        console.log('🗑️ Archivo temporal de entrada eliminado');
       } catch (cleanupError) {
-        console.warn('⚠️ Error eliminando archivo temporal:', cleanupError);
+        console.warn('⚠️ Error eliminando archivo temporal de entrada:', cleanupError);
+      }
+    }
+    if (tempOutputPath) {
+      try {
+        await unlink(tempOutputPath);
+        console.log('🗑️ Archivo temporal de salida eliminado');
+      } catch (cleanupError) {
+        console.warn('⚠️ Error eliminando archivo temporal de salida:', cleanupError);
       }
     }
   }

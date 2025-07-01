@@ -26,6 +26,7 @@ import { interviewService, InterviewQuestion } from '@/services/interviewService
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
 import InsufficientCreditsModal from '@/components/InsufficientCreditsModal';
+import { useToast } from '@/hooks/use-toast';
 
 // Local interfaces for component state
 interface Question extends InterviewQuestion {
@@ -70,6 +71,7 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const { toast } = useToast();
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
@@ -116,7 +118,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             const reserveResult = await reserveCredits('interview-simulation', `Simulación de entrevista para ${jobTitle}`);
             
             if (!reserveResult.success) {
-                setError('No tienes suficientes créditos para realizar la simulación');
+                toast({
+                    title: "Créditos insuficientes",
+                    description: "No tienes suficientes créditos para realizar la simulación.",
+                    variant: "destructive",
+                });
                 setIsLoading(false);
                 return;
             }
@@ -152,7 +158,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                 }
             }
             
-            setError('Error al generar preguntas. Inténtalo de nuevo.');
+            toast({
+                title: "Error al generar preguntas",
+                description: "No se pudieron generar las preguntas para la entrevista. Por favor, inténtalo de nuevo.",
+                variant: "destructive",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -195,7 +205,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             mediaRecorder.start();
             setIsRecording(true);
         } catch (error) {
-            setError(`Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}`);
+            toast({
+                title: "Error de grabación",
+                description: `Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}. Asegúrate de tener los permisos habilitados.`,
+                variant: "destructive",
+            });
             console.error('Error starting recording:', error);
         }
     };
@@ -288,7 +302,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
         } catch (error: any) {
             console.error('❌ Error procesando grabación:', error);
-            setError(`Error procesando grabación: ${error.message}`);
+            toast({
+                title: "Error al procesar la grabación",
+                description: error.message || "Ocurrió un error inesperado. Por favor, intenta grabar de nuevo.",
+                variant: "destructive",
+            });
         } finally {
             setProcessingAudio(false);
             setProcessingStep('');
@@ -327,7 +345,11 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             await refreshCredits(); // Update credits display
             setCurrentStep('completed');
         } catch (error) {
-            setError('Error al completar la entrevista');
+            toast({
+                title: "Error al completar la entrevista",
+                description: "No se pudo guardar la sesión de la entrevista. Por favor, contacta a soporte.",
+                variant: "destructive",
+            });
             console.error('Error completing interview:', error);
         }
     };    const resetSimulation = () => {
