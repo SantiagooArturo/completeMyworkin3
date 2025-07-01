@@ -2,9 +2,9 @@
 
 import Navbar from "@/components/navbar";
 import { trackButtonClick } from "@/utils/analytics";
-import { Bot, Zap, FileText, Play, Link, Users, Search } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/router";
+import { Bot, Zap, FileText, Play, Users, Search } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
 
