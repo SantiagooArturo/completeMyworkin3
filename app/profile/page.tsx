@@ -3,12 +3,14 @@
 import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { updateProfile, updatePassword } from "firebase/auth";
+import { updateProfile } from "firebase/auth";
 import Link from "next/link";
 import Avatar from "../../components/Avatar";
 import ClientOnly from "../../components/ClientOnly";
+import PasswordStrengthIndicator from "../../components/PasswordStrengthIndicator";
 import { UserService, UserProfile, UserStats } from "../../services/userService";
-import { 
+import { usePasswordChange } from "../../hooks/usePasswordChange";
+import {
   User, 
   Mail, 
   School, 
@@ -25,7 +27,10 @@ import {
   FileText,
   Send,
   Play,
-  Briefcase
+  Briefcase,
+  Shield,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -46,11 +51,30 @@ export default function ProfilePage() {
   const [location, setLocation] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
   const [success, setSuccess] = useState("");
-  const [formattedDate, setFormattedDate] = useState<string>("No disponible");  useEffect(() => {
+  const [formattedDate, setFormattedDate] = useState<string>("No disponible");
+
+  // Hook para cambio de contraseña
+  const {
+    currentPassword,
+    newPassword,
+    confirmPassword,
+    passwordError,
+    isLoading: passwordLoading,
+    isSendingReset,
+    setCurrentPassword,
+    setNewPassword,
+    setConfirmPassword,
+    setPasswordError,
+    changePassword,
+    sendPasswordResetEmail,
+    resetForm
+  } = usePasswordChange(user);
+
+  // Estados para controlar visibilidad de contraseñas
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);  useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     } else if (user) {
@@ -135,33 +159,23 @@ export default function ProfilePage() {
   };
 
   const handlePasswordChange = async () => {
-    setPasswordError("");
-    
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Las contraseñas no coinciden");
-      return;
+    const success = await changePassword();
+    if (success) {
+      setSuccess("Contraseña actualizada correctamente");
+      setChangingPassword(false);
+      setTimeout(() => setSuccess(""), 5000);
     }
-    
-    if (newPassword.length < 6) {
-      setPasswordError("La contraseña debe tener al menos 6 caracteres");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (user) {
-        await updatePassword(user, newPassword);
-        setSuccess("Contraseña actualizada correctamente");
-        setChangingPassword(false);
-        setNewPassword("");
-        setConfirmPassword("");
-        setTimeout(() => setSuccess(""), 3000);
-      }
-    } catch (error: any) {
-      setPasswordError("Error al cambiar la contraseña. Intenta cerrar sesión e iniciar de nuevo.");
-    }
-    setSaving(false);
   };
+
+  const handlePasswordResetEmail = async () => {
+    const success = await sendPasswordResetEmail();
+    if (success) {
+      setSuccess("Se ha enviado un enlace de restablecimiento a tu correo electrónico");
+      setChangingPassword(false);
+      setTimeout(() => setSuccess(""), 5000);
+    }
+  };
+
   return (
     <ClientOnly
       fallback={
@@ -464,28 +478,89 @@ export default function ProfilePage() {
                   <div className="p-6 space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nueva contraseña
+                        <Key className="inline h-4 w-4 mr-1" />
+                        Contraseña actual *
                       </label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent text-gray-900"
-                        placeholder="Mínimo 6 caracteres"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent text-gray-900"
+                          placeholder="Tu contraseña actual"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirmar nueva contraseña
+                        Nueva contraseña *
                       </label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent text-gray-900"
-                        placeholder="Repite la nueva contraseña"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent text-gray-900"
+                          placeholder="Mínimo 6 caracteres"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+                      {newPassword && (
+                        <div className="mt-3">
+                          <PasswordStrengthIndicator password={newPassword} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirmar nueva contraseña *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent text-gray-900"
+                          placeholder="Repite la nueva contraseña"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {passwordError && (
@@ -497,23 +572,36 @@ export default function ProfilePage() {
                     <div className="flex space-x-4">
                       <button
                         onClick={handlePasswordChange}
-                        disabled={saving || !newPassword || !confirmPassword}
-                        className="flex items-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+                        disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
+                        className="flex items-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Save size={16} />
-                        <span>{saving ? "Cambiando..." : "Cambiar contraseña"}</span>
+                        <span>{passwordLoading ? "Cambiando..." : "Cambiar contraseña"}</span>
                       </button>
                       <button
                         onClick={() => {
                           setChangingPassword(false);
-                          setNewPassword("");
-                          setConfirmPassword("");
-                          setPasswordError("");
+                          resetForm();
                         }}
                         className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition"
                       >
                         <X size={16} />
                         <span>Cancelar</span>
+                      </button>
+                    </div>
+
+                    {/* Opción alternativa: Resetear por email */}
+                    <div className="pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-600 mb-3">
+                        ¿Olvidaste tu contraseña actual? Puedes recibir un enlace de restablecimiento por email.
+                      </p>
+                      <button
+                        onClick={handlePasswordResetEmail}
+                        disabled={isSendingReset}
+                        className="flex items-center space-x-2 text-[#028bbf] hover:text-[#027ba8] transition disabled:opacity-50"
+                      >
+                        <Mail size={16} />
+                        <span>{isSendingReset ? "Enviando..." : "Enviar enlace por email"}</span>
                       </button>
                     </div>
                   </div>
