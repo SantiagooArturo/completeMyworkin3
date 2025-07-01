@@ -475,7 +475,7 @@ export class CVPDFGeneratorSimple {
       // Generar el archivo PDF
       const fileName = `CV_${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`;
       const pdfBlob = doc.output('blob');
-      const url = fileName ? URL.createObjectURL(pdfBlob) : '';
+      const url = URL.createObjectURL(pdfBlob);
       window.open(url, '_blank');
       // doc.save(fileName);
 
