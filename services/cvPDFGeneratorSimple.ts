@@ -150,42 +150,38 @@ export class CVPDFGeneratorSimple {
 
             // Logros organizados como en CVPreview
             if (exp.sections && exp.sections.length > 0) {
-              // Sub-secciones con títulos
               exp.sections.forEach(section => {
                 if (section.title) {
                   doc.setFontSize(11);
-                  doc.setFont('times', 'bold'); // font-semibold
+                  doc.setFont('times', 'bold');
                   doc.setTextColor(0, 0, 0);
-                  // Título de subcategoría
-                  doc.text(section.title, leftMargin, y); // Sin tabulación extra
-                  y += 4.5; // MÁS ESPACIO después de subcategoría
+                  doc.text(section.title, leftMargin, y);
+                  y += 5.5; // Espacio más notorio después de subcategoría
                 }
-                if (section.achievements && section.achievements.length > 0) {
+                if (Array.isArray(section.achievements) && section.achievements.length > 0) {
                   doc.setFontSize(11);
                   doc.setFont('times', 'normal');
                   doc.setTextColor(0, 0, 0);
                   section.achievements.forEach((achievement, idx) => {
                     const achievementLines = doc.splitTextToSize(`• ${achievement}`, contentWidth - 20);
-                    // Logros de subcategoría
-                    doc.text(achievementLines, leftMargin + 5, y); // Solo un pequeño espacio para la viñeta
-                    y += achievementLines.length * 4.2; // Espaciado mayor entre logros
-                    if (idx < section.achievements.length - 1) y += 2; // Espacio extra entre logros
+                    doc.text(achievementLines, leftMargin + 5, y);
+                    y += achievementLines.length * 4.5;
+                    if (idx < section.achievements.length - 1) y += 2.5;
                   });
-                  y += 3; // Espacio extra después de la lista de logros
+                  y += 3.5;
                 }
               });
-            } else if (exp.achievements && exp.achievements.length > 0) {
-              // Logros directos
+            } else if (Array.isArray(exp.achievements) && exp.achievements.length > 0) {
               doc.setFontSize(11);
               doc.setFont('times', 'normal');
               doc.setTextColor(0, 0, 0);
-              exp.achievements.forEach((achievement, idx) => {
+              exp.achievements.forEach((achievement, idx, arr) => {
                 const achievementLines = doc.splitTextToSize(`• ${achievement}`, contentWidth - 10);
                 doc.text(achievementLines, leftMargin + 10, y);
-                y += achievementLines.length * 4.2;
-                if (idx < exp.achievements.length - 1) y += 2; // Espacio extra entre logros
+                y += achievementLines.length * 4.5;
+                if (Array.isArray(arr) && idx < arr.length - 1) y += 2.5;
               });
-              y += 3; // Espacio extra después de la lista de logros
+              y += 3.5;
             }
 
             // Tecnologías como en CVPreview
@@ -265,16 +261,17 @@ export class CVPDFGeneratorSimple {
             }
 
             // Highlights como lista
-            if (project.highlights && project.highlights.length > 0) {
+            if (Array.isArray(project.highlights) && project.highlights.length > 0) {
               doc.setFontSize(11);
               doc.setFont('times', 'normal');
               doc.setTextColor(0, 0, 0);
-              project.highlights.forEach((highlight) => {
+              project.highlights.forEach((highlight, idx) => {
                 const highlightLines = doc.splitTextToSize(`• ${highlight}`, contentWidth - 10);
                 doc.text(highlightLines, leftMargin + 10, y);
-                y += highlightLines.length * 3.5; // Espaciado reducido
+                y += highlightLines.length * 4.5;
+                if (idx < project.highlights.length - 1) y += 2.5;
               });
-              y += 2; // mb-2, reducido
+              y += 3.5;
             }
 
             // Tecnologías del proyecto
@@ -331,16 +328,18 @@ export class CVPDFGeneratorSimple {
           y += 5; // Espaciado reducido
 
           // Logros de educación si existen (mt-1 space-y-1)
-          if (edu.achievements && edu.achievements.length > 0) {
-            y += 1.5; // mt-1, reducido
+          if (Array.isArray(edu.achievements) && edu.achievements.length > 0) {
+            y += 2.5;
             doc.setFontSize(11);
             doc.setFont('times', 'normal');
             doc.setTextColor(0, 0, 0);
-            edu.achievements.forEach((achievement) => {
+            edu.achievements.forEach((achievement, idx, arr) => {
               const achievementLines = doc.splitTextToSize(`• ${achievement}`, contentWidth - 10);
-              doc.text(achievementLines, leftMargin + 10, y); // list-disc list-inside
-              y += achievementLines.length * 3.5; // space-y-1, reducido
+              doc.text(achievementLines, leftMargin + 10, y);
+              y += achievementLines.length * 4.5;
+              if (Array.isArray(arr) && idx < arr.length - 1) y += 2.5;
             });
+            y += 3;
           }
 
           // Espacio entre educaciones (space-y-4)
@@ -473,7 +472,7 @@ export class CVPDFGeneratorSimple {
       }
 
       // Generar el archivo PDF
-      const fileName = `CV_${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`;
+      const fileName = `CV_${cvData.personalInfo.fullName.replace(/\s+/g, '_')}.pdf`;
       const totalPages = doc.getNumberOfPages();
       const blob = doc.output('blob');
       return { blob, totalPages, fileName };
