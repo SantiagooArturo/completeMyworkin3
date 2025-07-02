@@ -76,23 +76,35 @@ class InterviewService {
     return data.questions;
   }
 
-  // Upload media file to storage
+  // Upload media file to Cloudflare R2
   async uploadMedia(file: Blob, filename: string): Promise<string> {
     const formData = new FormData();
     formData.append('file', file, filename);
+    
+    // Determinar el tipo de archivo basado en la extensión
+    const extension = filename.split('.').pop()?.toLowerCase();
+    let fileType = 'audio'; // Default
+    
+    if (['mp4', 'webm', 'ogg', 'avi', 'mov'].includes(extension || '')) {
+      fileType = 'video';
+    } else if (['mp3', 'wav', 'ogg', 'webm'].includes(extension || '')) {
+      fileType = 'audio';
+    }
+    
+    formData.append('type', fileType);
 
-    const response = await fetch('https://worky-bot.onrender.com/upload', {
+    const response = await fetch('/api/upload', {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error('Error uploading media');
+      throw new Error('Error uploading media to R2');
     }
 
     const data = await response.json();
     if (!data.success || !data.url) {
-      throw new Error('Invalid upload response');
+      throw new Error('Invalid upload response from R2');
     }
 
     return data.url;

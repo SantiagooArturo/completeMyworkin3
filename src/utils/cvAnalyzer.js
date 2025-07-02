@@ -30,20 +30,30 @@ const checkServerStatus = async () => {
   }
 };
 
-// Función para subir el archivo PDF a Supabase Storage y obtener la URL pública
-const uploadPDFToSupabase = async (file) => {
+// Función para subir el archivo PDF a Cloudflare R2
+const uploadPDFToR2 = async (file) => {
   try {
-    const fileName = `${Date.now()}_${file.name}`;
-    const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'cv');
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
     });
-    if (error) throw error;
-    // Obtener la URL pública
-    const { data: publicUrlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return publicUrlData.publicUrl;
+
+    if (!response.ok) {
+      throw new Error('Error al subir el archivo a R2');
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.url) {
+      throw new Error('No se recibió la URL del archivo subido');
+    }
+
+    return data.url;
   } catch (error) {
-    console.error('Error al subir el archivo a Supabase:', error);
+    console.error('Error al subir el archivo a R2:', error);
     throw new Error('Error al subir el archivo PDF');
   }
 };
@@ -53,22 +63,10 @@ export const uploadCV = async (file) => {
     if (!file) {
       throw new Error('No se proporcionó un archivo PDF');
     }
-    const formData = new FormData();
-    formData.append('file', file);
-    // Llamada al endpoint externo
-    const response = await fetch('https://worky-bot.onrender.com/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    if (!response.ok) {
-      throw new Error('Error al subir el archivo al servidor externo');
-    }
-    const data = await response.json();
-    // Espera un JSON con { success: true, url: '...' }
-    if (!data.success || !data.url) {
-      throw new Error('No se recibió la URL del archivo subido');
-    }
-    return data.url;
+    
+    // Usar el nuevo servicio de R2
+    const url = await uploadPDFToR2(file);
+    return url;
   } catch (error) {
     console.error('Error al subir el CV:', error);
     throw new Error('Error al subir el CV');

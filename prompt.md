@@ -2,7 +2,7 @@
 //
 // You are helping me build a new “Interview Simulation” section in a Next.js application.
 // This feature uses OpenAI’s GPT-4 API to generate an interview flow and Whisper to transcribe user audio/video answers.
-// It also uses Firebase as a database, and a custom upload endpoint (https://worky-bot.onrender.com/upload) for storing media files.
+// It also uses Firebase as a database, and Cloudflare R2 for storing media files through /api/upload endpoint.
 // The simulation should:
 //
 // 1. Show an input field where the user types the job title they want to apply for (e.g. “Practicante de ventas en Coca Cola” or “Analista de marketing en banca”).
@@ -10,7 +10,7 @@
 // 3. Present each question one at a time:
 //    • Display the question text.
 //    • Offer buttons to record audio or video directly in the browser.
-//    • After recording, upload the media to our storage endpoint via POST to https://worky-bot.onrender.com/upload, which returns a URL.
+//    • After recording, upload the media to our Cloudflare R2 storage via POST to /api/upload, which returns a URL.
 //    • Send the URL to Whisper to transcribe the answer.
 //    • Send both the transcription and the original question to OpenAI for evaluation.
 //    • Receive a JSON response with:

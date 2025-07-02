@@ -17,6 +17,6 @@ tsconfig.tsbuildinfo
 *.pem
 *.key
 
-
+prompt.md
 /docs
 /.github

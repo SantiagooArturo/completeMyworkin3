@@ -399,27 +399,15 @@ export default function AnalizarCVPage() {
                         href={result}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow"
+                        className="inline-flex mx-auto items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow"
                       >
                         <FileText className="h-5 w-5" />
                         Ver PDF Analizado
                       </a>
-                      
-                      {user && (
-                        <Link href="/historial-cv">
-                          <Button 
-                            variant="outline" 
-                            className="flex items-center gap-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors"
-                          >
-                            <History className="h-4 w-4" />
-                            Ver Historial
-                          </Button>
-                        </Link>
-                      )}
                     </div>
                     
                     {user && (
-                      <p className="text-sm text-green-700 mt-3">
+                      <p className="text-sm mx-auto text-green-700 mt-3">
                         Tu análisis se ha guardado en tu historial personal.
                       </p>
                     )}
