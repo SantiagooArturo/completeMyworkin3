@@ -3,13 +3,54 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { CVData } from '@/types/cv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Mail, Phone, MapPin, Linkedin, Globe, Star } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileText, Mail, Phone, MapPin, Linkedin, Globe, Star, AlertTriangle, Info } from 'lucide-react';
 
 interface CVPreviewProps {
   cvData: CVData;
+  onPageCalculated?: (pageInfo: { totalPages: number; currentPageHeight: number }) => void;
 }
 
-export default function CVPreview({ cvData }: CVPreviewProps) {
+// Función para obtener sugerencias de optimización (exportada para uso externo)
+export const getOptimizationSuggestions = (cvData: CVData) => {
+  const suggestions = [];
+  
+  // Verificar longitud del resumen
+  if (cvData.personalInfo.summary && cvData.personalInfo.summary.length > 150) {
+    suggestions.push("Reducir el resumen a máximo 2-3 líneas");
+  }
+
+  // Verificar número de experiencias
+  if (cvData.workExperience.length > 3) {
+    suggestions.push("Mostrar solo las 2-3 experiencias más relevantes");
+  }
+
+  // Verificar logros por experiencia
+  cvData.workExperience.forEach((exp, index) => {
+    if (exp.achievements && exp.achievements.length > 4) {
+      suggestions.push(`Reducir logros en ${exp.company} a máximo 3-4 puntos`);
+    }
+  });
+
+  // Verificar número de proyectos
+  if (cvData.projects.length > 3) {
+    suggestions.push("Limitar a los 2-3 proyectos más destacados");
+  }
+
+  // Verificar habilidades
+  if (cvData.skills.length > 12) {
+    suggestions.push("Reducir habilidades a las más relevantes (máximo 10-12)");
+  }
+
+  // Verificar certificaciones
+  if (cvData.certifications.length > 4) {
+    suggestions.push("Mostrar solo las certificaciones más relevantes");
+  }
+
+  return suggestions;
+};
+
+export default function CVPreview({ cvData, onPageCalculated }: CVPreviewProps) {
   const [pageInfo, setPageInfo] = useState({ totalPages: 1, currentPageHeight: 0 });
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -92,10 +133,17 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
     const contentHeight = contentRef.current.scrollHeight;
     const totalPages = Math.ceil(contentHeight / USABLE_HEIGHT);
     
-    setPageInfo({
+    const newPageInfo = {
       totalPages: Math.max(1, totalPages),
       currentPageHeight: contentHeight
-    });
+    };
+    
+    setPageInfo(newPageInfo);
+    
+    // Notificar al componente padre sobre el cálculo de páginas
+    if (onPageCalculated) {
+      onPageCalculated(newPageInfo);
+    }
   };
 
   // Monitorear cambios en el contenido del CV
@@ -121,42 +169,6 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
   useEffect(() => {
     setTimeout(calculatePages, 200);
   }, []);
-
-  // Función para obtener sugerencias de optimización
-  const getOptimizationSuggestions = () => {
-    if (pageInfo.totalPages <= 1) return [];
-
-    const suggestions = [];
-    
-    // Verificar longitud del resumen
-    if (cvData.personalInfo.summary && cvData.personalInfo.summary.length > 150) {
-      suggestions.push("Reducir el resumen a máximo 2-3 líneas");
-    }
-
-    // Verificar número de experiencias
-    if (cvData.workExperience.length > 3) {
-      suggestions.push("Mostrar solo las 2-3 experiencias más relevantes");
-    }
-
-    // Verificar logros por experiencia
-    cvData.workExperience.forEach((exp, index) => {
-      if (exp.achievements && exp.achievements.length > 4) {
-        suggestions.push(`Reducir logros en ${exp.company} a máximo 3-4 puntos`);
-      }
-    });
-
-    // Verificar número de proyectos
-    if (cvData.projects.length > 3) {
-      suggestions.push("Mostrar solo los 2-3 proyectos más relevantes");
-    }
-
-    // Verificar habilidades
-    if (cvData.skills.length > 12) {
-      suggestions.push("Reducir habilidades a las 8-12 más relevantes");
-    }
-
-    return suggestions;
-  };
 
   // Función helper para estilos que coinciden exactamente con el PDF
   const getPDFMatchingStyles = (type: 'title' | 'body' | 'header') => {
@@ -190,18 +202,27 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
   };
 
   return (
-    <Card className="relative mx-auto bg-white shadow-lg border border-gray-300" style={{
-      width: '793px', // A4 width en px (595.28pt * 1.333)
-      minHeight: `${A4_HEIGHT_PX}px`,
-      maxWidth: '100%',
-      fontFamily: 'Times, Times New Roman, serif',
-      fontSize: '14.67px', // 11pt en px
-      lineHeight: 1.15,
-      boxSizing: 'border-box',
-      padding: 0,
-      overflow: 'hidden',
-      position: 'relative',
-    }}>
+    <div className="space-y-4">
+      {/* Información de páginas solo para referencia visual */}
+      {pageInfo.totalPages > 1 && (
+        <div className="text-center text-sm text-gray-600 bg-gray-50 p-2 rounded">
+          <FileText className="h-4 w-4 inline mr-1" />
+          CV de {pageInfo.totalPages} páginas
+        </div>
+      )}
+      
+      <Card className="relative mx-auto bg-white shadow-lg border border-gray-300" style={{
+        width: '793px', // A4 width en px (595.28pt * 1.333)
+        minHeight: `${A4_HEIGHT_PX}px`,
+        maxWidth: '100%',
+        fontFamily: 'Times, Times New Roman, serif',
+        fontSize: '14.67px', // 11pt en px
+        lineHeight: 1.15,
+        boxSizing: 'border-box',
+        padding: 0,
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
       <CardContent
         ref={contentRef}
         className="p-0"
@@ -226,7 +247,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
           
           {/* Contacto en una sola línea */}
           <div 
-            className="text-gray-700"
+            className="text-black font-serif text-sm mb-2"
             style={getPDFMatchingStyles('body')}
           >
             {[
@@ -242,8 +263,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
         {/* Resumen (sin título) */}
         {cvData.personalInfo.summary && (
           <section 
-            className="text-gray-800 leading-relaxed text-justify"
-            style={getPDFMatchingStyles('body')}
+            className="text-black text-justify"
           >
             {cvData.personalInfo.summary}
           </section>
@@ -253,7 +273,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
         {(cvData.workExperience.length > 0 || cvData.projects.length > 0) && (
           <section>
             <h2 
-              className="text-center text-black pb-2 mb-4"
+              className="text-center text-black my-4"
               style={{
                 ...getPDFMatchingStyles('title'),
                 textAlign: 'center'
@@ -326,7 +346,8 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
                       <div className="flex justify-between items-start mb-1">
                         <div>
                           <h4 className="font-bold text-black font-serif">{project.name}</h4>
-                        </div>                          <div className="text-right text-black">
+                        </div>                          
+                        <div className="text-right text-black">
                           <p className="font-medium font-serif">
                             {formatDateRange(project.startDate, project.endDate, project.current)}
                           </p>
@@ -542,5 +563,6 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }

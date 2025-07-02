@@ -14,6 +14,7 @@ import EducationForm from './forms/EducationForm';
 import WorkExperienceForm from './forms/WorkExperienceForm';
 import SkillsForm from './forms/SkillsForm';
 import CVPreview from './CVPreview';
+import PageWarningModal from './PageWarningModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
@@ -62,6 +63,8 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [pageInfo, setPageInfo] = useState({ totalPages: 1, currentPageHeight: 0 });
+  const [showPageWarning, setShowPageWarning] = useState(false);
 
   useEffect(() => {
     if (cvId && user) {
@@ -264,11 +267,33 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         setValidationErrors(validation.errors);
         return;
       }
+
+      // Verificar si el CV tiene más de una página
+      if (pageInfo.totalPages > 1) {
+        setShowPageWarning(true);
+        return;
+      }
+
+      // Si el CV tiene una página o menos, descargar directamente
       await CVPDFGeneratorSimple.generatePDF(cvData);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
     }
+  };
+
+  const handleConfirmDownload = async () => {
+    try {
+      setShowPageWarning(false);
+      await CVPDFGeneratorSimple.generatePDF(cvData);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      alert('Error al generar el PDF');
+    }
+  };
+
+  const handlePageCalculated = (calculatedPageInfo: { totalPages: number; currentPageHeight: number }) => {
+    setPageInfo(calculatedPageInfo);
   };
   const getCompletionPercentage = () => {
     const sections = [
@@ -484,10 +509,20 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
           <div className="lg:sticky lg:top-6">
             <CVPreview 
               cvData={cvData}
+              onPageCalculated={handlePageCalculated}
             />
           </div>
         )}
       </div>
+
+      {/* Modal de advertencia de páginas múltiples */}
+      <PageWarningModal
+        isOpen={showPageWarning}
+        onClose={() => setShowPageWarning(false)}
+        onConfirm={handleConfirmDownload}
+        totalPages={pageInfo.totalPages}
+        cvData={cvData}
+      />
     </>
   );
 }
