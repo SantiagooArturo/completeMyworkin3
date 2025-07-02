@@ -1,7 +1,7 @@
 import { CVData } from '@/types/cv';
 
 export class CVPDFGeneratorSimple {
-  static async generatePDF(cvData: CVData): Promise<void> {
+  static async generatePDF(cvData: CVData): Promise<{ blob: Blob; totalPages: number, fileName: string }> {
     try {
       const { jsPDF } = await import('jspdf');      
       const doc = new jsPDF();
@@ -474,15 +474,23 @@ export class CVPDFGeneratorSimple {
 
       // Generar el archivo PDF
       const fileName = `CV_${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`;
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      window.open(url, '_blank');
-      // doc.save(fileName);
+      const totalPages = doc.getNumberOfPages();
+      const blob = doc.output('blob');
+      return { blob, totalPages, fileName };
 
     } catch (error) {
       console.error('Error generando PDF:', error);
       throw new Error('Error al generar el PDF');
     }
+  }
+
+  static async downloadPDFBlob(blob: Blob, fileName = 'CV.pdf') {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Función auxiliar para organizar habilidades como en CVPreview

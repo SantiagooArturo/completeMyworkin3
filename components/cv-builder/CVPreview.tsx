@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { CVData } from '@/types/cv';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Mail, Phone, MapPin, Linkedin, Globe, Star, AlertTriangle, Info } from 'lucide-react';
+import { Card, CardContent,  } from '@/components/ui/card';
+import { Star } from 'lucide-react';
 
 interface CVPreviewProps {
   cvData: CVData;
@@ -202,15 +201,7 @@ export default function CVPreview({ cvData, onPageCalculated }: CVPreviewProps) 
   };
 
   return (
-    <div className="space-y-4">
-      {/* Información de páginas solo para referencia visual */}
-      {pageInfo.totalPages > 1 && (
-        <div className="text-center text-sm text-gray-600 bg-gray-50 p-2 rounded">
-          <FileText className="h-4 w-4 inline mr-1" />
-          CV de {pageInfo.totalPages} páginas
-        </div>
-      )}
-      
+    <div className="space-y-4">      
       <Card className="relative mx-auto bg-white shadow-lg border border-gray-300" style={{
         width: '793px', // A4 width en px (595.28pt * 1.333)
         minHeight: `${A4_HEIGHT_PX}px`,
@@ -540,26 +531,6 @@ export default function CVPreview({ cvData, onPageCalculated }: CVPreviewProps) 
               ))}
             </div>
           </div>
-        )}
-
-        {/* Marcadores de página si hay más de una página */}
-        {pageInfo.totalPages > 1 && (
-          <>
-            {Array.from({ length: pageInfo.totalPages - 1 }, (_, index) => (
-              <div
-                key={index}
-                className="absolute left-0 right-0 border-t-2 border-dashed border-red-400 bg-red-50"
-                style={{
-                  top: `${(index + 1) * USABLE_HEIGHT}px`,
-                  zIndex: 10
-                }}
-              >
-                <div className="bg-red-100 text-red-700 text-xs px-2 py-1 inline-block rounded-br font-medium">
-                  Página {index + 2}
-                </div>
-              </div>
-            ))}
-          </>
         )}
       </CardContent>
     </Card>

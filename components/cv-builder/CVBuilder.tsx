@@ -65,6 +65,9 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [pageInfo, setPageInfo] = useState({ totalPages: 1, currentPageHeight: 0 });
   const [showPageWarning, setShowPageWarning] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfPageCount, setPdfPageCount] = useState<number>(1);
+  const [pdfFileName, setPdfFileName] = useState<string>('CV.pdf');
 
   useEffect(() => {
     if (cvId && user) {
@@ -255,27 +258,32 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
       setIsSaving(false);
     }
   };
-
   const handleDownloadPDF = async () => {
     try {
-      // Usar validación específica para estudiantes
+      // Validación previa...
       const validation = isStudentMode 
         ? validateStudentCV(cvData)
         : cvBuilderService.validateCVData(cvData);
-        
+
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
         return;
       }
 
-      // Verificar si el CV tiene más de una página
-      if (pageInfo.totalPages > 1) {
+      // 1. Generar PDF en memoria y obtener número de páginas real
+      const { blob, totalPages, fileName } = await CVPDFGeneratorSimple.generatePDF(cvData);
+      setPdfBlob(blob);
+      setPdfPageCount(totalPages);
+      setPdfFileName(fileName || 'CV.pdf');
+
+      // 2. Mostrar modal si hay más de 1 página
+      if (totalPages > 1) {
         setShowPageWarning(true);
         return;
       }
 
-      // Si el CV tiene una página o menos, descargar directamente
-      await CVPDFGeneratorSimple.generatePDF(cvData);
+      // 3. Descargar directamente si 1 página
+      await CVPDFGeneratorSimple.downloadPDFBlob(blob, fileName);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF');
@@ -283,12 +291,9 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
   };
 
   const handleConfirmDownload = async () => {
-    try {
+    if (pdfBlob) {
       setShowPageWarning(false);
-      await CVPDFGeneratorSimple.generatePDF(cvData);
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-      alert('Error al generar el PDF');
+      await CVPDFGeneratorSimple.downloadPDFBlob(pdfBlob, pdfFileName);
     }
   };
 
@@ -520,7 +525,7 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         isOpen={showPageWarning}
         onClose={() => setShowPageWarning(false)}
         onConfirm={handleConfirmDownload}
-        totalPages={pageInfo.totalPages}
+        totalPages={pdfPageCount}
         cvData={cvData}
       />
     </>
