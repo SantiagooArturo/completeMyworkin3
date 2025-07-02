@@ -591,7 +591,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Opción alternativa: Resetear por email */}
-                    <div className="pt-4 border-t border-gray-200">
+                    {/* <div className="pt-4 border-t border-gray-200">
                       <p className="text-sm text-gray-600 mb-3">
                         ¿Olvidaste tu contraseña actual? Puedes recibir un enlace de restablecimiento por email.
                       </p>
@@ -603,7 +603,7 @@ export default function ProfilePage() {
                         <Mail size={16} />
                         <span>{isSendingReset ? "Enviando..." : "Enviar enlace por email"}</span>
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 )}
               </div>

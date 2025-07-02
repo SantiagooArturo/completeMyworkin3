@@ -13,7 +13,6 @@ import { Loader2, Upload, FileText, AlertCircle, History, Clock } from "lucide-r
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
-import { CreditService } from "@/services/creditService";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import { cvReviewService } from "../../services/cvReviewService";
 import Link from "next/link";
