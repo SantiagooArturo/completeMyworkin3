@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Card,
-  CardContent
+  CardContent,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Upload, FileText, AlertCircle, History, Clock } from "lucide-react";
 import Navbar from "@/components/navbar";
 import { useAuth } from "../../hooks/useAuth";
@@ -214,214 +216,239 @@ export default function AnalizarCVPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navbar />
       <div className="h-[52px]"></div>
       
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-2xl">
-          <div className="bg-white rounded-2xl p-8 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
-                  Analiza tu CV con{" "}
-                  <span className="text-[#028bbf]">Inteligencia Artificial</span>
-                </h1>
-                <p className="text-lg text-gray-600">
-                  Sube tu CV en PDF y recibe feedback instantáneo para el puesto que deseas.
-                </p>
-              </div>
-              
-              {/* Botón de Historial - Solo para usuarios autenticados */}
-              {user && (
-                <div className="ml-4">
-                  <Link href="/historial-cv">
-                    <Button 
-                      variant="outline" 
-                      className="flex items-center gap-2 border-[#028bbf] text-[#028bbf] hover:bg-[#028bbf] hover:text-white transition-colors"
-                    >
-                      <History className="h-4 w-4" />
-                      <span className="hidden sm:inline">Historial</span>
-                    </Button>
-                  </Link>
-                </div>
-              )}
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Análisis de CV con <span className="text-blue-600">IA</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Sube tu CV en PDF y recibe feedback detallado e instantáneo para el puesto que deseas.
+          </p>
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              <Clock className="h-4 w-4" />
+              Créditos disponibles: {credits}
             </div>
-            
-            {!user && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-amber-800">
-                  <strong>Análisis gratuito:</strong> Los usuarios no registrados pueden hacer 1 análisis gratuito. 
-                  Regístrate para acceso completo con créditos y historial de análisis.
-                </p>
-              </div>
+            {user && (
+              <Link href="/historial-cv">
+                <Button variant="outline" size="sm" className="flex text-black items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Ver Historial
+                </Button>
+              </Link>
             )}
-            
-            <Card className="shadow-none border-0">
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Alerta para usuarios no logueados que ya usaron su análisis gratuito */}
-                  {!user && freeUsed && (
-                    <Alert className="mb-6 border-amber-200 bg-amber-50">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                      <AlertTitle className="text-amber-800">
-                        Análisis gratuito utilizado
-                      </AlertTitle>
-                      <AlertDescription className="text-amber-700">
-                        Ya usaste tu análisis gratuito. Crea una cuenta para
-                        acceder a análisis ilimitados y muchas funciones más.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                      dragActive
-                        ? "border-primary bg-primary/10"
-                        : "border-gray-300"
-                    }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer flex flex-col items-center"
-                    >
-                      <Upload className="h-12 w-12 text-gray-400 mb-4" />
-                      <span className="text-sm text-gray-600">
-                        {file
-                          ? file.name
-                          : "Arrastra tu CV aquí o haz clic para seleccionar"}
-                      </span>
-                      <span className="text-xs text-gray-500 mt-2">
-                        Solo se aceptan archivos PDF
-                      </span>
-                    </label>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="puesto" className="text-sm font-medium">
-                      Puesto al que postulas
-                    </label>
-                    <Input
-                      id="puesto"
-                      value={puestoPostular}
-                      onChange={(e) => setPuestoPostular(e.target.value)}
-                      placeholder="Ej: Desarrollador Frontend"
-                    />
-                  </div>
-                  
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertTitle>Error</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {loading && (
-                    <Alert>
-                      <AlertTitle>Analizando tu CV...</AlertTitle>
-                      <AlertDescription>
-                        <div className="flex flex-col gap-2 items-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-[#028bbf] mb-2" />
-                          <span>
-                            Estamos analizando tu CV. Esto puede demorar hasta 2
-                            minutos.
-                          </span>
-                          {longWait && !veryLongWait && (
-                            <span className="text-sm text-gray-500">
-                              Sigue esperando, esto puede demorar un poco más de
-                              lo normal...
-                            </span>
-                          )}
-                          {veryLongWait && (
-                            <span className="text-sm text-red-500">
-                              El análisis está tardando demasiado. Puedes
-                              intentarlo más tarde o revisar tu conexión.
-                            </span>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {result && (
-                    <Alert>
-                      <AlertTitle>¡Análisis completado!</AlertTitle>
-                      <AlertDescription>
-                        <div className="flex flex-col items-center gap-4 mt-2">
-                          <p className="text-center">
-                            Tu CV ha sido analizado correctamente. Puedes ver el
-                            resultado en el siguiente enlace:
-                          </p>
-                          
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            <a
-                              href={result}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors shadow"
-                            >
-                              <FileText className="h-5 w-5" />
-                              Ver PDF Analizado
-                            </a>
-                            
-                            {/* Botón adicional para ir al historial (solo usuarios autenticados) */}
-                            {user && (
-                              <Link href="/historial-cv">
-                                <Button 
-                                  variant="outline" 
-                                  className="flex items-center gap-2 border-[#028bbf] text-[#028bbf] hover:bg-[#028bbf] hover:text-white transition-colors"
-                                >
-                                  <History className="h-4 w-4" />
-                                  Ver Historial
-                                </Button>
-                              </Link>
-                            )}
-                          </div>
-                          
-                          {user && (
-                            <p className="text-sm text-gray-600 text-center">
-                              Tu análisis se ha guardado en tu historial personal.
-                            </p>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Button
-                    onClick={handleAnalyze}
-                    disabled={loading || !file || !puestoPostular}
-                    className="w-full"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analizando...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Analizar CV
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
-      </section>
+        
+        {/* Alerta para usuarios no autenticados */}
+        {!user && (
+          <Alert className="mb-8 max-w-2xl mx-auto">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Análisis gratuito:</strong> Los usuarios no registrados pueden hacer 1 análisis gratuito. 
+              Regístrate para acceso completo con créditos y historial de análisis.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Formulario principal */}
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="p-8">
+            <div className="space-y-6">
+              {/* Alerta para usuarios no logueados que ya usaron su análisis gratuito */}
+              {!user && freeUsed && (
+                <Alert className="border-amber-200 bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <div>
+                    <div className="font-semibold text-amber-800">
+                      Análisis gratuito utilizado
+                    </div>
+                    <div className="text-amber-700 text-sm mt-1">
+                      Ya usaste tu análisis gratuito. Crea una cuenta para
+                      acceder a análisis ilimitados y muchas funciones más.
+                    </div>
+                  </div>
+                </Alert>
+              )}
+              
+              {/* Zona de subida de archivos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Sube tu CV (formato PDF)
+                </label>
+                <div
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+                    dragActive
+                      ? "border-blue-400 bg-blue-50"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Upload className="h-12 w-12 text-blue-500 mb-4" />
+                    <span className="text-lg font-medium text-gray-900 mb-2">
+                      {file
+                        ? file.name
+                        : "Arrastra tu CV aquí o haz clic para seleccionar"}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      Solo se aceptan archivos PDF
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              {/* Campo de puesto */}
+              <div>
+                <label htmlFor="puesto" className="block text-sm font-medium text-gray-700 mb-2">
+                  Puesto al que postulas
+                </label>
+                <Input
+                  id="puesto"
+                  value={puestoPostular}
+                  onChange={(e) => setPuestoPostular(e.target.value)}
+                  placeholder="Ej: Desarrollador Frontend, Analista de Marketing, Practicante de Ventas"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Información sobre el análisis */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">¿Qué incluye el análisis?</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Evaluación detallada de tu CV con IA avanzada</li>
+                  <li>• Puntuación profesional y feedback específico</li>
+                  <li>• Sugerencias de mejora personalizadas</li>
+                  <li>• Optimización para el puesto específico</li>
+                  <li>• Reporte en PDF descargable</li>
+                </ul>
+              </div>
+
+              {/* Balance de créditos para usuarios autenticados */}
+              {user && (
+                <div className="bg-green-50 p-3 rounded-lg flex items-center justify-between">
+                  <span className="text-sm text-green-800">Balance actual:</span>
+                  <span className="font-semibold text-green-900">{credits} créditos</span>
+                </div>
+              )}
+              
+              {/* Errores */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Error</div>
+                    <div className="text-sm mt-1">{error}</div>
+                  </div>
+                </Alert>
+              )}
+              
+              {/* Estado de carga */}
+              {loading && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <div>
+                    <div className="font-semibold text-blue-900">Analizando tu CV...</div>
+                    <div className="text-blue-800 text-sm mt-1">
+                      Estamos analizando tu CV. Esto puede demorar hasta 2 minutos.
+                      {longWait && !veryLongWait && (
+                        <span className="block mt-1 text-blue-700">
+                          Sigue esperando, esto puede demorar un poco más de lo normal...
+                        </span>
+                      )}
+                      {veryLongWait && (
+                        <span className="block mt-1 text-red-600">
+                          El análisis está tardando demasiado. Puedes intentarlo más tarde o revisar tu conexión.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Alert>
+              )}
+              
+              {/* Resultado exitoso */}
+              {result && (
+                <Alert className="border-green-200 bg-green-50">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <div>
+                    <div className="font-semibold text-green-900">¡Análisis completado!</div>
+                    <div className="text-green-800 text-sm mt-1 mb-4">
+                      Tu CV ha sido analizado correctamente. Puedes ver el resultado en el siguiente enlace:
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <a
+                        href={result}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow"
+                      >
+                        <FileText className="h-5 w-5" />
+                        Ver PDF Analizado
+                      </a>
+                      
+                      {user && (
+                        <Link href="/historial-cv">
+                          <Button 
+                            variant="outline" 
+                            className="flex items-center gap-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors"
+                          >
+                            <History className="h-4 w-4" />
+                            Ver Historial
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                    
+                    {user && (
+                      <p className="text-sm text-green-700 mt-3">
+                        Tu análisis se ha guardado en tu historial personal.
+                      </p>
+                    )}
+                  </div>
+                </Alert>
+              )}
+
+              {/* Botón principal */}
+              <Button
+                onClick={handleAnalyze}
+                disabled={loading || !file || !puestoPostular || (!user && freeUsed)}
+                className="w-full h-12 text-lg font-semibold"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Analizando...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-5 w-5" />
+                    Analizar CV
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Insufficient Credits Modal */}
       {user && (
