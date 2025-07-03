@@ -5,7 +5,7 @@ import { Info } from "lucide-react"
 import JobCategory from "@/components/job-category"
 import JobListing from "@/components/job-listing"
 import CategoryNav from "@/components/category-nav"
-import { getTodayPracticesByCategory, Practice } from "@/services/firebase"
+import { getRecentPracticesByCategory, getTodayPracticesByCategory, Practice } from "@/services/firebase"
 import Link from 'next/link'
 import Navbar from '@/components/navbar';
 
@@ -37,7 +37,7 @@ export default function ClientBolsaTrabajoPage() {
   useEffect(() => {
     const loadPractices = async () => {
       try {
-        const result = await getTodayPracticesByCategory();
+        const result = await getRecentPracticesByCategory();
         setPracticesByCategory(result.practices);
         setExtractionDate(result.extractionDate);
       } catch (error) {

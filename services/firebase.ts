@@ -251,7 +251,69 @@ export async function getTodayExtractions(): Promise<ExtractedData[]> {
     return [];
   }
 }
+export async function getRecentPracticesByCategory(): Promise<{ 
+  extractionDate: string | null, 
+  practices: { [category: string]: Practice[] } 
+}> {
+  const today = new Date();
+  const fiveDaysAgo = new Date(today);
+  fiveDaysAgo.setDate(today.getDate() - 5);
 
+  // Formato "YYYY-MM-DD"
+  const formatDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const fiveDaysAgoStr = `${formatDate(fiveDaysAgo)} 00:00:00`;
+  const todayStr = `${formatDate(today)} 23:59:59`;
+
+  // 1. Extracciones manuales (use_selenium: false) últimos 5 días
+  const manualQuery = query(
+    collection(worksDb, 'extractions'),
+    where('use_selenium', '==', false),
+    where('extraction_date', '>=', fiveDaysAgoStr),
+    where('extraction_date', '<=', todayStr),
+    orderBy('extraction_date', 'desc')
+  );
+  const manualSnapshot = await getDocs(manualQuery);
+
+  // 2. Extracciones automáticas (use_selenium: true) más recientes (por ejemplo, solo 1)
+  const autoQuery = query(
+    collection(worksDb, 'extractions'),
+    where('use_selenium', '==', true),
+    orderBy('extraction_date', 'desc'),
+    limit(1)
+  );
+  const autoSnapshot = await getDocs(autoQuery);
+
+  // Combinar extracciones
+  const allExtractions: ExtractedData[] = [
+    ...manualSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExtractedData)),
+    ...autoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExtractedData)),
+  ];
+
+  // Obtener y combinar prácticas por categoría
+  let practicesByCategory: { [category: string]: Practice[] } = {};
+  let extractionDate: string | null = null;
+
+  for (const extraction of allExtractions) {
+    const practices = await getPractices(extraction.id);
+    Object.entries(practices).forEach(([category, categoryPractices]) => {
+      if (!practicesByCategory[category]) {
+        practicesByCategory[category] = [];
+      }
+      practicesByCategory[category].push(...categoryPractices);
+    });
+    // Guardar la fecha más reciente para mostrar
+    if (!extractionDate || extraction.extraction_date > extractionDate) {
+      extractionDate = extraction.extraction_date;
+    }
+  }
+
+  return {
+    extractionDate,
+    practices: practicesByCategory
+  };
+}
 // Función para obtener los datos del día actual ya clasificados
 export async function getTodayPracticesByCategory(): Promise<{ 
   extractionDate: string | null, 
