@@ -2,12 +2,31 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Configuración del cliente S3 para Cloudflare R2
+const r2Endpoint = process.env.R2_ENDPOINT;
+const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID;
+const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+console.log('🔧 Configuración R2:', {
+  endpoint: r2Endpoint ? 'CONFIGURADO' : 'FALTANTE',
+  accessKeyId: r2AccessKeyId ? 'CONFIGURADO' : 'FALTANTE',
+  secretAccessKey: r2SecretAccessKey ? 'CONFIGURADO' : 'FALTANTE',
+  endpointPreview: r2Endpoint ? `${r2Endpoint.substring(0, 30)}...` : 'UNDEFINED'
+});
+
+if (!r2Endpoint || !r2AccessKeyId || !r2SecretAccessKey) {
+  console.error('❌ Variables de entorno R2 faltantes:', {
+    R2_ENDPOINT: !!r2Endpoint,
+    R2_ACCESS_KEY_ID: !!r2AccessKeyId,
+    R2_SECRET_ACCESS_KEY: !!r2SecretAccessKey
+  });
+}
+
 const r2Client = new S3Client({
   region: 'auto', // Cloudflare R2 usa 'auto' como región
-  endpoint: process.env.R2_ENDPOINT || '',
+  endpoint: r2Endpoint || '',
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    accessKeyId: r2AccessKeyId || '',
+    secretAccessKey: r2SecretAccessKey || '',
   },
 });
 
@@ -27,6 +46,33 @@ export async function uploadFileToR2(
   contentType?: string
 ): Promise<string> {
   try {
+    console.log('📤 === INICIO UPLOAD R2 ===');
+    console.log('📁 Archivo a subir:', {
+      fileName,
+      contentType,
+      fileType: file instanceof File ? 'File' : 'Buffer',
+      size: file instanceof File ? file.size : file.length
+    });
+
+    // Validar configuración
+    if (!BUCKET_NAME) {
+      throw new Error('R2_BUCKET_NAME no configurado');
+    }
+
+    if (!PUBLIC_URL) {
+      throw new Error('NEXT_PUBLIC_R2_PUBLIC_URL no configurado');
+    }
+
+    if (!r2Endpoint) {
+      throw new Error('R2_ENDPOINT no configurado');
+    }
+
+    if (!r2AccessKeyId || !r2SecretAccessKey) {
+      throw new Error('Credenciales R2 no configuradas');
+    }
+
+    console.log('✅ Configuración R2 válida');
+
     let buffer: Buffer;
     let mimeType: string;
 
@@ -40,6 +86,13 @@ export async function uploadFileToR2(
       mimeType = contentType || 'application/octet-stream';
     }
 
+    console.log('📋 Datos preparados:', {
+      bufferSize: buffer.length,
+      mimeType,
+      bucketName: BUCKET_NAME,
+      fileName
+    });
+
     // Crear comando de subida
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
@@ -50,14 +103,41 @@ export async function uploadFileToR2(
       ACL: 'public-read',
     });
 
+    console.log('📤 Enviando a R2...');
+
     // Ejecutar la subida
-    await r2Client.send(command);
+    const result = await r2Client.send(command);
+    
+    console.log('✅ Upload exitoso a R2:', {
+      ETag: result.ETag,
+      VersionId: result.VersionId
+    });
 
     // Retornar la URL pública
     const publicUrl = `${PUBLIC_URL}/${fileName}`;
+    
+    console.log('🔗 URL pública generada:', publicUrl);
+    console.log('📤 === FIN UPLOAD R2 ===');
+    
     return publicUrl;
   } catch (error) {
-    console.error('Error uploading file to R2:', error);
+    console.error('❌ === ERROR UPLOAD R2 ===');
+    console.error('❌ Error completo:', error);
+    
+    if (error instanceof Error) {
+      console.error('❌ Mensaje:', error.message);
+      console.error('❌ Stack:', error.stack);
+      
+      // Errores específicos de AWS/R2
+      if ('$metadata' in error) {
+        console.error('❌ AWS Metadata:', (error as any).$metadata);
+      }
+      
+      if ('Code' in error) {
+        console.error('❌ AWS Error Code:', (error as any).Code);
+      }
+    }
+    
     throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -111,7 +191,45 @@ export function generateUniqueFileName(originalName: string, prefix?: string): s
  * @returns true si el archivo es válido
  */
 export function validateFileType(file: File, allowedTypes: string[]): boolean {
-  return allowedTypes.includes(file.type);
+  console.log('🔍 Validando tipo de archivo:', {
+    fileName: file.name,
+    fileType: file.type,
+    allowedTypes
+  });
+
+  // Validación principal por MIME type
+  if (allowedTypes.includes(file.type)) {
+    console.log('✅ Tipo MIME válido:', file.type);
+    return true;
+  }
+
+  // Para archivos de audio/video, ser más permisivo con MIME types vacíos o genéricos
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  if (!file.type || file.type === 'application/octet-stream') {
+    console.log('⚠️ MIME type vacío o genérico, validando por extensión:', extension);
+    
+    // Si es audio, validar por extensión
+    if (allowedTypes.some(type => type.startsWith('audio/'))) {
+      const audioExtensions = ['mp3', 'wav', 'ogg', 'webm', 'm4a', 'aac', 'flac'];
+      if (extension && audioExtensions.includes(extension)) {
+        console.log('✅ Extensión de audio válida:', extension);
+        return true;
+      }
+    }
+    
+    // Si es video, validar por extensión
+    if (allowedTypes.some(type => type.startsWith('video/'))) {
+      const videoExtensions = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv', 'wmv'];
+      if (extension && videoExtensions.includes(extension)) {
+        console.log('✅ Extensión de video válida:', extension);
+        return true;
+      }
+    }
+  }
+
+  console.log('❌ Tipo de archivo no válido');
+  return false;
 }
 
 /**
@@ -128,8 +246,25 @@ export function validateFileSize(file: File, maxSizeInMB: number): boolean {
 // Tipos de archivo permitidos por categoría
 export const ALLOWED_FILE_TYPES = {
   CV: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-  AUDIO: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
-  VIDEO: ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'],
+  AUDIO: [
+    'audio/mpeg', 
+    'audio/wav', 
+    'audio/ogg', 
+    'audio/webm',
+    'audio/mp3',
+    'audio/m4a',
+    'audio/aac',
+    'audio/flac'
+  ],
+  VIDEO: [
+    'video/mp4', 
+    'video/webm', 
+    'video/ogg', 
+    'video/avi', 
+    'video/mov',
+    'video/mkv',
+    'video/wmv'
+  ],
   IMAGE: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };
 

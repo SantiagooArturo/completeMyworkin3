@@ -78,36 +78,113 @@ class InterviewService {
 
   // Upload media file to Cloudflare R2
   async uploadMedia(file: Blob, filename: string): Promise<string> {
-    const formData = new FormData();
-    formData.append('file', file, filename);
-    
-    // Determinar el tipo de archivo basado en la extensión
-    const extension = filename.split('.').pop()?.toLowerCase();
-    let fileType = 'audio'; // Default
-    
-    if (['mp4', 'webm', 'ogg', 'avi', 'mov'].includes(extension || '')) {
-      fileType = 'video';
-    } else if (['mp3', 'wav', 'ogg', 'webm'].includes(extension || '')) {
-      fileType = 'audio';
+    try {
+      console.log('📤 === INICIO UPLOAD MEDIA ===');
+      console.log('📁 Archivo:', {
+        size: file.size,
+        type: file.type,
+        filename: filename
+      });
+
+      // Validaciones iniciales
+      if (!file || file.size === 0) {
+        throw new Error('Archivo vacío o inválido');
+      }
+
+      if (file.size > 100 * 1024 * 1024) { // 100MB límite
+        throw new Error('Archivo demasiado grande (máximo 100MB)');
+      }
+
+      const formData = new FormData();
+      
+      // Crear File object con nombre correcto
+      const fileWithName = new File([file], filename, { type: file.type });
+      formData.append('file', fileWithName);
+      
+      // Determinar el tipo de archivo basado primero en el MIME type, luego en la extensión
+      const extension = filename.split('.').pop()?.toLowerCase();
+      let fileType = 'audio'; // Default
+      
+      // Primero revisar el MIME type del archivo
+      if (file.type.startsWith('video/')) {
+        fileType = 'video';
+      } else if (file.type.startsWith('audio/')) {
+        fileType = 'audio';
+      } else {
+        // Si no hay MIME type o es genérico, basarse en la extensión
+        if (['mp4', 'avi', 'mov', 'mkv', 'wmv'].includes(extension || '')) {
+          fileType = 'video';
+        } else if (['mp3', 'wav', 'm4a', 'aac', 'flac'].includes(extension || '')) {
+          fileType = 'audio';
+        } else if (extension === 'webm' || extension === 'ogg') {
+          // ✅ FIX: Para archivos de entrevista webm, usar 'video' para ser más permisivo
+          fileType = 'video';
+        }
+      }
+      
+      formData.append('type', fileType);
+
+      console.log('📋 FormData preparado:', {
+        fileType,
+        extension,
+        fileSize: file.size
+      });
+
+      // Debug FormData
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
+
+      console.log('📤 Enviando a /api/upload...');
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error en upload:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = errorText || errorMessage;
+        }
+
+        throw new Error(`Upload failed: ${errorMessage}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Upload exitoso:', data);
+
+      if (!data.success || !data.url) {
+        throw new Error('Invalid upload response from R2');
+      }
+
+      console.log('✅ URL obtenida:', data.url);
+      console.log('📤 === FIN UPLOAD MEDIA ===');
+      
+      return data.url;
+    } catch (error: any) {
+      console.error('❌ === ERROR EN UPLOAD MEDIA ===');
+      console.error('❌ Tipo:', error.constructor.name);
+      console.error('❌ Mensaje:', error.message);
+      console.error('❌ Stack:', error.stack);
+      throw new Error(`Error uploading media to R2: ${error.message}`);
     }
-    
-    formData.append('type', fileType);
-
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Error uploading media to R2');
-    }
-
-    const data = await response.json();
-    if (!data.success || !data.url) {
-      throw new Error('Invalid upload response from R2');
-    }
-
-    return data.url;
   }
 
   // Transcribe audio using Whisper
