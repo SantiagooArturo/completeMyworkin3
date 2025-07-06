@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Faltan parámetros requeridos' }, { status: 400 });
   }
 
-  const apiUrl = `https://api-jobs-tyc1.onrender.com/analizar_cv/?pdf_url=${encodeURIComponent(pdf_url)}&puesto=${encodeURIComponent(puesto)}&numero=${encodeURIComponent(numero)}`;
+  const apiUrl = `https://api-jobs-tyc1.onrender.com/analizar_practicas/?pdf_url=${encodeURIComponent(pdf_url)}&puesto=${encodeURIComponent(puesto)}&numero=${encodeURIComponent(numero)}`;
   const response = await fetch(apiUrl);
   const data = await response.json();
   return NextResponse.json(data);
