@@ -368,10 +368,18 @@ export default function MatchCV() {
                           <p className="text-gray-800 font-medium mb-1">{p.company} · {p.location}</p>
                           <p className="text-gray-600 mb-3 line-clamp-4 text-sm">{p.description}</p>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <a href={p.link || p.url}  target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors text-center">Ver Detalle</a>
-                          <span className="text-xs text-gray-500 ml-2">{p.posted_date}</span>
-                        </div>
+                   <div className="flex items-center justify-between mt-2">
+                    <a 
+                      href={p.link ? p.link : p.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="inline-block px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors text-center"
+                    >
+                      Ver Detalle
+                    </a>
+                    <span className="text-xs text-gray-500 ml-2">{p.posted_date}</span>
+                  </div>
+
                         <div className="mt-2 text-xs text-green-600 font-semibold">Match: {p.porcentaje}%</div>
                       </div>
                     ))}
