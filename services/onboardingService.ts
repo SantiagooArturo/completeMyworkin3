@@ -25,6 +25,8 @@ export interface OnboardingData {
   interestedRoles: string[];
   workType: string[]; // Cambiado a string[] para selección múltiple
   hasCV: string;
+  cvFileName?: string; // Nuevo campo para nombre de archivo CV
+  cvFileUrl?: string; // Nuevo campo para URL del CV
 }
 
 export interface OnboardingState {

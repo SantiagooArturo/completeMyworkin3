@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { X } from 'lucide-react';
@@ -16,7 +16,8 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FileUp, FilePlus } from 'lucide-react';
+import { FileUp, FilePlus, Upload, CheckCircle } from 'lucide-react';
+import { cvReviewService } from '@/services/cvReviewService';
 
 // Opciones para los selects y botones
 const CAREER_OPTIONS = [
@@ -89,7 +90,7 @@ const WORK_TYPE_OPTIONS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(2);
   const totalSteps = 4;
   const [submitting, setSubmitting] = useState(false);
 
@@ -121,6 +122,17 @@ export default function OnboardingPage() {
 
   const [areasOpen, setAreasOpen] = useState(false);
   const [workTypeOpen, setWorkTypeOpen] = useState(false);
+  
+  // Estados para upload de CV
+  const [uploadingCV, setUploadingCV] = useState(false);
+  const [uploadedCV, setUploadedCV] = useState<{
+    fileName: string;
+    fileUrl: string;
+  } | null>(null);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cerrar dropdowns cuando se hace clic fuera
   useEffect(() => {
@@ -250,6 +262,145 @@ export default function OnboardingPage() {
 
   const getProgressPercentage = () => {
     return (currentStep / totalSteps) * 100;
+  };
+
+  // Función para manejar la subida de CV
+  const handleCVUpload = async (file: File) => {
+    if (!user) {
+      console.error('Usuario no autenticado');
+      return;
+    }
+
+    setUploadingCV(true);
+    
+    try {
+      // Validar el archivo
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        throw new Error('Solo se permiten archivos PDF');
+      }
+
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        throw new Error('El archivo es demasiado grande (máximo 10MB)');
+      }
+
+      // Subir archivo a R2
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'cv');
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Error al subir el archivo');
+      }
+
+      const { fileUrl } = await uploadResponse.json();
+
+      setUploadedCV({
+        fileName: file.name,
+        fileUrl: fileUrl
+      });
+
+      // Actualizar formData
+      updateFormData('hasCV', 'uploaded');
+      updateFormData('cvFileName', file.name);
+      updateFormData('cvFileUrl', fileUrl);
+
+    } catch (error) {
+      console.error('Error subiendo CV:', error);
+      alert(error instanceof Error ? error.message : 'Error al subir el archivo');
+    } finally {
+      setUploadingCV(false);
+    }
+  };
+
+  // Función para manejar el análisis de CV
+  const handleCVAnalysis = async () => {
+    if (!user || !uploadedCV) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalyzeProgress(0);
+    setAnalysisStep(0);
+
+    const analysisSteps = [
+      'Subiendo tu CV...',
+      'Analizando estructura...',
+      'Evaluando contenido...',
+      'Generando recomendaciones...',
+      'Finalizando análisis...'
+    ];
+
+    try {
+      // Simular progreso de análisis
+      for (let i = 0; i < analysisSteps.length; i++) {
+        setAnalysisStep(i);
+        setAnalyzeProgress((i + 1) * 20);
+        
+        if (i === 2) {
+          // En el paso 3, hacer la petición real al servicio de análisis
+          const reviewId = await cvReviewService.createReview(user, {
+            fileName: uploadedCV.fileName,
+            position: formData.interestedRoles[0] || 'Estudiante',
+            fileUrl: uploadedCV.fileUrl
+          });
+
+          // Iniciar análisis
+          const analysisResponse = await fetch('/api/cv/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileUrl: uploadedCV.fileUrl,
+              fileName: uploadedCV.fileName,
+              position: formData.interestedRoles[0] || 'Estudiante',
+              reviewId: reviewId
+            }),
+          });
+
+          if (!analysisResponse.ok) {
+            throw new Error('Error al analizar el CV');
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+
+      setAnalyzeProgress(100);
+      
+      // Consumir una revisión
+      await cvReviewService.consumeReview(user);
+      
+      // Después del análisis, continuar al dashboard
+      setTimeout(() => {
+        router.push('/dashboard?cvAnalyzed=true');
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error analizando CV:', error);
+      alert('Error al analizar el CV. Inténtalo de nuevo.');
+      setIsAnalyzing(false);
+      setAnalyzeProgress(0);
+    }
+  };
+
+  // Función para activar el input de archivo
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Manejar cambio en el input de archivo
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleCVUpload(file);
+    }
   };
 
   if (loading) {
@@ -500,12 +651,7 @@ export default function OnboardingPage() {
       case 3:
         return (
           <div className="space-y-8">
-            <div className="text-left mb-6">
-              <p className="text-[#373737] text-base">
-                Así está el mercado para los roles que elegiste. Estos datos te ayudarán a tomar mejores decisiones para tu carrera.
-              </p>
-            </div>
-            <div className="space-y-6">
+            {/* <div className="space-y-6">
               {formData.interestedRoles.slice(0, 3).map((role, index) => (
                 <div key={role} className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
                   <h3 className="font-semibold text-gray-900 mb-3 text-center">{role}</h3>
@@ -563,19 +709,36 @@ export default function OnboardingPage() {
                   Y {formData.interestedRoles.length - 3} roles más que también tienen gran demanda en el mercado
                 </div>
               )}
+            </div> */}
+            {/* dos filas con 3 columnas */}
+            <div className="grid grid-rows-2 gap-6">
+              {/* Primera fila */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
+                    <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
+                      {/* Puedes poner un icono aquí si lo deseas */} 
+                    </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
-                  <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-yellow-900 mb-1">💡 Consejo profesional</h4>
-                  <p className="text-sm text-yellow-800">
-                    Estos roles tienen alta demanda. Te recomendamos crear un CV optimizado y practicar entrevistas para destacar entre los candidatos.
-                  </p>
-                </div>
+                    <p> 
+                    <span className="font-bold">Título {i} </span>
+                    lorem ipsum</p>
+                  </div>
+                ))}
+              </div>
+              {/* Segunda fila */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[4, 5, 6].map((i) => (
+                  <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
+                    <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
+                      {/* Puedes poner un icono aquí si lo deseas */}
+                    </div>
+                    <p>
+                      <span className="font-bold">Título {i} </span>
+                      lorem ipsum
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -584,40 +747,133 @@ export default function OnboardingPage() {
       case 4:
         return (
           <div className="space-y-8">
-            <div className="mb-6">
-              <p>
-                Tu CV es una de las herramientas más importantes para postular a una práctica. Si aún no lo tienes, no te preocupes: podemos ayudarte a crearlo desde cero usando inteligencia artificial.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  className="w-full p-6 min-h-[300px] rounded-2xl border hover:border-primary transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base"
-                  onClick={() => updateFormData('hasCV', 'yes')}
-                >
-                  <div className="my-auto flex flex-col items-center">
-                    <FileUp className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
-                  <span className="font-semibold">Adjunta tu CV</span>
-                  <span className="text-sm text-gray-500 px-16">Sube tu archivo en PDF para que podamos ayudarte a encontrar prácticas compatibles.</span>
+            {!isAnalyzing ? (
+              <>
+                <div className="mb-6 text-center">
+                  <p className="text-[#373737] text-base">
+                    Tu CV es una de las herramientas más importantes para postular a una práctica. Si aún no lo tienes, no te preocupes: podemos ayudarte a crearlo desde cero usando inteligencia artificial.
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Adjuntar CV */}
+                    <div
+                      className={`w-full p-6 min-h-[300px] rounded-2xl border transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base cursor-pointer ${
+                        uploadedCV ? 'border-primary bg-primary/5' : 'hover:border'
+                      }`}
+                      onClick={uploadedCV ? undefined : triggerFileInput}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      
+                      <div className="my-auto flex flex-col items-center text-center">
+                        {uploadingCV ? (
+                          <>
+                            <Upload className="w-10 h-10 text-primary mb-2 animate-pulse" strokeWidth={1.5} />
+                            <span className="font-semibold">Subiendo CV...</span>
+                            <span className="text-sm text-gray-500 px-8">Por favor espera mientras subimos tu archivo.</span>
+                          </>
+                        ) : uploadedCV ? (
+                          <>
+                            <CheckCircle className="w-10 h-10 text-green-500 mb-2" strokeWidth={1.5} />
+                            <span className="font-semibold text-green-700">CV Subido</span>
+                            <span className="text-sm text-green-600 px-8 break-all">{uploadedCV.fileName}</span>
+                            <button
+                              onClick={handleCVAnalysis}
+                              className="mt-4 px-8 py-2 font-medium bg-primary text-white rounded-lg hover:bg-primary/500 transition-colors"
+                            >
+                              Analizar CV
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <FileUp className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
+                            <span className="font-semibold">Adjunta tu CV</span>
+                            <span className="text-sm text-gray-500 px-8">Sube tu archivo en PDF para que podamos ayudarte a encontrar prácticas compatibles.</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Crear CV */}
+                    <div
+                      className="w-full p-6 min-h-[300px] rounded-2xl border  transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base cursor-pointer"
+                      onClick={() => updateFormData('hasCV', 'create')}
+                    >
+                      <div className="my-auto flex flex-col items-center text-center">
+                        <FilePlus className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
+                        <span className="font-semibold">Mi primer CV</span>
+                        <span className="text-sm px-8 text-gray-500">Te guiaremos para que puedas generar un CV profesional desde cero, sin complicaciones.</span>
+                        <button
+                          className="mt-4 px-8 py-2 font-medium bg-white border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
+                          onClick={
+                            () => router.push('/crear-cv')
+                          }
+                        >
+                          Crear CV
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div
-                    className="w-full p-6 min-h-[300px] rounded-2xl border hover:border-primary transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base"
-                    onClick={() => updateFormData('hasCV', 'no')}
-                >
-                  <div className="my-auto flex flex-col items-center">
-                    <FilePlus className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
-                    <span className="font-semibold">Mi primer CV</span>
-                    <span className="text-sm px-16 text-gray-500">Te guiaremos para que puedas generar un CV profesional desde cero, sin complicaciones.</span>
-                    <button
-                      className='mt-4 px-8 py-2 font-medium bg-white border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors'
-                    >
-                      Crear CV
-                    </button>
+              </>
+            ) : (
+              /* Carrusel de análisis */
+              <div className="flex flex-col items-center justify-center min-h-[400px] space-y-8">
+                <div className="text-center space-y-4">
+                  <div className="w-20 h-20 mx-auto">
+                    <div className="relative w-full h-full">
+                      <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+                      <div 
+                        className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin"
+                        style={{ animationDuration: '1.5s' }}
+                      ></div>
+                      <div className="absolute inset-2 bg-primary/10 rounded-full flex items-center justify-center">
+                        <FileUp className="w-8 h-8 text-primary" strokeWidth={1.5} />
+                      </div>
+                    </div>
                   </div>
+                  
+                  <h3 className="text-2xl font-semibold text-[#373737]">
+                    Analizando tu CV
+                  </h3>
+                  
+                  <p className="text-base text-gray-600 max-w-md mx-auto">
+                    {[
+                      'Subiendo tu CV...',
+                      'Analizando estructura...',
+                      'Evaluando contenido...',
+                      'Generando recomendaciones...',
+                      'Finalizando análisis...'
+                    ][analysisStep]}
+                  </p>
+                </div>
+
+                {/* Barra de progreso */}
+                <div className="w-full max-w-md">
+                  <div className="flex justify-between text-sm text-gray-500 mb-2">
+                    <span>Progreso</span>
+                    <span>{analyzeProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${analyzeProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-gray-500">
+                  <p>Este proceso puede tomar unos momentos...</p>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         );
       
@@ -692,11 +948,12 @@ export default function OnboardingPage() {
           disabled={
             (currentStep === 1 && (!formData.educationType || !formData.currentCareer || !formData.studyCenter || !formData.studyStatus)) ||
             (currentStep === 2 && (formData.interestedRoles.length === 0 || formData.workType.length === 0)) ||
-            (currentStep === 4 && (!formData.hasCV || submitting))
+            (currentStep === 4 && (!formData.hasCV || submitting || isAnalyzing))
           }
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguente") : "Siguiente"}
+          {isAnalyzing ? "Analizando CV..." : 
+           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguiente") : "Siguiente"}
         </button>
       </div>
     </div>
