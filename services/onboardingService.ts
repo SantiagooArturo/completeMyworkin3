@@ -23,6 +23,7 @@ export interface OnboardingData {
   studyStatus: string; // 'estudiando' o 'egresado'
   currentCycle: string;
   interestedRoles: string[];
+  workType: string[]; // Cambiado a string[] para selección múltiple
   hasCV: string;
 }
 

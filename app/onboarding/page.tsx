@@ -76,6 +76,15 @@ const ROLE_OPTIONS = [
   'Cloud Engineer',
 ];
 
+// Opciones para tipo de trabajo
+const WORK_TYPE_OPTIONS = [
+  { value: 'Tiempo completo', label: 'Tiempo completo' },
+  { value: 'Part-Time', label: 'Part-Time' },
+  { value: 'Prácticas', label: 'Prácticas' },
+  { value: 'Freelance', label: 'Freelance' },
+  { value: 'Remoto', label: 'Remoto' },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -105,8 +114,28 @@ export default function OnboardingPage() {
     studyStatus: '', // 'estudiando' o 'egresado'
     currentCycle: '',
     interestedRoles: [],
+    workType: [], // Cambiado a string[] para selección múltiple
     hasCV: '',
   });
+
+  const [areasOpen, setAreasOpen] = useState(false);
+  const [workTypeOpen, setWorkTypeOpen] = useState(false);
+
+  // Cerrar dropdowns cuando se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-select="areas"]')) {
+        setAreasOpen(false);
+      }
+      if (!target.closest('[data-select="workType"]')) {
+        setWorkTypeOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Redirigir si no hay usuario autenticado
   useEffect(() => {
@@ -349,40 +378,118 @@ export default function OnboardingPage() {
       
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <p className="text-gray-600">
-                Selecciona los roles que más te interesan para tu carrera profesional
+          <div className="space-y-8">
+            <div className="text-left mb-6">
+              <p className="text-[#373737] text-base">
+                Según tu formación, estos roles podrían interesarte. Selecciona las que más te llamen la atención para ayudarte a encontrar tu primera experiencia profesional.
               </p>
             </div>
-
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Áreas de interés - Select múltiple con chips */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Selecciona los roles de tu interés (puedes elegir varios)
+                <label className="block text-[#373737] mb-3">
+                  Áreas de interés <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ROLE_OPTIONS.map(role => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => toggleRole(role)}
-                      className={`p-3 rounded-lg border-2 text-left transition ${
-                        formData.interestedRoles.includes(role)
-                          ? 'border-[#028bbf] bg-[#028bbf]/10 text-[#028bbf]'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{role}</span>
-                        {formData.interestedRoles.includes(role) && (
-                          <svg className="w-5 h-5 text-[#028bbf]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                <div className="relative" data-select="areas">
+                  <div 
+                    className="w-full min-h-[56px] border border-primary rounded-lg bg-white flex flex-wrap gap-2 items-center px-4 py-2 cursor-pointer"
+                    onClick={() => setAreasOpen(!areasOpen)}
+                  >
+                    {formData.interestedRoles.length === 0 ? (
+                      <span className="text-gray-400">Selecciona áreas de interés</span>
+                    ) : (
+                      formData.interestedRoles.map(role => (
+                        <span key={role} className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#038bbf] text-white text-sm font-light mr-1 mb-1">
+                          {role}
+                          <button
+                            type="button"
+                            className="ml-1 bg-white rounded-full w-4 h-4 flex items-center justify-center focus:outline-none hover:bg-gray-100"
+                            onClick={e => {
+                              e.stopPropagation();
+                              updateFormData('interestedRoles', formData.interestedRoles.filter(r => r !== role));
+                            }}
+                          >
+                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))
+                    )}
+                    <svg className="w-4 h-4 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                  {areasOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                      {ROLE_OPTIONS.filter(role => !formData.interestedRoles.includes(role)).map(role => (
+                        <div
+                          key={role}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          onClick={() => {
+                            updateFormData('interestedRoles', [...formData.interestedRoles, role]);
+                            setAreasOpen(false);
+                          }}
+                        >
+                          {role}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tipo de trabajo - Select múltiple con chips */}
+              <div>
+                <label className="block text-[#373737] mb-3 font-medium">
+                  Tipo de trabajo <span className="text-red-500">*</span>
+                </label>
+                <div className="relative" data-select="workType">
+                  <div 
+                    className="w-full min-h-[56px] border border-primary rounded-lg bg-white flex flex-wrap gap-2 items-center px-4 py-2 cursor-pointer"
+                    onClick={() => setWorkTypeOpen(!workTypeOpen)}
+                  >
+                    {formData.workType.length === 0 ? (
+                      <span className="text-gray-400">Selecciona tipo de trabajo</span>
+                    ) : (
+                      formData.workType.map(type => (
+                        <span key={type} className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#038bbf] text-white text-sm font-light mr-1 mb-1">
+                          {type}
+                          <button
+                            type="button"
+                            className="ml-1 bg-white rounded-full w-4 h-4 flex items-center justify-center focus:outline-none hover:bg-gray-100"
+                            onClick={e => {
+                              e.stopPropagation();
+                              updateFormData('workType', formData.workType.filter(t => t !== type));
+                            }}
+                          >
+                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </span>
+                      ))
+                    )}
+                    <svg className="w-4 h-4 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                  {workTypeOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                      {WORK_TYPE_OPTIONS.filter(opt => !formData.workType.includes(opt.value)).map(opt => (
+                        <div
+                          key={opt.value}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          onClick={() => {
+                            updateFormData('workType', [...formData.workType, opt.value]);
+                            setWorkTypeOpen(false);
+                          }}
+                        >
+                          {opt.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -596,9 +703,9 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50">
+    <div className="min-h-screen bg-[#eff8ff]">
       {/* step indicator */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Barras de progreso */}
         <div className="flex gap-2">
           {Array.from({ length: totalSteps }, (_, index) => {
@@ -607,7 +714,7 @@ export default function OnboardingPage() {
             return (
               <div
                 key={stepNumber}
-                className={`h-2 w-full rounded-full transition-colors duration-300 ${
+                className={`h-3 w-full rounded-full transition-colors duration-300 ${
                   isCompleted 
                     ? 'bg-[#028bbf]' 
                     : 'bg-[#028bbf]/30'
@@ -619,7 +726,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* Header con logo y botón cerrar */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-start flex-col gap-3">
             <Link href="/">
@@ -640,14 +747,14 @@ export default function OnboardingPage() {
       </div>
 
       {/* Card principal */}
-      <div className="max-w-4xl mx-auto px-4 pb-8">
+      <div className="max-w-6xl mx-auto px-4 pb-8">
         <div className="bg-white rounded-2xl p-8">
           {renderStepContent()}
         </div>
       </div>
 
       {/* Botones fuera de la card */}
-      <div className="max-w-4xl mx-auto px-4 flex justify-between pb-8">
+      <div className="max-w-6xl mx-auto px-4 flex justify-between pb-8">
         {currentStep > 1 ? (
           <button
             onClick={handlePrevious}
@@ -660,7 +767,7 @@ export default function OnboardingPage() {
           onClick={handleNext}
           disabled={
             (currentStep === 1 && (!formData.educationType || !formData.currentCareer || !formData.studyCenter || !formData.studyStatus)) ||
-            (currentStep === 2 && formData.interestedRoles.length === 0) ||
+            (currentStep === 2 && (formData.interestedRoles.length === 0 || formData.workType.length === 0)) ||
             (currentStep === 4 && (!formData.hasCV || submitting))
           }
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
