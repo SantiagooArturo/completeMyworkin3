@@ -116,9 +116,6 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Crear cuenta
           </h1>
-          <p className="text-gray-600">
-            Únete a MyWorkIn y crea tu CV profesional
-          </p>
         </div>
 
         {/* Formulario */}
@@ -137,22 +134,7 @@ export default function RegisterPage() {
                 onChange={e => setDisplayName(e.target.value)}
                 required
               />
-            </div>
-
-            <div>
-              <label htmlFor="university" className="block text-sm font-medium text-gray-700 mb-1">
-                Universidad (opcional)
-              </label>
-              <input
-                id="university"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent transition"
-                type="text"
-                placeholder="Tu universidad o institución"
-                value={university}
-                onChange={e => setUniversity(e.target.value)}
-              />
-            </div>
-            
+            </div>            
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Correo electrónico *
