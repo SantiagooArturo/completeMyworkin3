@@ -16,6 +16,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FileUp, FilePlus } from 'lucide-react';
 
 // Opciones para los selects y botones
 const CAREER_OPTIONS = [
@@ -498,45 +499,40 @@ export default function OnboardingPage() {
       
       case 3:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <p className="text-gray-600">
-                Te mostramos insights del mercado laboral para los roles que seleccionaste
+          <div className="space-y-8">
+            <div className="text-left mb-6">
+              <p className="text-[#373737] text-base">
+                Así está el mercado para los roles que elegiste. Estos datos te ayudarán a tomar mejores decisiones para tu carrera.
               </p>
             </div>
-
-            <div className="space-y-4">
+            <div className="space-y-6">
               {formData.interestedRoles.slice(0, 3).map((role, index) => (
                 <div key={role} className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-gray-900 mb-3">{role}</h3>
-                  
+                  <h3 className="font-semibold text-gray-900 mb-3 text-center">{role}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="text-center">
+                    <div className="flex flex-col items-center justify-center text-center">
                       <div className="text-2xl font-bold text-[#028bbf] mb-1">
                         {index === 0 ? 'S/. 3,500' : index === 1 ? 'S/. 4,200' : 'S/. 3,800'}
                       </div>
                       <div className="text-gray-600">Salario promedio</div>
                     </div>
-                    
-                    <div className="text-center">
+                    <div className="flex flex-col items-center justify-center text-center">
                       <div className="text-2xl font-bold text-green-600 mb-1">
                         {index === 0 ? '850+' : index === 1 ? '620+' : '750+'}
                       </div>
                       <div className="text-gray-600">Ofertas activas</div>
                     </div>
-                    
-                    <div className="text-center">
+                    <div className="flex flex-col items-center justify-center text-center">
                       <div className="text-2xl font-bold text-orange-600 mb-1">
                         {index === 0 ? 'Alta' : index === 1 ? 'Media' : 'Alta'}
                       </div>
                       <div className="text-gray-600">Demanda</div>
                     </div>
                   </div>
-
                   <div className="mt-3 pt-3 border-t border-blue-200">
                     <div className="text-xs text-gray-600">
                       <span className="font-medium">Habilidades más demandadas:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="flex flex-wrap gap-1 mt-1 justify-center">
                         {role.includes('Frontend') && ['React', 'JavaScript', 'CSS'].map(skill => (
                           <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
                         ))}
@@ -568,19 +564,17 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
-                    <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-yellow-900 mb-1">💡 Consejo profesional</h4>
-                    <p className="text-sm text-yellow-800">
-                      Estos roles tienen alta demanda. Te recomendamos crear un CV optimizado y practicar entrevistas para destacar entre los candidatos.
-                    </p>
-                  </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                  <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-yellow-900 mb-1">💡 Consejo profesional</h4>
+                  <p className="text-sm text-yellow-800">
+                    Estos roles tienen alta demanda. Te recomendamos crear un CV optimizado y practicar entrevistas para destacar entre los candidatos.
+                  </p>
                 </div>
               </div>
             </div>
@@ -589,110 +583,40 @@ export default function OnboardingPage() {
       
       case 4:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <p className="text-gray-600">
-                Cuéntanos sobre tu situación actual con tu currículum vitae
+          <div className="space-y-8">
+            <div className="mb-6">
+              <p>
+                Tu CV es una de las herramientas más importantes para postular a una práctica. Si aún no lo tienes, no te preocupes: podemos ayudarte a crearlo desde cero usando inteligencia artificial.
               </p>
             </div>
-
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  ¿Ya cuentas con un CV? *
-                </label>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('hasCV', 'si-actualizado')}
-                    className={`w-full p-4 rounded-lg border-2 text-left transition ${
-                      formData.hasCV === 'si-actualizado'
-                        ? 'border-[#028bbf] bg-[#028bbf]/10'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">Sí, tengo un CV actualizado</div>
-                        <div className="text-sm text-gray-600">Mi CV está listo y actualizado</div>
-                      </div>
-                      {formData.hasCV === 'si-actualizado' && (
-                        <svg className="w-5 h-5 text-[#028bbf]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('hasCV', 'si-desactualizado')}
-                    className={`w-full p-4 rounded-lg border-2 text-left transition ${
-                      formData.hasCV === 'si-desactualizado'
-                        ? 'border-[#028bbf] bg-[#028bbf]/10'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">Sí, pero necesita actualización</div>
-                        <div className="text-sm text-gray-600">Tengo un CV pero está desactualizado</div>
-                      </div>
-                      {formData.hasCV === 'si-desactualizado' && (
-                        <svg className="w-5 h-5 text-[#028bbf]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('hasCV', 'no')}
-                    className={`w-full p-4 rounded-lg border-2 text-left transition ${
-                      formData.hasCV === 'no'
-                        ? 'border-[#028bbf] bg-[#028bbf]/10'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">No, necesito crear uno</div>
-                        <div className="text-sm text-gray-600">No tengo un CV y necesito crearlo desde cero</div>
-                      </div>
-                      {formData.hasCV === 'no' && (
-                        <svg className="w-5 h-5 text-[#028bbf]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {formData.hasCV && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-1">
-                        {formData.hasCV === 'si-actualizado' && '¡Perfecto!'}
-                        {formData.hasCV === 'si-desactualizado' && '💡 Te ayudamos a mejorarlo'}
-                        {formData.hasCV === 'no' && '🚀 ¡Comencemos desde cero!'}
-                      </h4>
-                      <p className="text-sm text-blue-800">
-                        {formData.hasCV === 'si-actualizado' && 'Podrás usar nuestras herramientas para optimizar aún más tu CV y practicar entrevistas.'}
-                        {formData.hasCV === 'si-desactualizado' && 'Nuestro creador de CV te ayudará a actualizarlo con las mejores prácticas y optimizaciones para ATS.'}
-                        {formData.hasCV === 'no' && 'Te guiaremos paso a paso para crear un CV profesional que destaque entre los reclutadores.'}
-                      </p>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  className="w-full p-6 min-h-[300px] rounded-2xl border hover:border-primary transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base"
+                  onClick={() => updateFormData('hasCV', 'yes')}
+                >
+                  <div className="my-auto flex flex-col items-center">
+                    <FileUp className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
+                  <span className="font-semibold">Adjunta tu CV</span>
+                  <span className="text-sm text-gray-500 px-16">Sube tu archivo en PDF para que podamos ayudarte a encontrar prácticas compatibles.</span>
                   </div>
                 </div>
-              )}
+                <div
+                    className="w-full p-6 min-h-[300px] rounded-2xl border hover:border-primary transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base"
+                    onClick={() => updateFormData('hasCV', 'no')}
+                >
+                  <div className="my-auto flex flex-col items-center">
+                    <FilePlus className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
+                    <span className="font-semibold">Mi primer CV</span>
+                    <span className="text-sm px-16 text-gray-500">Te guiaremos para que puedas generar un CV profesional desde cero, sin complicaciones.</span>
+                    <button
+                      className='mt-4 px-8 py-2 font-medium bg-white border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors'
+                    >
+                      Crear CV
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -772,7 +696,7 @@ export default function OnboardingPage() {
           }
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {currentStep === totalSteps ? (submitting ? "Finalizando..." : "Completar onboarding") : "Siguiente"}
+          {currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguente") : "Siguiente"}
         </button>
       </div>
     </div>
