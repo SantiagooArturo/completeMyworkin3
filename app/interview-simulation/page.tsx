@@ -573,9 +573,6 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                     <h3 className="font-semibold text-blue-900 mb-2">¿Qué incluye la simulación?</h3>
                                     <ul className="text-sm text-blue-800 space-y-1">
                                         <li>• 4 preguntas personalizadas para tu puesto</li>
-                                        <li>• Grabación de audio o video hasta 3 minutos por pregunta</li>
-                                        <li>• Subida directa a R2 - Sin límites de Vercel (hasta 50MB)</li>
-                                        <li>• Transcripción automática con IA</li>
                                         <li>• Evaluación detallada y feedback personalizado</li>
                                         <li>• <strong>Costo: {requiredCredits} crédito</strong></li>
                                     </ul>
