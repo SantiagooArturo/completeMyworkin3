@@ -90,7 +90,7 @@ const WORK_TYPE_OPTIONS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [currentStep, setCurrentStep] = useState(2);
+  const [currentStep, setCurrentStep] = useState(4);
   const totalSteps = 4;
   const [submitting, setSubmitting] = useState(false);
 
@@ -803,8 +803,7 @@ export default function OnboardingPage() {
 
                     {/* Crear CV */}
                     <div
-                      className="w-full p-6 min-h-[300px] rounded-2xl border  transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base cursor-pointer"
-                      onClick={() => updateFormData('hasCV', 'create')}
+                      className="w-full p-6 min-h-[300px] rounded-2xl border  transition flex flex-col items-center gap-2 shadow-sm font-light text-[#373737] text-base"
                     >
                       <div className="my-auto flex flex-col items-center text-center">
                         <FilePlus className="w-10 h-10 text-primary mb-2" strokeWidth={1.5} />
