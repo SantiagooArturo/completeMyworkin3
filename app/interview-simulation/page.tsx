@@ -81,9 +81,9 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
     
-    // Configuración de grabación más estricta
-    const MAX_RECORDING_TIME = 90; // 1.5 minutos máximo
-    const RECORDING_WARNING_TIME = 60; // Advertencia a 1 minuto
+    // Configuración de grabación optimizada para R2 directo
+    const MAX_RECORDING_TIME = 180; // 3 minutos máximo (más tiempo con R2 directo)
+    const RECORDING_WARNING_TIME = 150; // Advertencia a los 2.5 minutos
     
     // Función para formatear tiempo
     const formatTime = (seconds: number) => {
@@ -248,12 +248,12 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                     type: type === 'video' ? 'video/webm' : 'audio/webm',
                 });
                 
-                // Verificar tamaño antes de procesar
+                // Verificar tamaño antes de procesar (límite aumentado para R2 directo)
                 const sizeInMB = blob.size / (1024 * 1024);
                 console.log(`📦 Tamaño del archivo: ${sizeInMB.toFixed(2)}MB`);
                 
-                if (sizeInMB > 8) {
-                    setError('El archivo es demasiado grande. Intenta con una grabación más corta.');
+                if (sizeInMB > 50) { // Límite aumentado para R2 directo (50MB)
+                    setError('El archivo es demasiado grande (máximo 50MB). Intenta con una grabación más corta.');
                     setShowRetryRecording(true);
                     return;
                 }
@@ -264,15 +264,15 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
             mediaRecorder.start(1000); // Grabar en chunks de 1 segundo
             setIsRecording(true);
             
-            // Iniciar cronómetro con límite más estricto
+            // Iniciar cronómetro con límite extendido para R2 directo
             const timer = setInterval(() => {
                 setRecordingTime(prev => {
                     const newTime = prev + 1;
                     
-                    // Límite más estricto para evitar archivos grandes
-                    if (newTime >= 90) { // 1.5 minutos máximo
+                    // Límite extendido para R2 directo (3 minutos)
+                    if (newTime >= 180) { // 3 minutos máximo
                         stopRecording();
-                        return 90;
+                        return 180;
                     }
                     
                     return newTime;
@@ -328,9 +328,9 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 return;
             }
 
-            // Límite estricto de tamaño
-            if (fileSizeInMB > 8) {
-                setError('El archivo es demasiado grande (máximo 8MB). Intenta con una grabación más corta.');
+            // Límite estricto de tamaño (aumentado con presigned URLs)
+            if (fileSizeInMB > 50) {
+                setError('El archivo es demasiado grande (máximo 50MB). Intenta con una grabación más corta.');
                 setShowRetryRecording(true);
                 return;
             }
@@ -400,9 +400,9 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
             } catch (uploadError: any) {
                 console.error('❌ Error en el proceso:', uploadError);
                 
-                // Mensajes de error específicos
+                // Mensajes de error específicos para R2 directo
                 if (uploadError.message.includes('Too Large') || uploadError.message.includes('PAYLOAD_TOO_LARGE')) {
-                    setError('El archivo es demasiado grande. Intenta con una grabación más corta (máximo 1 minuto).');
+                    setError('El archivo es demasiado grande. Intenta con una grabación más corta (máximo 3 minutos).');
                 } else if (uploadError.message.includes('network') || uploadError.message.includes('fetch')) {
                     setError('Problema de conexión. Verifica tu internet e intenta nuevamente.');
                 } else {
@@ -573,7 +573,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                     <h3 className="font-semibold text-blue-900 mb-2">¿Qué incluye la simulación?</h3>
                                     <ul className="text-sm text-blue-800 space-y-1">
                                         <li>• 4 preguntas personalizadas para tu puesto</li>
-                                        <li>• Grabación de audio o video de tus respuestas</li>
+                                        <li>• Grabación de audio o video hasta 3 minutos por pregunta</li>
+                                        <li>• Subida directa a R2 - Sin límites de Vercel (hasta 50MB)</li>
                                         <li>• Transcripción automática con IA</li>
                                         <li>• Evaluación detallada y feedback personalizado</li>
                                         <li>• <strong>Costo: {requiredCredits} crédito</strong></li>
@@ -759,6 +760,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                                     {recordingTime >= 30 && (
                                                         <div className="text-xs text-gray-500 mt-2 text-center">
                                                             💾 Tamaño estimado: ~{((recordingTime * (recordingType === 'video' ? 25 : 8)) / 1024).toFixed(1)}MB
+                                                            <br />
+                                                            <span className="text-blue-600">📤 Subida directa a R2 - Sin límites de Vercel</span>
                                                         </div>
                                                     )}
                                                 </div>

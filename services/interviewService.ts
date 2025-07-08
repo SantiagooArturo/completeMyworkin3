@@ -76,10 +76,91 @@ class InterviewService {
     return data.questions;
   }
 
-  // Upload media file to Cloudflare R2
+  // Upload media file directly to Cloudflare R2 using presigned URLs
   async uploadMedia(file: Blob, filename: string): Promise<string> {
     try {
-      console.log('📤 === INICIO UPLOAD MEDIA ===');
+      console.log('📤 === INICIO UPLOAD MEDIA (DIRECT R2) ===');
+      console.log('📁 Archivo:', {
+        size: file.size,
+        type: file.type,
+        filename: filename
+      });
+
+      // Validaciones iniciales
+      if (!file || file.size === 0) {
+        throw new Error('Archivo vacío o inválido');
+      }
+
+      // Validar tamaño máximo para R2 directo (100MB)
+      if (file.size > 100 * 1024 * 1024) {
+        throw new Error('Archivo demasiado grande (máximo 100MB)');
+      }
+
+      // Paso 1: Obtener presigned URL
+      console.log('🔐 Obteniendo presigned URL...');
+      const response = await fetch('/api/upload-presigned', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename,
+          contentType: file.type || 'application/octet-stream'
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error obteniendo presigned URL: ${response.status} - ${errorText}`);
+      }
+
+      const { uploadUrl, publicUrl } = await response.json();
+      console.log('✅ Presigned URL obtenida');
+
+      // Paso 2: Subir directamente a R2
+      console.log('📤 Subiendo archivo directamente a R2...');
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Error subiendo archivo a R2: ${uploadResponse.status} - ${errorText}`);
+      }
+
+      console.log('✅ Upload exitoso con presigned URLs');
+      console.log('🔗 URL pública:', publicUrl);
+      console.log('📤 === FIN UPLOAD MEDIA (DIRECT R2) ===');
+      
+      return publicUrl;
+      
+    } catch (error: any) {
+      console.error('❌ === ERROR EN UPLOAD MEDIA (DIRECT R2) ===');
+      console.error('❌ Tipo:', error.constructor.name);
+      console.error('❌ Mensaje:', error.message);
+      console.error('❌ Stack:', error.stack);
+      
+      // Si falla el método directo, intentar con legacy como respaldo
+      if (file.size <= 10 * 1024 * 1024) { // Solo si el archivo es menor a 10MB
+        console.warn('⚠️ Intentando método legacy como respaldo...');
+        try {
+          return await this.uploadMediaLegacy(file, filename);
+        } catch (legacyError: any) {
+          console.error('❌ También falló el método legacy:', legacyError.message);
+          throw new Error(`Upload failed: ${error.message}`);
+        }
+      }
+      
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  }
+
+  // Método de respaldo: Upload media usando la ruta anterior (para compatibilidad)
+  async uploadMediaLegacy(file: Blob, filename: string): Promise<string> {
+    try {
+      console.log('📤 === INICIO UPLOAD MEDIA (LEGACY) ===');
       console.log('📁 Archivo:', {
         size: file.size,
         type: file.type,
@@ -175,11 +256,11 @@ class InterviewService {
       }
 
       console.log('✅ URL obtenida:', data.url);
-      console.log('📤 === FIN UPLOAD MEDIA ===');
+      console.log('📤 === FIN UPLOAD MEDIA (LEGACY) ===');
       
       return data.url;
     } catch (error: any) {
-      console.error('❌ === ERROR EN UPLOAD MEDIA ===');
+      console.error('❌ === ERROR EN UPLOAD MEDIA (LEGACY) ===');
       console.error('❌ Tipo:', error.constructor.name);
       console.error('❌ Mensaje:', error.message);
       console.error('❌ Stack:', error.stack);
