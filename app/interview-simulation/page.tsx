@@ -69,10 +69,30 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
-    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+    
+    // Estados para el cronómetro
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
+    
+    // Función para formatear tiempo mm:ss
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+    
+    // Limpiar cronómetro al desmontar
+    useEffect(() => {
+        return () => {
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+            }
+        };
+    }, [recordingTimer]);
       // ✅ CAMBIO: Ahora las entrevistas cuestan 1 crédito
     const requiredCredits = 1;
     const hasEnoughCredits = hasEnoughCreditsFunc('interview-simulation');
@@ -162,6 +182,8 @@ export default function InterviewSimulationPage() {    const { user, loading: au
         try {
             console.log(`🎬 Iniciando grabación de ${type}...`);
             setRecordingType(type);
+            setRecordingTime(0); // Resetear cronómetro
+            
             const constraints = type === 'video'
                 ? { video: true, audio: true }
                 : { audio: true };
@@ -194,6 +216,13 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
             mediaRecorder.start();
             setIsRecording(true);
+            
+            // Iniciar cronómetro
+            const timer = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+            setRecordingTimer(timer);
+            
         } catch (error) {
             setError(`Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}`);
             console.error('Error starting recording:', error);
@@ -204,6 +233,12 @@ export default function InterviewSimulationPage() {    const { user, loading: au
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            
+            // Limpiar cronómetro
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                setRecordingTimer(null);
+            }
 
             // Limpiar video preview
             if (videoPreviewRef.current) {
@@ -570,6 +605,10 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                                                         REC
                                                     </div>
+                                                    {/* Cronómetro en el video */}
+                                                    <div className="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-mono">
+                                                        {formatTime(recordingTime)}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -579,6 +618,9 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                 <div className="inline-flex items-center gap-2 text-red-600 font-medium">
                                                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                                                     Grabando {recordingType === 'video' ? 'video' : 'audio'}...
+                                                </div>
+                                                <div className="mt-2 text-lg font-mono text-gray-700 bg-gray-100 px-3 py-1 rounded-lg inline-block">
+                                                    {formatTime(recordingTime)}
                                                 </div>
                                             </div>
                                         )}

@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "app/api/upload/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/interview/transcribe/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/interview/evaluate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/upload-presigned/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "regions": ["iad1"],
+  "framework": "nextjs"
+}
