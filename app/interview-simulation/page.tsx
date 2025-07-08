@@ -81,9 +81,9 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
     
-    // Configuración de grabación
-    const MAX_RECORDING_TIME = 120; // 2 minutos máximo
-    const RECORDING_WARNING_TIME = 90; // Advertencia a los 90 segundos
+    // Configuración de grabación más estricta
+    const MAX_RECORDING_TIME = 90; // 1.5 minutos máximo
+    const RECORDING_WARNING_TIME = 60; // Advertencia a 1 minuto
     
     // Función para formatear tiempo
     const formatTime = (seconds: number) => {
@@ -192,8 +192,25 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
             setRecordingTime(0);
             
             const constraints = type === 'video'
-                ? { video: true, audio: true }
-                : { audio: true };
+                ? { 
+                    video: { 
+                        width: { max: 640 }, 
+                        height: { max: 480 },
+                        frameRate: { max: 24 }
+                    }, 
+                    audio: { 
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                }
+                : { 
+                    audio: { 
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                };
 
             console.log('📱 Solicitando permisos de cámara/micrófono...');
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -204,7 +221,19 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 audioTracks: stream.getAudioTracks().length
             });
 
-            const mediaRecorder = new MediaRecorder(stream);
+            // Configurar MediaRecorder con compresión agresiva
+            const options = type === 'video' 
+                ? {
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 200000, // 200kbps para video
+                    audioBitsPerSecond: 64000   // 64kbps para audio
+                }
+                : {
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 64000   // 64kbps para audio
+                };
+
+            const mediaRecorder = new MediaRecorder(stream, options);
             mediaRecorderRef.current = mediaRecorder;
             recordedChunksRef.current = [];
 
@@ -218,21 +247,32 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 const blob = new Blob(recordedChunksRef.current, {
                     type: type === 'video' ? 'video/webm' : 'audio/webm',
                 });
+                
+                // Verificar tamaño antes de procesar
+                const sizeInMB = blob.size / (1024 * 1024);
+                console.log(`📦 Tamaño del archivo: ${sizeInMB.toFixed(2)}MB`);
+                
+                if (sizeInMB > 8) {
+                    setError('El archivo es demasiado grande. Intenta con una grabación más corta.');
+                    setShowRetryRecording(true);
+                    return;
+                }
+                
                 await processRecording(blob);
             };
 
-            mediaRecorder.start();
+            mediaRecorder.start(1000); // Grabar en chunks de 1 segundo
             setIsRecording(true);
             
-            // Iniciar cronómetro
+            // Iniciar cronómetro con límite más estricto
             const timer = setInterval(() => {
                 setRecordingTime(prev => {
                     const newTime = prev + 1;
                     
-                    // Detener automáticamente al alcanzar el tiempo máximo
-                    if (newTime >= MAX_RECORDING_TIME) {
+                    // Límite más estricto para evitar archivos grandes
+                    if (newTime >= 90) { // 1.5 minutos máximo
                         stopRecording();
-                        return MAX_RECORDING_TIME;
+                        return 90;
                     }
                     
                     return newTime;
@@ -283,6 +323,14 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
 
             if (blob.size === 0) {
                 console.error('❌ La grabación está vacía');
+                setError('La grabación está vacía. Intenta nuevamente.');
+                setShowRetryRecording(true);
+                return;
+            }
+
+            // Límite estricto de tamaño
+            if (fileSizeInMB > 8) {
+                setError('El archivo es demasiado grande (máximo 8MB). Intenta con una grabación más corta.');
                 setShowRetryRecording(true);
                 return;
             }
@@ -292,76 +340,82 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
             setShowRetryRecording(false);
             setUploadProgress(0);
             
-            // Verificar si es un archivo grande
-            if (fileSizeInMB > 3) {
-                setIsUploadingLargeFile(true);
-                console.log('📦 Archivo grande detectado, usando chunked upload');
-            }
-            
-            // Paso 1: Subiendo archivo
-            setProcessingStep(fileSizeInMB > 3 ? 'Subiendo archivo grande (esto puede tomar un momento)...' : 'Subiendo archivo...');
-            console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
-            
-            const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
-            const audioUrl = await interviewService.uploadMedia(blob, filename);
-            
-            setIsUploadingLargeFile(false);
-            setUploadProgress(0);
-            console.log('✅ Archivo subido:', audioUrl);
+            try {
+                // Verificar si es un archivo grande
+                if (fileSizeInMB > 3) {
+                    setIsUploadingLargeFile(true);
+                    console.log('📦 Archivo grande detectado, usando chunked upload');
+                }
+                
+                // Paso 1: Subiendo archivo
+                setProcessingStep(fileSizeInMB > 3 ? 'Subiendo archivo grande (esto puede tomar un momento)...' : 'Subiendo archivo...');
+                console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
+                
+                const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
+                const audioUrl = await interviewService.uploadMedia(blob, filename);
+                
+                setIsUploadingLargeFile(false);
+                setUploadProgress(0);
+                console.log('✅ Archivo subido:', audioUrl);
 
-            // Paso 2: Transcribiendo audio
-            setProcessingStep('Transcribiendo tu respuesta...');
-            console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
-            const transcription = await interviewService.transcribeAudio(audioUrl);
-            
-            if (!transcription || transcription.trim() === '') {
-                throw new Error('La transcripción está vacía');
-            }
+                // Paso 2: Transcribiendo audio
+                setProcessingStep('Transcribiendo tu respuesta...');
+                console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
+                const transcription = await interviewService.transcribeAudio(audioUrl);
+                
+                if (!transcription || transcription.trim() === '') {
+                    throw new Error('No se pudo transcribir el audio. Intenta hablar más claro.');
+                }
 
-            console.log('✅ Transcripción completada:', transcription);
+                console.log('✅ Transcripción completada:', transcription);
 
-            // Paso 3: Evaluando respuesta
-            setProcessingStep('Evaluando tu respuesta con IA...');
-            console.log('🤖 Iniciando evaluación...');
-            const evaluation = await interviewService.evaluateAnswer(
-                questions[currentQuestionIndex].text,
-                transcription,
-                jobTitle
-            );
+                // Paso 3: Evaluando respuesta
+                setProcessingStep('Evaluando tu respuesta con IA...');
+                console.log('🤖 Iniciando evaluación...');
+                const evaluation = await interviewService.evaluateAnswer(
+                    questions[currentQuestionIndex].text,
+                    transcription,
+                    jobTitle
+                );
 
-            console.log('✅ Evaluación completada');
+                console.log('✅ Evaluación completada');
 
-            // Actualizar pregunta
-            const updatedQuestions = [...questions];
-            updatedQuestions[currentQuestionIndex] = {
-                ...updatedQuestions[currentQuestionIndex],
-                audioUrl,
-                transcription,
-                transcript: transcription,
-                evaluation,
-            };
+                // Actualizar pregunta
+                const updatedQuestions = [...questions];
+                updatedQuestions[currentQuestionIndex] = {
+                    ...updatedQuestions[currentQuestionIndex],
+                    audioUrl,
+                    transcription,
+                    transcript: transcription,
+                    evaluation,
+                };
 
-            setQuestions(updatedQuestions);
-            setShowAnalysis(true);
-            
-            if (currentQuestionIndex === questions.length - 1) {
-                console.log('✅ Última pregunta completada, análisis listo para mostrar');
+                setQuestions(updatedQuestions);
+                setShowAnalysis(true);
+                
+                if (currentQuestionIndex === questions.length - 1) {
+                    console.log('✅ Última pregunta completada, análisis listo para mostrar');
+                }
+
+            } catch (uploadError: any) {
+                console.error('❌ Error en el proceso:', uploadError);
+                
+                // Mensajes de error específicos
+                if (uploadError.message.includes('Too Large') || uploadError.message.includes('PAYLOAD_TOO_LARGE')) {
+                    setError('El archivo es demasiado grande. Intenta con una grabación más corta (máximo 1 minuto).');
+                } else if (uploadError.message.includes('network') || uploadError.message.includes('fetch')) {
+                    setError('Problema de conexión. Verifica tu internet e intenta nuevamente.');
+                } else {
+                    setError('Error procesando la grabación. Intenta nuevamente.');
+                }
+                
+                setShowRetryRecording(true);
             }
 
         } catch (error: any) {
-            console.error('❌ Error procesando grabación:', error);
-            console.log('🔧 Tipo de error detectado:', error.message);
-            
+            console.error('❌ Error general:', error);
+            setError('Error inesperado. Intenta nuevamente.');
             setShowRetryRecording(true);
-            setError(null);
-            setIsUploadingLargeFile(false);
-            setUploadProgress(0);
-            
-            if (error.message === 'UPLOAD_FAILED') {
-                console.log('🔄 Error de upload detectado - usuario puede reintentar');
-            } else {
-                console.log('🔄 Error general detectado - usuario puede reintentar');
-            }
         } finally {
             setProcessingAudio(false);
             setProcessingStep('');
@@ -699,6 +753,12 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                                     {recordingTime < RECORDING_WARNING_TIME && (
                                                         <div className="text-xs text-blue-600 text-center">
                                                             💡 Tómate el tiempo necesario para responder completamente
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {recordingTime >= 30 && (
+                                                        <div className="text-xs text-gray-500 mt-2 text-center">
+                                                            💾 Tamaño estimado: ~{((recordingTime * (recordingType === 'video' ? 25 : 8)) / 1024).toFixed(1)}MB
                                                         </div>
                                                     )}
                                                 </div>
