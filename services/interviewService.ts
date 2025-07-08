@@ -57,7 +57,14 @@ export interface SavedInterview {
 }
 
 class InterviewService {
-  
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://www.myworkin.pe' 
+      : 'http://localhost:3000';
+  }
+
   // Generate interview questions using OpenAI
   async generateQuestions(jobTitle: string): Promise<string[]> {
     const response = await fetch('/api/interview/generate-questions', {

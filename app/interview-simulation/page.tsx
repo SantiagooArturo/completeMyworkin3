@@ -82,8 +82,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
     
     // Configuración de grabación optimizada para R2 directo
-    const MAX_RECORDING_TIME = 180; // 3 minutos máximo (más tiempo con R2 directo)
-    const RECORDING_WARNING_TIME = 150; // Advertencia a los 2.5 minutos
+    const MAX_RECORDING_TIME = 300; // 5 minutos
+    const RECORDING_WARNING_TIME = 240; // 4 minutos
     
     // Función para formatear tiempo
     const formatTime = (seconds: number) => {
@@ -252,8 +252,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 const sizeInMB = blob.size / (1024 * 1024);
                 console.log(`📦 Tamaño del archivo: ${sizeInMB.toFixed(2)}MB`);
                 
-                if (sizeInMB > 50) { // Límite aumentado para R2 directo (50MB)
-                    setError('El archivo es demasiado grande (máximo 50MB). Intenta con una grabación más corta.');
+                if (sizeInMB > 100) { // Límite aumentado para R2 directo (100MB)
+                    setError('El archivo es demasiado grande (máximo 100MB). Intenta con una grabación más corta.');
                     setShowRetryRecording(true);
                     return;
                 }
@@ -269,10 +269,10 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 setRecordingTime(prev => {
                     const newTime = prev + 1;
                     
-                    // Límite extendido para R2 directo (3 minutos)
-                    if (newTime >= 180) { // 3 minutos máximo
+                    // Límite extendido para R2 directo (5 minutos)
+                    if (newTime >= 300) { // 5 minutos máximo
                         stopRecording();
-                        return 180;
+                        return 300;
                     }
                     
                     return newTime;
@@ -329,8 +329,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
             }
 
             // Límite estricto de tamaño (aumentado con presigned URLs)
-            if (fileSizeInMB > 50) {
-                setError('El archivo es demasiado grande (máximo 50MB). Intenta con una grabación más corta.');
+            if (fileSizeInMB > 100) {
+                setError('El archivo es demasiado grande (máximo 100MB). Intenta con una grabación más corta.');
                 setShowRetryRecording(true);
                 return;
             }
