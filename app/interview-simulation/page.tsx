@@ -66,13 +66,40 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isRecording, setIsRecording] = useState(false);    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [showRetryRecording, setShowRetryRecording] = useState(false);
+    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
-    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);    const [uploadProgress, setUploadProgress] = useState(0);
+const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
+
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
+    
+    // Configuración de grabación
+    const MAX_RECORDING_TIME = 120; // 2 minutos máximo
+    const RECORDING_WARNING_TIME = 90; // Advertencia a los 90 segundos
+    
+    // Función para formatear tiempo
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Limpiar cronómetro al desmontar
+    useEffect(() => {
+        return () => {
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+            }
+        };
+    }, [recordingTimer]);
       // ✅ CAMBIO: Ahora las entrevistas cuestan 1 crédito
     const requiredCredits = 1;
     const hasEnoughCredits = hasEnoughCreditsFunc('interview-simulation');
@@ -162,6 +189,8 @@ export default function InterviewSimulationPage() {    const { user, loading: au
         try {
             console.log(`🎬 Iniciando grabación de ${type}...`);
             setRecordingType(type);
+            setRecordingTime(0);
+            
             const constraints = type === 'video'
                 ? { video: true, audio: true }
                 : { audio: true };
@@ -194,9 +223,28 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
             mediaRecorder.start();
             setIsRecording(true);
+            
+            // Iniciar cronómetro
+            const timer = setInterval(() => {
+                setRecordingTime(prev => {
+                    const newTime = prev + 1;
+                    
+                    // Detener automáticamente al alcanzar el tiempo máximo
+                    if (newTime >= MAX_RECORDING_TIME) {
+                        stopRecording();
+                        return MAX_RECORDING_TIME;
+                    }
+                    
+                    return newTime;
+                });
+            }, 1000);
+            
+            setRecordingTimer(timer);
+            
         } catch (error) {
+            console.error('❌ Error starting recording:', error);
             setError(`Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}`);
-            console.error('Error starting recording:', error);
+            setShowRetryRecording(true);
         }
     };
 
@@ -204,6 +252,12 @@ export default function InterviewSimulationPage() {    const { user, loading: au
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+
+            // Limpiar cronómetro
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                setRecordingTimer(null);
+            }
 
             // Limpiar video preview
             if (videoPreviewRef.current) {
@@ -218,27 +272,44 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     };    const processRecording = async (blob: Blob) => {
         try {
             const isVideo = blob.type.includes('video');
+            const fileSizeInMB = blob.size / (1024 * 1024);
+            
             console.log('🎬 Procesando grabación:', {
                 size: blob.size,
+                sizeInMB: fileSizeInMB.toFixed(2),
                 type: blob.type,
                 isVideo: isVideo
             });
 
             if (blob.size === 0) {
-                throw new Error('La grabación está vacía');
+                console.error('❌ La grabación está vacía');
+                setShowRetryRecording(true);
+                return;
             }
 
             setProcessingAudio(true);
+            setError(null);
+            setShowRetryRecording(false);
+            setUploadProgress(0);
+            
+            // Verificar si es un archivo grande
+            if (fileSizeInMB > 3) {
+                setIsUploadingLargeFile(true);
+                console.log('📦 Archivo grande detectado, usando chunked upload');
+            }
             
             // Paso 1: Subiendo archivo
-            setProcessingStep('Subiendo archivo...');
+            setProcessingStep(fileSizeInMB > 3 ? 'Subiendo archivo grande (esto puede tomar un momento)...' : 'Subiendo archivo...');
             console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
+            
             const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
             const audioUrl = await interviewService.uploadMedia(blob, filename);
             
+            setIsUploadingLargeFile(false);
+            setUploadProgress(0);
             console.log('✅ Archivo subido:', audioUrl);
 
-            // Paso 2: Transcribiendo audio (extrae audio del video si es necesario)
+            // Paso 2: Transcribiendo audio
             setProcessingStep('Transcribiendo tu respuesta...');
             console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
             const transcription = await interviewService.transcribeAudio(audioUrl);
@@ -266,32 +337,36 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                 ...updatedQuestions[currentQuestionIndex],
                 audioUrl,
                 transcription,
-                transcript: transcription, // Para compatibilidad
+                transcript: transcription,
                 evaluation,
-            };            setQuestions(updatedQuestions);
+            };
+
+            setQuestions(updatedQuestions);
             setShowAnalysis(true);
             
-            console.log('🔍 Debug análisis pregunta:', {
-                questionIndex: currentQuestionIndex,
-                totalQuestions: questions.length,
-                isLastQuestion: currentQuestionIndex === questions.length - 1,
-                showAnalysis: true,
-                evaluation: evaluation
-            });
-            
-            // Si es la última pregunta, NO completar automáticamente
-            // Permitir que el usuario vea el análisis primero
             if (currentQuestionIndex === questions.length - 1) {
                 console.log('✅ Última pregunta completada, análisis listo para mostrar');
-                // No completar automáticamente, dejar que el usuario vea el análisis
             }
 
         } catch (error: any) {
             console.error('❌ Error procesando grabación:', error);
-            setError(`Error procesando grabación: ${error.message}`);
+            console.log('🔧 Tipo de error detectado:', error.message);
+            
+            setShowRetryRecording(true);
+            setError(null);
+            setIsUploadingLargeFile(false);
+            setUploadProgress(0);
+            
+            if (error.message === 'UPLOAD_FAILED') {
+                console.log('🔄 Error de upload detectado - usuario puede reintentar');
+            } else {
+                console.log('🔄 Error general detectado - usuario puede reintentar');
+            }
         } finally {
             setProcessingAudio(false);
             setProcessingStep('');
+            setIsUploadingLargeFile(false);
+            setUploadProgress(0);
         }
     };    const completeInterview = async (finalQuestions: Question[]) => {
         try {
@@ -576,9 +651,56 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
                                         {isRecording && (
                                             <div className="text-center">
-                                                <div className="inline-flex items-center gap-2 text-red-600 font-medium">
+                                                <div className="inline-flex items-center gap-2 text-red-600 font-medium mb-4">
                                                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                                                     Grabando {recordingType === 'video' ? 'video' : 'audio'}...
+                                                </div>
+                                                
+                                                {/* Cronómetro Mejorado */}
+                                                <div className="bg-gray-50 rounded-lg p-4 mx-auto max-w-md">
+                                                    <div className="text-center mb-3">
+                                                        <div className="text-xs text-gray-500 mb-1">Tiempo de grabación</div>
+                                                        <div className={`text-3xl font-bold ${
+                                                            recordingTime >= RECORDING_WARNING_TIME ? 'text-red-600' : 'text-blue-600'
+                                                        }`}>
+                                                            {formatTime(recordingTime)}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            máximo {formatTime(MAX_RECORDING_TIME)}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Barra de progreso mejorada */}
+                                                    <div className="mb-3">
+                                                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                            <span>0:00</span>
+                                                            <span>{formatTime(MAX_RECORDING_TIME)}</span>
+                                                        </div>
+                                                        <div className="w-full bg-gray-200 rounded-full h-3">
+                                                            <div 
+                                                                className={`h-3 rounded-full transition-all duration-300 ${
+                                                                    recordingTime >= RECORDING_WARNING_TIME 
+                                                                        ? 'bg-red-500' 
+                                                                        : 'bg-blue-500'
+                                                                }`}
+                                                                style={{ 
+                                                                    width: `${Math.min((recordingTime / MAX_RECORDING_TIME) * 100, 100)}%` 
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {recordingTime >= RECORDING_WARNING_TIME && (
+                                                        <div className="text-xs text-red-600 font-medium text-center bg-red-50 px-2 py-1 rounded">
+                                                            ⚠️ La grabación se detendrá automáticamente en {formatTime(MAX_RECORDING_TIME - recordingTime)}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {recordingTime < RECORDING_WARNING_TIME && (
+                                                        <div className="text-xs text-blue-600 text-center">
+                                                            💡 Tómate el tiempo necesario para responder completamente
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -588,17 +710,78 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                                                 <div className="space-y-2">
                                                     <p className="text-gray-900 font-medium">Procesando tu respuesta...</p>
-                                                    <p className="text-gray-600 text-sm">{processingStep}</p>
+                                                    <p className="text-gray-600 text-sm mb-4">{processingStep}</p>
+                                                    
+                                                    {isUploadingLargeFile && (
+                                                        <div className="bg-blue-50 p-3 rounded-lg mx-auto max-w-md">
+                                                            <div className="text-xs text-blue-600 mb-2">
+                                                                📦 Archivo grande detectado - procesando en partes...
+                                                            </div>
+                                                            <div className="text-xs text-blue-500">
+                                                                Esto puede tomar un momento, por favor mantén la página abierta
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                                
                                                 <div className="mt-4 max-w-md mx-auto">
                                                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Subiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('archivo') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Subiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Transcribiendo') || processingStep.includes('Evaluando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                                         <span>Subiendo</span>
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Transcribiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Evaluando') || processingStep.includes('Guardando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Transcribiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Evaluando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                                         <span>Transcribiendo</span>
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Evaluando') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Guardando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Evaluando') ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}></div>
                                                         <span>Evaluando</span>
                                                     </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Retry Recording Button - Solo cuando hay error */}
+                                        {showRetryRecording && (
+                                            <div className="text-center py-6">
+                                                <div className="mb-4">
+                                                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <AlertCircle className="h-8 w-8 text-orange-600" />
+                                                    </div>
+                                                    <p className="text-gray-700 font-medium mb-2">
+                                                        No se pudo procesar tu grabación
+                                                    </p>
+                                                    <p className="text-gray-600 text-sm mb-4">
+                                                        Esto puede ocurrir por problemas de conexión o archivos muy grandes. 
+                                                        <br />
+                                                        Intenta grabar una respuesta más breve o con mejor conexión.
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="flex gap-4 justify-center">
+                                                    <Button
+                                                        onClick={() => {
+                                                            setShowRetryRecording(false);
+                                                            setError(null);
+                                                            setRecordingTime(0);
+                                                            startRecording('audio');
+                                                        }}
+                                                        disabled={processingAudio}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Mic className="h-4 w-4" />
+                                                        Reintentar con Audio
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => {
+                                                            setShowRetryRecording(false);
+                                                            setError(null);
+                                                            setRecordingTime(0);
+                                                            startRecording('video');
+                                                        }}
+                                                        disabled={processingAudio}
+                                                        variant="outline"
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Video className="h-4 w-4" />
+                                                        Reintentar con Video
+                                                    </Button>
                                                 </div>
                                             </div>
                                         )}
@@ -652,13 +835,13 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                 </div>
 
                                                 {/* Transcript */}
-                                                <div className="bg-white p-4 rounded-lg">
+                                                {/* <div className="bg-white p-4 rounded-lg">
                                                     <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                                                         <MessageSquare className="h-4 w-4" />
                                                         Tu respuesta transcrita:
                                                     </h4>
                                                     <p className="text-gray-700 text-sm italic leading-relaxed">"{currentQuestion.transcript}"</p>
-                                                </div>
+                                                </div> */}
 
                                                 {/* Strengths */}
                                                 <div className="bg-white p-4 rounded-lg">
