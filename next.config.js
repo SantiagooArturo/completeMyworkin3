@@ -134,10 +134,19 @@ const nextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      {
+        source: '/api/analizar-cv',
+        destination: 'https://myworkin-cv-2.onrender.com/analizar-cv/',
+      },
+    ];
+  },
+  
+  // ✅ Configuración experimental para performance
   experimental: {
     // Optimización de fuentes
     optimizePackageImports: ['@headlessui/react', '@heroicons/react'],
-    serverComponentsExternalPackages: ['@aws-sdk'],
   },
 
   // ✅ Paquetes externos del servidor (movido de experimental)

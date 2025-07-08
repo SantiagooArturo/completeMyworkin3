@@ -66,32 +66,25 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isRecording, setIsRecording] = useState(false);    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [showRetryRecording, setShowRetryRecording] = useState(false);
-    const [processingAudio, setProcessingAudio] = useState(false);
+    const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+    
+    // Estados para el cronómetro
     const [recordingTime, setRecordingTime] = useState(0);
-    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);    const [uploadProgress, setUploadProgress] = useState(0);
-const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
-
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
     
-    // Configuración de grabación optimizada para R2 directo
-    const MAX_RECORDING_TIME = 300; // 5 minutos
-    const RECORDING_WARNING_TIME = 240; // 4 minutos
-    
-    // Función para formatear tiempo
+    // Función para formatear tiempo mm:ss
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
-
+    
     // Limpiar cronómetro al desmontar
     useEffect(() => {
         return () => {
@@ -189,28 +182,11 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
         try {
             console.log(`🎬 Iniciando grabación de ${type}...`);
             setRecordingType(type);
-            setRecordingTime(0);
+            setRecordingTime(0); // Resetear cronómetro
             
             const constraints = type === 'video'
-                ? { 
-                    video: { 
-                        width: { max: 640 }, 
-                        height: { max: 480 },
-                        frameRate: { max: 24 }
-                    }, 
-                    audio: { 
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        sampleRate: 44100
-                    }
-                }
-                : { 
-                    audio: { 
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        sampleRate: 44100
-                    }
-                };
+                ? { video: true, audio: true }
+                : { audio: true };
 
             console.log('📱 Solicitando permisos de cámara/micrófono...');
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -221,19 +197,7 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 audioTracks: stream.getAudioTracks().length
             });
 
-            // Configurar MediaRecorder con compresión agresiva
-            const options = type === 'video' 
-                ? {
-                    mimeType: 'video/webm;codecs=vp8,opus',
-                    videoBitsPerSecond: 200000, // 200kbps para video
-                    audioBitsPerSecond: 64000   // 64kbps para audio
-                }
-                : {
-                    mimeType: 'audio/webm;codecs=opus',
-                    audioBitsPerSecond: 64000   // 64kbps para audio
-                };
-
-            const mediaRecorder = new MediaRecorder(stream, options);
+            const mediaRecorder = new MediaRecorder(stream);
             mediaRecorderRef.current = mediaRecorder;
             recordedChunksRef.current = [];
 
@@ -247,44 +211,21 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                 const blob = new Blob(recordedChunksRef.current, {
                     type: type === 'video' ? 'video/webm' : 'audio/webm',
                 });
-                
-                // Verificar tamaño antes de procesar (límite aumentado para R2 directo)
-                const sizeInMB = blob.size / (1024 * 1024);
-                console.log(`📦 Tamaño del archivo: ${sizeInMB.toFixed(2)}MB`);
-                
-                if (sizeInMB > 100) { // Límite aumentado para R2 directo (100MB)
-                    setError('El archivo es demasiado grande (máximo 100MB). Intenta con una grabación más corta.');
-                    setShowRetryRecording(true);
-                    return;
-                }
-                
                 await processRecording(blob);
             };
 
-            mediaRecorder.start(1000); // Grabar en chunks de 1 segundo
+            mediaRecorder.start();
             setIsRecording(true);
             
-            // Iniciar cronómetro con límite extendido para R2 directo
+            // Iniciar cronómetro
             const timer = setInterval(() => {
-                setRecordingTime(prev => {
-                    const newTime = prev + 1;
-                    
-                    // Límite extendido para R2 directo (5 minutos)
-                    if (newTime >= 300) { // 5 minutos máximo
-                        stopRecording();
-                        return 300;
-                    }
-                    
-                    return newTime;
-                });
+                setRecordingTime(prev => prev + 1);
             }, 1000);
-            
             setRecordingTimer(timer);
             
         } catch (error) {
-            console.error('❌ Error starting recording:', error);
             setError(`Error al acceder al ${type === 'video' ? 'micrófono y cámara' : 'micrófono'}`);
-            setShowRetryRecording(true);
+            console.error('Error starting recording:', error);
         }
     };
 
@@ -292,7 +233,7 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
-
+            
             // Limpiar cronómetro
             if (recordingTimer) {
                 clearInterval(recordingTimer);
@@ -312,115 +253,70 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
     };    const processRecording = async (blob: Blob) => {
         try {
             const isVideo = blob.type.includes('video');
-            const fileSizeInMB = blob.size / (1024 * 1024);
-            
             console.log('🎬 Procesando grabación:', {
                 size: blob.size,
-                sizeInMB: fileSizeInMB.toFixed(2),
                 type: blob.type,
                 isVideo: isVideo
             });
 
             if (blob.size === 0) {
-                console.error('❌ La grabación está vacía');
-                setError('La grabación está vacía. Intenta nuevamente.');
-                setShowRetryRecording(true);
-                return;
-            }
-
-            // Límite estricto de tamaño (aumentado con presigned URLs)
-            if (fileSizeInMB > 100) {
-                setError('El archivo es demasiado grande (máximo 100MB). Intenta con una grabación más corta.');
-                setShowRetryRecording(true);
-                return;
+                throw new Error('La grabación está vacía');
             }
 
             setProcessingAudio(true);
-            setError(null);
-            setShowRetryRecording(false);
-            setUploadProgress(0);
             
-            try {
-                // Verificar si es un archivo grande
-                if (fileSizeInMB > 3) {
-                    setIsUploadingLargeFile(true);
-                    console.log('📦 Archivo grande detectado, usando chunked upload');
-                }
-                
-                // Paso 1: Subiendo archivo
-                setProcessingStep(fileSizeInMB > 3 ? 'Subiendo archivo grande (esto puede tomar un momento)...' : 'Subiendo archivo...');
-                console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
-                
-                const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
-                const audioUrl = await interviewService.uploadMedia(blob, filename);
-                
-                setIsUploadingLargeFile(false);
-                setUploadProgress(0);
-                console.log('✅ Archivo subido:', audioUrl);
+            // Verificar tamaño máximo para transcripción directa (25MB)
+            if (blob.size > 25 * 1024 * 1024) {
+                throw new Error('El archivo es demasiado grande (máximo 25MB). Intenta grabar una respuesta más corta.');
+            }
 
-                // Paso 2: Transcribiendo audio
-                setProcessingStep('Transcribiendo tu respuesta...');
-                console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
-                const transcription = await interviewService.transcribeAudio(audioUrl);
-                
-                if (!transcription || transcription.trim() === '') {
-                    throw new Error('No se pudo transcribir el audio. Intenta hablar más claro.');
-                }
+            // Usar el método processRecording que hace transcripción directa
+            setProcessingStep('Transcribiendo tu respuesta...');
+            console.log(`🎤 Iniciando transcripción directa ${isVideo ? 'de video' : 'de audio'}...`);
+            
+            const result = await interviewService.processRecording(
+                blob,
+                questions[currentQuestionIndex].text,
+                jobTitle,
+                isVideo ? 'video' : 'audio'
+            );
 
-                console.log('✅ Transcripción completada:', transcription);
+            console.log('✅ Procesamiento completado:', result);
 
-                // Paso 3: Evaluando respuesta
-                setProcessingStep('Evaluando tu respuesta con IA...');
-                console.log('🤖 Iniciando evaluación...');
-                const evaluation = await interviewService.evaluateAnswer(
-                    questions[currentQuestionIndex].text,
-                    transcription,
-                    jobTitle
-                );
-
-                console.log('✅ Evaluación completada');
-
-                // Actualizar pregunta
-                const updatedQuestions = [...questions];
-                updatedQuestions[currentQuestionIndex] = {
-                    ...updatedQuestions[currentQuestionIndex],
-                    audioUrl,
-                    transcription,
-                    transcript: transcription,
-                    evaluation,
-                };
-
-                setQuestions(updatedQuestions);
-                setShowAnalysis(true);
-                
-                if (currentQuestionIndex === questions.length - 1) {
-                    console.log('✅ Última pregunta completada, análisis listo para mostrar');
-                }
-
-            } catch (uploadError: any) {
-                console.error('❌ Error en el proceso:', uploadError);
-                
-                // Mensajes de error específicos para R2 directo
-                if (uploadError.message.includes('Too Large') || uploadError.message.includes('PAYLOAD_TOO_LARGE')) {
-                    setError('El archivo es demasiado grande. Intenta con una grabación más corta (máximo 3 minutos).');
-                } else if (uploadError.message.includes('network') || uploadError.message.includes('fetch')) {
-                    setError('Problema de conexión. Verifica tu internet e intenta nuevamente.');
-                } else {
-                    setError('Error procesando la grabación. Intenta nuevamente.');
-                }
-                
-                setShowRetryRecording(true);
+            // Actualizar pregunta
+            const updatedQuestions = [...questions];
+            updatedQuestions[currentQuestionIndex] = {
+                ...updatedQuestions[currentQuestionIndex],
+                audioUrl: result.mediaUrl, // Será una string vacía
+                transcription: result.transcript,
+                transcript: result.transcript, // Para compatibilidad
+                evaluation: result.evaluation,
+            };
+            
+            setQuestions(updatedQuestions);
+            setShowAnalysis(true);
+            
+            console.log('🔍 Debug análisis pregunta:', {
+                questionIndex: currentQuestionIndex,
+                totalQuestions: questions.length,
+                isLastQuestion: currentQuestionIndex === questions.length - 1,
+                showAnalysis: true,
+                evaluation: result.evaluation
+            });
+            
+            // Si es la última pregunta, NO completar automáticamente
+            // Permitir que el usuario vea el análisis primero
+            if (currentQuestionIndex === questions.length - 1) {
+                console.log('✅ Última pregunta completada, análisis listo para mostrar');
+                // No completar automáticamente, dejar que el usuario vea el análisis
             }
 
         } catch (error: any) {
-            console.error('❌ Error general:', error);
-            setError('Error inesperado. Intenta nuevamente.');
-            setShowRetryRecording(true);
+            console.error('❌ Error procesando grabación:', error);
+            setError(`Error procesando grabación: ${error.message}`);
         } finally {
             setProcessingAudio(false);
             setProcessingStep('');
-            setIsUploadingLargeFile(false);
-            setUploadProgress(0);
         }
     };    const completeInterview = async (finalQuestions: Question[]) => {
         try {
@@ -573,6 +469,8 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                     <h3 className="font-semibold text-blue-900 mb-2">¿Qué incluye la simulación?</h3>
                                     <ul className="text-sm text-blue-800 space-y-1">
                                         <li>• 4 preguntas personalizadas para tu puesto</li>
+                                        <li>• Grabación de audio o video de tus respuestas</li>
+                                        <li>• Transcripción automática con IA</li>
                                         <li>• Evaluación detallada y feedback personalizado</li>
                                         <li>• <strong>Costo: {requiredCredits} crédito</strong></li>
                                     </ul>
@@ -697,70 +595,22 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                                                         REC
                                                     </div>
+                                                    {/* Cronómetro en el video */}
+                                                    <div className="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm font-mono">
+                                                        {formatTime(recordingTime)}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
 
                                         {isRecording && (
                                             <div className="text-center">
-                                                <div className="inline-flex items-center gap-2 text-red-600 font-medium mb-4">
+                                                <div className="inline-flex items-center gap-2 text-red-600 font-medium">
                                                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                                                     Grabando {recordingType === 'video' ? 'video' : 'audio'}...
                                                 </div>
-                                                
-                                                {/* Cronómetro Mejorado */}
-                                                <div className="bg-gray-50 rounded-lg p-4 mx-auto max-w-md">
-                                                    <div className="text-center mb-3">
-                                                        <div className="text-xs text-gray-500 mb-1">Tiempo de grabación</div>
-                                                        <div className={`text-3xl font-bold ${
-                                                            recordingTime >= RECORDING_WARNING_TIME ? 'text-red-600' : 'text-blue-600'
-                                                        }`}>
-                                                            {formatTime(recordingTime)}
-                                                        </div>
-                                                        <div className="text-sm text-gray-600">
-                                                            máximo {formatTime(MAX_RECORDING_TIME)}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Barra de progreso mejorada */}
-                                                    <div className="mb-3">
-                                                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                            <span>0:00</span>
-                                                            <span>{formatTime(MAX_RECORDING_TIME)}</span>
-                                                        </div>
-                                                        <div className="w-full bg-gray-200 rounded-full h-3">
-                                                            <div 
-                                                                className={`h-3 rounded-full transition-all duration-300 ${
-                                                                    recordingTime >= RECORDING_WARNING_TIME 
-                                                                        ? 'bg-red-500' 
-                                                                        : 'bg-blue-500'
-                                                                }`}
-                                                                style={{ 
-                                                                    width: `${Math.min((recordingTime / MAX_RECORDING_TIME) * 100, 100)}%` 
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {recordingTime >= RECORDING_WARNING_TIME && (
-                                                        <div className="text-xs text-red-600 font-medium text-center bg-red-50 px-2 py-1 rounded">
-                                                            ⚠️ La grabación se detendrá automáticamente en {formatTime(MAX_RECORDING_TIME - recordingTime)}
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {recordingTime < RECORDING_WARNING_TIME && (
-                                                        <div className="text-xs text-blue-600 text-center">
-                                                            💡 Tómate el tiempo necesario para responder completamente
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {recordingTime >= 30 && (
-                                                        <div className="text-xs text-gray-500 mt-2 text-center">
-                                                            💾 Tamaño estimado: ~{((recordingTime * (recordingType === 'video' ? 25 : 8)) / 1024).toFixed(1)}MB
-                                                            <br />
-                                                            <span className="text-blue-600">📤 Subida directa a R2 - Sin límites de Vercel</span>
-                                                        </div>
-                                                    )}
+                                                <div className="mt-2 text-lg font-mono text-gray-700 bg-gray-100 px-3 py-1 rounded-lg inline-block">
+                                                    {formatTime(recordingTime)}
                                                 </div>
                                             </div>
                                         )}
@@ -770,78 +620,17 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                                                 <div className="space-y-2">
                                                     <p className="text-gray-900 font-medium">Procesando tu respuesta...</p>
-                                                    <p className="text-gray-600 text-sm mb-4">{processingStep}</p>
-                                                    
-                                                    {isUploadingLargeFile && (
-                                                        <div className="bg-blue-50 p-3 rounded-lg mx-auto max-w-md">
-                                                            <div className="text-xs text-blue-600 mb-2">
-                                                                📦 Archivo grande detectado - procesando en partes...
-                                                            </div>
-                                                            <div className="text-xs text-blue-500">
-                                                                Esto puede tomar un momento, por favor mantén la página abierta
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <p className="text-gray-600 text-sm">{processingStep}</p>
                                                 </div>
-                                                
                                                 <div className="mt-4 max-w-md mx-auto">
                                                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Subiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Transcribiendo') || processingStep.includes('Evaluando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Subiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('archivo') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                                         <span>Subiendo</span>
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Transcribiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Evaluando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Transcribiendo') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Evaluando') || processingStep.includes('Guardando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                                         <span>Transcribiendo</span>
-                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Evaluando') ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                                        <div className={`w-2 h-2 rounded-full ${processingStep.includes('Evaluando') ? 'bg-blue-500 animate-pulse' : processingStep.includes('Guardando') ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                                         <span>Evaluando</span>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Retry Recording Button - Solo cuando hay error */}
-                                        {showRetryRecording && (
-                                            <div className="text-center py-6">
-                                                <div className="mb-4">
-                                                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                        <AlertCircle className="h-8 w-8 text-orange-600" />
-                                                    </div>
-                                                    <p className="text-gray-700 font-medium mb-2">
-                                                        No se pudo procesar tu grabación
-                                                    </p>
-                                                    <p className="text-gray-600 text-sm mb-4">
-                                                        Esto puede ocurrir por problemas de conexión o archivos muy grandes. 
-                                                        <br />
-                                                        Intenta grabar una respuesta más breve o con mejor conexión.
-                                                    </p>
-                                                </div>
-                                                
-                                                <div className="flex gap-4 justify-center">
-                                                    <Button
-                                                        onClick={() => {
-                                                            setShowRetryRecording(false);
-                                                            setError(null);
-                                                            setRecordingTime(0);
-                                                            startRecording('audio');
-                                                        }}
-                                                        disabled={processingAudio}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Mic className="h-4 w-4" />
-                                                        Reintentar con Audio
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() => {
-                                                            setShowRetryRecording(false);
-                                                            setError(null);
-                                                            setRecordingTime(0);
-                                                            startRecording('video');
-                                                        }}
-                                                        disabled={processingAudio}
-                                                        variant="outline"
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Video className="h-4 w-4" />
-                                                        Reintentar con Video
-                                                    </Button>
                                                 </div>
                                             </div>
                                         )}
@@ -895,13 +684,13 @@ const [isUploadingLargeFile, setIsUploadingLargeFile] = useState(false);
                                                 </div>
 
                                                 {/* Transcript */}
-                                                {/* <div className="bg-white p-4 rounded-lg">
+                                                <div className="bg-white p-4 rounded-lg">
                                                     <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                                                         <MessageSquare className="h-4 w-4" />
                                                         Tu respuesta transcrita:
                                                     </h4>
                                                     <p className="text-gray-700 text-sm italic leading-relaxed">"{currentQuestion.transcript}"</p>
-                                                </div> */}
+                                                </div>
 
                                                 {/* Strengths */}
                                                 <div className="bg-white p-4 rounded-lg">
