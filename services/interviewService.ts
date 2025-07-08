@@ -549,7 +549,7 @@ class InterviewService {
     }
   }
 
-  // Process complete recording (upload + transcribe + evaluate)
+  // Process complete recording (transcribe directly without upload)
   async processRecording(
     audioBlob: Blob, 
     question: string, 
@@ -557,16 +557,14 @@ class InterviewService {
     recordingType: 'audio' | 'video' = 'audio'
   ) {
     try {
-      // Upload media
-      const filename = `interview_${Date.now()}.${recordingType === 'video' ? 'webm' : 'webm'}`;
-      // const mediaUrl = await this.uploadMedia(audioBlob, filename);
-      const mediaUrl = 'https://example.com/path/to/uploaded/file.webm'; // Placeholder for actual upload logic
-      // Transcribe audio
-      const transcript = await this.transcribeAudio(mediaUrl);
+      // Transcribe audio directly without uploading to R2
+      const transcript = await this.transcribeAudioDirect(audioBlob);
 
       // Evaluate answer
-      const evaluation = await this.evaluateAnswer(question, transcript, jobTitle);      return {
-        mediaUrl,
+      const evaluation = await this.evaluateAnswer(question, transcript, jobTitle);
+
+      return {
+        mediaUrl: '', // No media URL since we're not uploading
         transcript,
         evaluation,
       };

@@ -1,16 +1,24 @@
 {
   "functions": {
     "app/api/upload/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     },
     "app/api/interview/transcribe/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     },
     "app/api/interview/evaluate/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 512
     },
     "app/api/upload-presigned/route.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "memory": 512
+    },
+    "app/api/cv/optimize-project-description/route.ts": {
+      "maxDuration": 30,
+      "memory": 512
     }
   },
   "regions": ["iad1"],

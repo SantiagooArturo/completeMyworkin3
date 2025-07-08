@@ -265,45 +265,35 @@ export default function InterviewSimulationPage() {    const { user, loading: au
 
             setProcessingAudio(true);
             
-            // Paso 1: Subiendo archivo
-            setProcessingStep('Subiendo archivo...');
-            console.log(`📤 Subiendo archivo de ${isVideo ? 'video' : 'audio'}...`);
-            const filename = `interview_${Date.now()}_${currentQuestionIndex}.webm`;
-            const audioUrl = await interviewService.uploadMedia(blob, filename);
-            
-            console.log('✅ Archivo subido:', audioUrl);
-
-            // Paso 2: Transcribiendo audio (extrae audio del video si es necesario)
-            setProcessingStep('Transcribiendo tu respuesta...');
-            console.log(`🎤 Iniciando transcripción ${isVideo ? 'de video' : 'de audio'} via API...`);
-            const transcription = await interviewService.transcribeAudio(audioUrl);
-            
-            if (!transcription || transcription.trim() === '') {
-                throw new Error('La transcripción está vacía');
+            // Verificar tamaño máximo para transcripción directa (25MB)
+            if (blob.size > 25 * 1024 * 1024) {
+                throw new Error('El archivo es demasiado grande (máximo 25MB). Intenta grabar una respuesta más corta.');
             }
 
-            console.log('✅ Transcripción completada:', transcription);
-
-            // Paso 3: Evaluando respuesta
-            setProcessingStep('Evaluando tu respuesta con IA...');
-            console.log('🤖 Iniciando evaluación...');
-            const evaluation = await interviewService.evaluateAnswer(
+            // Usar el método processRecording que hace transcripción directa
+            setProcessingStep('Transcribiendo tu respuesta...');
+            console.log(`🎤 Iniciando transcripción directa ${isVideo ? 'de video' : 'de audio'}...`);
+            
+            const result = await interviewService.processRecording(
+                blob,
                 questions[currentQuestionIndex].text,
-                transcription,
-                jobTitle
+                jobTitle,
+                isVideo ? 'video' : 'audio'
             );
 
-            console.log('✅ Evaluación completada');
+            console.log('✅ Procesamiento completado:', result);
 
             // Actualizar pregunta
             const updatedQuestions = [...questions];
             updatedQuestions[currentQuestionIndex] = {
                 ...updatedQuestions[currentQuestionIndex],
-                audioUrl,
-                transcription,
-                transcript: transcription, // Para compatibilidad
-                evaluation,
-            };            setQuestions(updatedQuestions);
+                audioUrl: result.mediaUrl, // Será una string vacía
+                transcription: result.transcript,
+                transcript: result.transcript, // Para compatibilidad
+                evaluation: result.evaluation,
+            };
+            
+            setQuestions(updatedQuestions);
             setShowAnalysis(true);
             
             console.log('🔍 Debug análisis pregunta:', {
@@ -311,7 +301,7 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                 totalQuestions: questions.length,
                 isLastQuestion: currentQuestionIndex === questions.length - 1,
                 showAnalysis: true,
-                evaluation: evaluation
+                evaluation: result.evaluation
             });
             
             // Si es la última pregunta, NO completar automáticamente
