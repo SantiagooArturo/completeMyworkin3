@@ -1,23 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cvBuilderService, SavedCV } from '@/services/cvBuilderService';
+import { OnboardingService } from '@/services/onboardingService';
 import Navbar from '@/components/navbar';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import CVBuilder from '@/components/cv-builder/CVBuilder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Plus, Edit, Trash2, Calendar, Download, Lock, UserPlus } from 'lucide-react';
+import { FileText, Plus, Edit, Trash2, Calendar, Download, Lock, UserPlus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function CrearCV() {
+// Componente interno que usa useSearchParams
+function CrearCVContent() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromOnboarding = searchParams.get('from') === 'onboarding';
   
   // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingCVId, setEditingCVId] = useState<string | undefined>();
   const [userCVs, setUserCVs] = useState<SavedCV[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // useEffect también debe ir al inicio
   useEffect(() => {
@@ -63,10 +71,37 @@ export default function CrearCV() {
     }
   };
 
-  const handleBackToList = () => {
-    setShowBuilder(false);
-    setEditingCVId(undefined);
-    loadUserCVs();
+  const handleBackToList = async () => {
+    if (isFromOnboarding) {
+      // Si viene del onboarding, regresar al onboarding
+      router.push('/onboarding?step=4');
+    } else {
+      // Flujo normal
+      setShowBuilder(false);
+      setEditingCVId(undefined);
+      loadUserCVs();
+    }
+  };
+
+  // Manejar cuando se guarda un CV desde el onboarding
+  const handleCVSavedFromOnboarding = async (cvData: any, cvId: string) => {
+    if (!user || !isFromOnboarding) return;
+    
+    try {
+      setIsProcessing(true);
+      
+      // Integrar datos del CV al onboarding
+      await OnboardingService.integrateCVData(user, cvId, cvData, 'created');
+      
+      // Regresar al onboarding con el CV creado
+      router.push('/onboarding?step=4&cvCreated=true');
+      
+    } catch (error) {
+      console.error('Error integrando CV al onboarding:', error);
+      alert('Error al procesar el CV. Por favor intenta nuevamente.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const formatDate = (timestamp: any) => {
@@ -170,31 +205,174 @@ export default function CrearCV() {
   }
 
   if (showBuilder) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100">
-        <Navbar />
-        <div className="h-[52px]"></div>
+    const builderContent = (
+      <>
+        {/* Banner informativo si viene del onboarding */}
+        {isFromOnboarding && (
+          <div className="bg-blue-50 border-b border-blue-200 p-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-lg font-semibold text-blue-900 mb-1">
+                Creando tu primer CV profesional
+              </h2>
+              <p className="text-blue-700">
+                Una vez que completes tu CV, continuaremos con tu proceso de onboarding y te llevaremos al dashboard.
+              </p>
+            </div>
+          </div>
+        )}
+        
         <div className="container mx-auto py-8">
           <div className="mb-6">
-             {/* Botón Volver a mis CVs */}
-          <Button
-            variant="outline"
-            onClick={handleBackToList}
-            className="flex items-center gap-2 bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 shadow-sm"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span className="hidden sm:inline">Volver a mis CVs</span>
-            <span className="sm:hidden">Volver</span>
-          </Button>
+            {/* Botón Volver */}
+            <Button
+              variant="outline"
+              onClick={handleBackToList}
+              className="flex items-center gap-2 bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {isFromOnboarding ? 'Volver al onboarding' : 'Volver a mis CVs'}
+              </span>
+              <span className="sm:hidden">Volver</span>
+            </Button>
           </div>
-          <CVBuilder cvId={editingCVId} />
+          
+          <CVBuilder 
+            cvId={editingCVId}
+            onSave={isFromOnboarding ? handleCVSavedFromOnboarding : undefined}
+          />
         </div>
-      </div>
+        
+        {/* Modal de procesamiento */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 className="text-lg font-semibold mb-2">Procesando tu CV</h3>
+                <p className="text-gray-600">Integrando la información a tu perfil...</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+
+    // Si viene del onboarding, usar el layout completo
+    if (isFromOnboarding) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100">
+          <Navbar />
+          <div className="h-[52px]"></div>
+          {builderContent}
+        </div>
+      );
+    }
+
+    // Si es usuario normal, usar DashboardLayout
+    return (
+      <DashboardLayout>
+        {builderContent}
+      </DashboardLayout>
     );
   }
 
+  // Para usuarios logueados (no del onboarding), usar el DashboardLayout
+  if (user && !isFromOnboarding) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Mis CVs Profesionales</h1>
+              <p className="text-gray-600 mt-1">Crea y gestiona tus CVs con formato Harvard profesional</p>
+            </div>
+            <Button 
+              onClick={handleCreateNew}
+              className="bg-[#028bbf] hover:bg-[#027ba8]"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Crear Nuevo CV
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#028bbf]"></div>
+            </div>
+          ) : userCVs.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No tienes CVs creados
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Crea tu primer CV profesional con formato Harvard
+                </p>
+                <Button 
+                  onClick={handleCreateNew}
+                  className="bg-[#028bbf] hover:bg-[#027ba8]"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear mi primer CV
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userCVs.map((cv) => (
+                <Card key={cv.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <FileText className="h-5 w-5 text-[#028bbf]" />
+                      {cv.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>Actualizado: {formatDate(cv.updatedAt)}</span>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600">
+                        <p><strong>Plantilla:</strong> {cv.template || 'Harvard'}</p>
+                        <p><strong>Nombre:</strong> {cv.data.personalInfo.fullName || 'Sin nombre'}</p>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditCV(cv.id)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteCV(cv.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Para usuarios no logueados o casos especiales
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
       <Navbar />
@@ -342,4 +520,13 @@ export default function CrearCV() {
       </section>
     </div>
   );
-} 
+}
+
+// Componente exportado con Suspense
+export default function CrearCV() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <CrearCVContent />
+    </Suspense>
+  );
+}

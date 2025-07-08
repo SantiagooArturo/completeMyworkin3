@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { X } from 'lucide-react';
 import Link from 'next/link';
-import { OnboardingData } from '@/services/onboardingService';
+import { OnboardingData, OnboardingService } from '@/services/onboardingService';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import {
@@ -110,13 +110,14 @@ export default function OnboardingPage() {
       tips: false,
     },
     // Nuevos campos para el onboarding actualizado
-    educationType: '', // 'universitario' o 'tecnico'
+    educationType: 'universitario', // 'universitario' o 'tecnico'
     currentCareer: '',
     studyCenter: '',
-    studyStatus: '', // 'estudiando' o 'egresado'
+    studyStatus: 'estudiando', // 'estudiando' o 'egresado'
     currentCycle: '',
     interestedRoles: [],
     workType: [], // Cambiado a string[] para selección múltiple
+    cvSource: null, // Añadido para resolver el error
     hasCV: '',
   });
 
@@ -162,17 +163,81 @@ export default function OnboardingPage() {
   };
 
   const handleNext = async () => {
+    // Guardar datos del paso actual antes de avanzar
+    if (currentStep === 1) {
+      await saveStepData({
+        educationType: formData.educationType,
+        currentCareer: formData.currentCareer,
+        studyCenter: formData.studyCenter,
+        studyStatus: formData.studyStatus,
+        currentCycle: formData.currentCycle,
+        graduationYear: formData.graduationYear
+      });
+    } else if (currentStep === 2) {
+      await saveStepData({
+        interestedRoles: formData.interestedRoles,
+        workType: formData.workType
+      });
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Paso final: guardar datos y completar onboarding
-      await saveOnboardingData();
+      // Paso final: completar onboarding
+      await completeOnboarding();
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Función para guardar datos paso a paso
+  const saveStepData = async (stepData: any) => {
+    if (!user) return;
+    
+    try {
+      await OnboardingService.saveStepData(user, stepData);
+    } catch (error) {
+      console.error('Error guardando datos del paso:', error);
+    }
+  };
+
+  // Función para completar onboarding
+  const completeOnboarding = async () => {
+    if (!user) return;
+    
+    try {
+      setSubmitting(true);
+      
+      const completeData = {
+        educationType: formData.educationType,
+        currentCareer: formData.currentCareer,
+        studyCenter: formData.studyCenter,
+        studyStatus: formData.studyStatus,
+        currentCycle: formData.currentCycle,
+        graduationYear: formData.graduationYear,
+        interestedRoles: formData.interestedRoles,
+        workType: formData.workType,
+        cvSource: uploadedCV ? 'uploaded' as const : null,
+        cvFileName: uploadedCV?.fileName,
+        cvFileUrl: uploadedCV?.fileUrl
+      };
+      
+      await OnboardingService.completeOnboarding(user, completeData);
+      
+      // Si hay datos de CV, integrarlos al perfil del usuario
+      if (uploadedCV && formData.cvData) {
+        await OnboardingService.updateUserProfileFromCV(user, formData.cvData);
+      }
+      
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Error completando onboarding:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -197,7 +262,7 @@ export default function OnboardingPage() {
         // Actualizar campos principales si están disponibles
         ...(formData.university && { university: formData.university }),
         ...(formData.position && { position: formData.position }),
-        ...(formData.skills.length > 0 && { skills: formData.skills }),
+        ...(formData.skills && formData.skills.length > 0 && { skills: formData.skills }),
         updatedAt: new Date(),
       });
 
@@ -221,9 +286,9 @@ export default function OnboardingPage() {
   const toggleSkill = (skill: string) => {
     setFormData(prev => ({
       ...prev,
-      skills: prev.skills.includes(skill)
-        ? prev.skills.filter(s => s !== skill)
-        : [...prev.skills, skill],
+      skills: (prev.skills || []).includes(skill)
+        ? (prev.skills || []).filter(s => s !== skill)
+        : [...(prev.skills || []), skill],
     }));
   };
 
@@ -239,9 +304,9 @@ export default function OnboardingPage() {
   const toggleObjective = (objective: string) => {
     setFormData(prev => ({
       ...prev,
-      objectives: prev.objectives.includes(objective)
-        ? prev.objectives.filter(o => o !== objective)
-        : [...prev.objectives, objective],
+      objectives: (prev.objectives || []).includes(objective)
+        ? (prev.objectives || []).filter(o => o !== objective)
+        : [...(prev.objectives || []), objective],
     }));
   };
 
@@ -332,7 +397,7 @@ export default function OnboardingPage() {
       'Subiendo tu CV...',
       'Analizando estructura...',
       'Evaluando contenido...',
-      'Generando recomendaciones...',
+      'Extrayendo datos personales...',
       'Finalizando análisis...'
     ];
 
@@ -367,6 +432,13 @@ export default function OnboardingPage() {
           if (!analysisResponse.ok) {
             throw new Error('Error al analizar el CV');
           }
+
+          const analysisData = await analysisResponse.json();
+          
+          // Extraer datos del CV y guardarlos en formData
+          if (analysisData.extractedData) {
+            updateFormData('cvData', analysisData.extractedData);
+          }
         }
 
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -377,9 +449,13 @@ export default function OnboardingPage() {
       // Consumir una revisión
       await cvReviewService.consumeReview(user);
       
-      // Después del análisis, continuar al dashboard
+      // Marcar que el CV está listo y analizado
+      updateFormData('hasCV', 'analyzed');
+      
+      // Después del análisis, permitir continuar
       setTimeout(() => {
-        router.push('/dashboard?cvAnalyzed=true');
+        setIsAnalyzing(false);
+        // El usuario puede ahora hacer clic en "Siguiente" para ir al dashboard
       }, 1000);
 
     } catch (error) {
@@ -811,9 +887,20 @@ export default function OnboardingPage() {
                         <span className="text-sm px-8 text-gray-500">Te guiaremos para que puedas generar un CV profesional desde cero, sin complicaciones.</span>
                         <button
                           className="mt-4 px-8 py-2 font-medium bg-white border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
-                          onClick={
-                            () => router.push('/crear-cv')
-                          }
+                          onClick={() => {
+                            // Guardar datos actuales antes de ir al creador de CV
+                            saveStepData({
+                              educationType: formData.educationType,
+                              currentCareer: formData.currentCareer,
+                              studyCenter: formData.studyCenter,
+                              studyStatus: formData.studyStatus,
+                              currentCycle: formData.currentCycle,
+                              graduationYear: formData.graduationYear,
+                              interestedRoles: formData.interestedRoles,
+                              workType: formData.workType
+                            });
+                            router.push('/crear-cv?from=onboarding');
+                          }}
                         >
                           Crear CV
                         </button>
@@ -947,12 +1034,12 @@ export default function OnboardingPage() {
           disabled={
             (currentStep === 1 && (!formData.educationType || !formData.currentCareer || !formData.studyCenter || !formData.studyStatus)) ||
             (currentStep === 2 && (formData.interestedRoles.length === 0 || formData.workType.length === 0)) ||
-            (currentStep === 4 && (!formData.hasCV || submitting || isAnalyzing))
+            (currentStep === 4 && (!formData.hasCV || formData.hasCV === 'uploaded' && !uploadedCV) || submitting || isAnalyzing)
           }
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isAnalyzing ? "Analizando CV..." : 
-           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguiente") : "Siguiente"}
+           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Ir al Dashboard") : "Siguiente"}
         </button>
       </div>
     </div>

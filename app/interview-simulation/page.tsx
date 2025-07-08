@@ -652,13 +652,13 @@ export default function InterviewSimulationPage() {    const { user, loading: au
                                                 </div>
 
                                                 {/* Transcript */}
-                                                <div className="bg-white p-4 rounded-lg">
+                                                {/* <div className="bg-white p-4 rounded-lg">
                                                     <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                                                         <MessageSquare className="h-4 w-4" />
                                                         Tu respuesta transcrita:
                                                     </h4>
                                                     <p className="text-gray-700 text-sm italic leading-relaxed">"{currentQuestion.transcript}"</p>
-                                                </div>
+                                                </div> */}
 
                                                 {/* Strengths */}
                                                 <div className="bg-white p-4 rounded-lg">

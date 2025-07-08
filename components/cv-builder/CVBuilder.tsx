@@ -47,9 +47,12 @@ const  initialCVData: CVData = {
 
 interface CVBuilderProps {
   cvId?: string; // Para editar CV existente
+  onSave?: (cvData: any, cvId: string) => Promise<void>; // Callback personalizado al guardar
+  showBackButton?: boolean; // Mostrar botón de retroceso
+  autoRedirect?: boolean; // Redirigir automáticamente después de guardar
 }
 
-export default function CVBuilder({ cvId }: CVBuilderProps) {
+export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRedirect = true }: CVBuilderProps) {
   const { user } = useAuth();
   const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
   const [cvData, setCVData] = useState<CVData>(initialCVData);
@@ -242,15 +245,22 @@ export default function CVBuilder({ cvId }: CVBuilderProps) {
         await refreshCredits();
       }
 
+      let savedCvId = cvId;
+      
       if (cvId) {
         await cvBuilderService.updateCV(cvId, cvData, cvTitle);
       } else {
-        await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');
+        savedCvId = await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');
       }
 
       setHasUnsavedChanges(false); // Marcar como guardado
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      
+      // Si hay un callback personalizado, llamarlo
+      if (onSave && savedCvId) {
+        await onSave(cvData, savedCvId);
+      }
     } catch (error) {
       console.error('Error al guardar CV:', error);
       alert('Error al guardar el CV. Inténtalo de nuevo.');

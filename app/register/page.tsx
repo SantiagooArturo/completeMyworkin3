@@ -76,8 +76,8 @@ export default function RegisterPage() {
       }
       
       setLoading(false);
-      // Redirigir al dashboard
-      router.push('/dashboard');
+      // Redirigir al onboarding para completar el perfil
+      router.push('/onboarding');
       
     } catch (err: any) {
       let errorMessage = "No se pudo crear la cuenta";
