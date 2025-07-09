@@ -77,7 +77,7 @@ export const analyzeCV = async (pdfUrl, puestoPostular, originalFileName) => {
   try {
     const formattedPuesto = puestoPostular.replace(/\s+/g, '_');
     //const url = `/api/proxy-analizar-cv?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}`;
-    const url = `https://myworkin-cv-2.onrender.com/analizar-cv?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}&original_name=${encodeURIComponent(originalFileName)}`;
+    const url = `https://myworkin-cv-2.onrender.com/analizar_practicas?pdf_url=${encodeURIComponent(pdfUrl)}&puesto_postular=${encodeURIComponent(formattedPuesto)}&original_name=${encodeURIComponent(originalFileName)}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {
