@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LoadingScreen from "@/components/LoadingScreens";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,12 +23,29 @@ export default function LoginPage() {
     try {
       await login(email, password);
       setLoading(false);
-      router.push('/dashboard');
+      setShowLoginSuccess(true);
+      
+      // Simular carga antes de redirigir
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (err: any) {
       setError("Correo o contraseña incorrectos");
       setLoading(false);
     }
   };
+
+  // Mostrar pantalla de carga después del login exitoso
+  if (showLoginSuccess) {
+    return (
+      <LoadingScreen
+        variant="dashboard"
+        message="¡Bienvenido de vuelta!"
+        subtitle="Preparando tu espacio de trabajo..."
+        fullScreen={true}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center px-4 pt-16">

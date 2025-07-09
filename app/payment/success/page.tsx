@@ -6,6 +6,7 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import LoadingScreen from '@/components/LoadingScreens';
 
 function PaymentSuccessContent() {
   const router = useRouter();
@@ -83,15 +84,12 @@ function PaymentSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <Loader2 className="animate-spin h-8 w-8 text-[#028bbf] mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Procesando tu pago...</h2>
-            <p className="text-gray-600">Por favor espera mientras confirmamos tu compra.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <LoadingScreen
+        variant="processing"
+        message="Procesando tu pago..."
+        subtitle="Por favor espera mientras confirmamos tu compra."
+        fullScreen={true}
+      />
     );
   }
 

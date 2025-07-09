@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { OnboardingService } from '@/services/onboardingService';
 import { useRouter, usePathname } from 'next/navigation';
+import LoadingScreen from '@/components/LoadingScreens';
 
 export function useOnboardingGuard() {
   const { user } = useAuth();
@@ -57,9 +58,12 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
   
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <LoadingScreen
+        variant="dashboard"
+        message="Verificando configuración..."
+        subtitle="Preparando tu experiencia personalizada"
+        fullScreen={true}
+      />
     );
   }
   

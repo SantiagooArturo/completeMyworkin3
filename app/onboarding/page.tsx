@@ -18,6 +18,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FileUp, FilePlus, Upload, CheckCircle } from 'lucide-react';
 import { cvReviewService } from '@/services/cvReviewService';
+import LoadingScreen from '@/components/LoadingScreens';
 
 // Opciones para los selects y botones
 const CAREER_OPTIONS = [
@@ -93,6 +94,8 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(4);
   const totalSteps = 4;
   const [submitting, setSubmitting] = useState(false);
+  const [showCompletionLoading, setShowCompletionLoading] = useState(false);
+  const [completionProgress, setCompletionProgress] = useState(0);
 
   // Estado para los datos del formulario
   const [formData, setFormData] = useState<OnboardingData>({
@@ -211,7 +214,11 @@ export default function OnboardingPage() {
     
     try {
       setSubmitting(true);
+      setShowCompletionLoading(true);
+      setCompletionProgress(0);
       
+      // Paso 1: Guardar datos del onboarding (20%)
+      setCompletionProgress(20);
       const completeData = {
         educationType: formData.educationType,
         currentCareer: formData.currentCareer,
@@ -228,14 +235,32 @@ export default function OnboardingPage() {
       
       await OnboardingService.completeOnboarding(user, completeData);
       
-      // Si hay datos de CV, integrarlos al perfil del usuario
+      // Simular progreso de configuración
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCompletionProgress(40);
+      
+      // Paso 2: Si hay CV, procesarlo (40%)
       if (uploadedCV && formData.cvData) {
         await OnboardingService.updateUserProfileFromCV(user, formData.cvData);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setCompletionProgress(60);
       }
+      
+      // Paso 3: Configurar perfil inicial (60%)
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCompletionProgress(80);
+      
+      // Paso 4: Finalizar configuración (100%)
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCompletionProgress(100);
+      
+      // Esperar un poco antes de redirigir
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       router.push('/dashboard');
     } catch (error) {
       console.error('Error completando onboarding:', error);
+      setShowCompletionLoading(false);
     } finally {
       setSubmitting(false);
     }
@@ -489,6 +514,20 @@ export default function OnboardingPage() {
 
   if (!user) {
     return null;
+  }
+
+  // Mostrar pantalla de carga al completar onboarding
+  if (showCompletionLoading) {
+    return (
+      <LoadingScreen
+        variant="processing"
+        message="Configurando tu perfil..."
+        subtitle="Creando tu espacio de trabajo personalizado"
+        progress={completionProgress}
+        showProgress={true}
+        fullScreen={true}
+      />
+    );
   }
 
   const renderStepContent = () => {
