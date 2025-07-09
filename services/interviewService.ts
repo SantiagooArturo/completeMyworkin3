@@ -15,6 +15,16 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/util';
+
+
+interface MediaFile {
+  name: string;
+  type: string;
+  size: number;
+  data: File; // The actual file object
+}
 export interface InterviewQuestion {
   text: string;
   mediaUrl?: string;
@@ -58,6 +68,16 @@ export interface SavedInterview {
 
 class InterviewService {
   
+  private ffmpeg: FFmpeg | null = null;
+
+  private async loadFFmpeg() {
+    if (!this.ffmpeg) {
+      this.ffmpeg = new FFmpeg();
+      await this.ffmpeg.load();
+    }
+    return this.ffmpeg;
+  }
+
   // Generate interview questions using OpenAI
   async generateQuestions(jobTitle: string): Promise<string[]> {
     const response = await fetch('/api/interview/generate-questions', {
@@ -259,18 +279,48 @@ class InterviewService {
         throw new Error('El archivo es demasiado grande (máximo 25MB)');
       }
 
-      // Verificar API key
-      const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-      console.log('🔑 API Key configurada:', apiKey ? 'SÍ' : 'NO');
-      console.log('🔑 API Key preview:', apiKey ? `${apiKey.substring(0, 7)}...` : 'UNDEFINED');
+      let audioBlob = blob;
+      // Si es un video, convertirlo a MP3
+      if (blob.type === 'video/webm') {
+        console.log('🎥 Convirtiendo video a audio...');
+        try {
+          // Cargar FFmpeg
+          const ffmpeg = await this.loadFFmpeg();
+          
+          // Escribir el archivo de entrada en el sistema de archivos virtual
+          const inputFileName = 'input.webm';
+          const outputFileName = 'output.mp3';
+          await ffmpeg.writeFile(inputFileName, await fetchFile(blob));
 
-      if (!apiKey) {
-        throw new Error('Clave API de OpenAI no configurada. Verifica NEXT_PUBLIC_OPENAI_API_KEY en .env.local');
+          // Ejecutar comando FFmpeg para convertir webm a mp3
+          await ffmpeg.exec([
+            '-i', inputFileName,
+            '-vn',  // No video
+            '-acodec', 'libmp3lame',
+            '-ar', '44100',  // Sample rate
+            '-ac', '2',      // Stereo
+            '-b:a', '192k',  // Bitrate
+            outputFileName
+          ]);
+
+          // Leer el archivo convertido
+          const outputData = await ffmpeg.readFile(outputFileName);
+          audioBlob = new Blob([outputData], { type: 'audio/mp3' });
+
+          console.log('✅ Conversión completada');
+          
+          // Limpiar archivos
+          await ffmpeg.deleteFile(inputFileName);
+          await ffmpeg.deleteFile(outputFileName);
+        } catch (error) {
+          console.error('❌ Error en la conversión:', error);
+          throw new Error('Error al convertir el video a audio');
+        }
       }
 
       // Crear File object con el formato correcto
-      const file = new File([blob], 'respuesta.webm', { 
-        type: blob.type || 'audio/webm' 
+      const file = new File([audioBlob], audioBlob.type === 'audio/mp3' ? 'audio.mp3' : 'audio.webm', { 
+        type: audioBlob.type 
       });
       
       console.log('📁 File object creado:', {
@@ -279,6 +329,12 @@ class InterviewService {
         size: file.size
       });
       
+      // Verificar API key
+      const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OpenAI API key not configured');
+      }
+
       // Crear FormData
       const formData = new FormData();
       formData.append('file', file);
@@ -296,6 +352,7 @@ class InterviewService {
       }
 
       console.log('📤 Enviando a OpenAI directamente...');
+      console.log(formData)
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: {
