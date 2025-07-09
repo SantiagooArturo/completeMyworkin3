@@ -43,7 +43,6 @@ export default function MatchCV() {
     revertReservation 
   } = useCredits(user);
 
-  // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
   const [file, setFile] = useState<File | null>(null);
   const [puesto, setPuesto] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,6 +52,7 @@ export default function MatchCV() {
   const [practicas, setPracticas] = useState<Practica[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+  const [noPracticasModal, setNoPracticasModal] = useState(false); // Nuevo estado para el popup de no prácticas
 
   // PROTECCIÓN: Si no hay usuario, mostrar pantalla de login
   if (!user) {
@@ -144,8 +144,6 @@ export default function MatchCV() {
     );
   }
 
-  // RESTO DEL CÓDIGO ORIGINAL PARA USUARIOS AUTENTICADOS
-
   // Maneja la carga del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -164,6 +162,7 @@ export default function MatchCV() {
     setShowInputs(true);
     setError(null);
   };
+
   // Maneja la búsqueda real de prácticas
   const handleBuscar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +213,30 @@ export default function MatchCV() {
       console.log("🔍 Buscando prácticas...");
       const trabajos = await matchesCV(pdfUrl, puesto);
       console.log(`✅ Encontradas ${trabajos.length} prácticas`);
+      
+      if (trabajos.length === 0) {
+        // Mostrar mensaje de que no hay prácticas
+        setNoPracticasModal(true);
+
+        // Evitar el consumo de créditos
+        if (reservationId) {
+          try {
+            console.log("🔄 Revirtiendo reserva de créditos...");
+            const revertResult = await revertReservation(reservationId, 'job-match', 'No hay prácticas disponibles');
+            
+            if (revertResult) {
+              console.log("✅ Reserva de créditos revertida exitosamente");
+            } else {
+              console.warn("⚠️ No se pudo revertir la reserva de créditos");
+            }
+          } catch (revertError) {
+            console.error("❌ Error al revertir reserva:", revertError);
+          }
+        }
+        setShowInputs(true); // Mostrar los inputs para que el usuario pueda intentarlo nuevamente
+        setLoading(false);
+        return;
+      }
       
       // 3. CONFIRMAR consumo de créditos solo después del éxito
       console.log("💳 Confirmando consumo de créditos...");
@@ -277,6 +300,28 @@ export default function MatchCV() {
       </div>
     );
   }
+
+  // Modal de No Hay Prácticas
+  function NoPracticasModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-8 rounded-xl shadow-xl max-w-sm w-full">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">No hay prácticas disponibles</h3>
+          <p className="text-lg text-gray-600 mb-6">Lo sentimos, no encontramos prácticas que coincidan con tu perfil.</p>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-[#028bbf] text-white rounded-xl font-medium hover:bg-[#027ba8] transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
       <Navbar />
@@ -288,7 +333,8 @@ export default function MatchCV() {
             <h1 className="text-4xl md:text-5xl font-bold mb-8">
               <span className="text-black">Encuentra las </span>
               <span className="text-[#028bbf]">Prácticas Ideales</span>
-            </h1>            <p className="text-xl text-gray-600">
+            </h1>
+            <p className="text-xl text-gray-600">
               Nuestra IA analiza tu CV y te conecta con las prácticas que mejor se ajustan a tu perfil.
             </p>
           </div>
@@ -361,18 +407,17 @@ export default function MatchCV() {
                           <p className="text-gray-800 font-medium mb-1">{p.company} · {p.location}</p>
                           <p className="text-gray-600 mb-3 line-clamp-4 text-sm">{p.description}</p>
                         </div>
-                   <div className="flex items-center justify-between mt-2">
-                    <a 
-                      href={p.link ? p.link : p.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="inline-block px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors text-center"
-                    >
-                      Ver Detalle
-                    </a>
-                    <span className="text-xs text-gray-500 ml-2">{p.posted_date}</span>
-                  </div>
-
+                        <div className="flex items-center justify-between mt-2">
+                          <a 
+                            href={p.link ? p.link : p.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-block px-4 py-2 bg-[#028bbf] text-white rounded-lg font-medium hover:bg-[#027ba8] transition-colors text-center"
+                          >
+                            Ver Detalle
+                          </a>
+                          <span className="text-xs text-gray-500 ml-2">{p.posted_date}</span>
+                        </div>
                         <div className="mt-2 text-xs text-green-600 font-semibold">Match: {p.porcentaje}%</div>
                       </div>
                     ))}
@@ -425,9 +470,18 @@ export default function MatchCV() {
                 <p className="text-lg text-gray-600 mb-4">¿Quieres recibir alertas de prácticas en WhatsApp?</p>
                 <a href="https://mc.ht/s/SH1lIgc" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center px-6 py-3 bg-[#028bbf] text-white rounded-xl font-medium hover:bg-[#027ba8] transition-colors">Conecta con El Chambas</a>
               </div>
-            </div>          </div>
+            </div>
+          </div>
         </div>
-      </section>      {/* Insufficient Credits Modal */}
+      </section>
+      
+      {/* Modal de No Hay Prácticas */}
+      <NoPracticasModal
+        isOpen={noPracticasModal}
+        onClose={() => setNoPracticasModal(false)}
+      />
+
+      {/* Insufficient Credits Modal */}
       {user && (
         <InsufficientCreditsModal
           isOpen={showInsufficientCreditsModal}
