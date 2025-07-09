@@ -105,7 +105,7 @@ export const analyzeCV = async (pdfUrl, puestoPostular, originalFileName) => {
 
 export const matchesCV = async (cvUrl, puestoPostular, telefono) => {
   try {
-    const url = `/api/proxy-match-cv?pdf_url=${encodeURIComponent(cvUrl)}&puesto=${encodeURIComponent(puestoPostular)}&numero=${encodeURIComponent(telefono)}`;
+    const url = `/api/proxy-match-cv?pdf_url=${encodeURIComponent(cvUrl)}&puesto=${encodeURIComponent(puestoPostular)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Error al buscar prácticas: ' + response.statusText);
