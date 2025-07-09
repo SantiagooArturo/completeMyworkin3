@@ -40,7 +40,7 @@ const sidebarItems = [
     id: 'portal-trabajo',
     label: 'Portal de trabajo',
     icon: Briefcase,
-    href: '/bolsa-trabajo',
+    href: '/portal-trabajo',
     badge: null
   },
   {
