@@ -43,7 +43,7 @@ export default function CreditBalance({
       <>
         <div className={`flex items-center space-x-2 ${className}`}>
           <Link href="/credits">
-            <Badge variant={badgeVariant} className="flex items-center space-x-1 py-2">
+            <Badge variant={badgeVariant} className="flex items-center space-x-1 py-2 hover:bg-cyan-600 transition-colors">
               <Coins className="h-3 w-3" />
               <span>{credits} créditos</span>
             </Badge>

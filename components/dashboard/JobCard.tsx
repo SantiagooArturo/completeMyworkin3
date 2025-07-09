@@ -1,6 +1,7 @@
 'use client';
 
-import { MapPin, Clock, DollarSign, Heart, Building } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Heart, Building, PiggyBank } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface JobCardProps {
   job: {
@@ -12,6 +13,7 @@ interface JobCardProps {
     schedule: string;
     salary: string;
     publishedDate: string;
+    applicationUrl?: string; // AGREGAR ESTA PROPIEDAD OPCIONAL
     skills: {
       technical: number;
       soft: number;
@@ -28,7 +30,7 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-20 h-20 mb-2">
-        <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+        <svg className={`w-20 h-20 transform -rotate-90 ${color}`} viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
@@ -36,7 +38,7 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
             stroke="currentColor"
             strokeWidth="8"
             fill="none"
-            className="text-gray-200"
+            opacity={0.25}
           />
           <circle
             cx="50"
@@ -47,91 +49,137 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
             fill="none"
             strokeDasharray={strokeDasharray}
             strokeDashoffset={strokeDashoffset}
-            className={color}
             strokeLinecap="round"
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold text-gray-900">{percentage}%</span>
+          <span className="text-lg font-bold text-white">{percentage}%</span>
         </div>
       </div>
-      <p className="text-sm text-gray-600 text-center font-medium">{label}</p>
+      <p className="text-sm text-white text-center font-medium">{label}</p>
     </div>
   );
 }
 
 export default function JobCard({ job }: JobCardProps) {
+  const router = useRouter();
+
+  const handleApplyClick = () => {
+    // Opcional: tracking
+    // trackButtonClick(`Aplicar desde Dashboard - ${job.title}`);
+    
+    const params = new URLSearchParams({
+      title: job.title,
+      url: job.applicationUrl || '',
+      worky: 'https://mc.ht/s/SH1lIgc'
+    });
+    
+    router.push(`/postular?${params.toString()}`);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        {/* Job Info */}
-        <div className="flex-1">
-          <div className="flex items-start space-x-4">
-            {/* Company Logo Placeholder */}
-            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-              <Building className="h-8 w-8 text-gray-400" />
-            </div>
-            
-            {/* Job Details */}
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                <button className="text-gray-400 hover:text-red-500 transition-colors">
-                  <Heart className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <p className="text-gray-600 mb-3">{job.company}</p>
-              
-              <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
-                <div className="flex items-center space-x-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{job.location}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Building className="h-4 w-4" />
-                  <span>{job.type}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{job.schedule}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <DollarSign className="h-4 w-4" />
-                  <span>{job.salary}</span>
-                </div>
-              </div>
-              
-              <p className="text-sm text-gray-500 mb-4">
+    <div className="bg-white rounded-xl border-gray-200 p-1 hover:shadow-md transition-shadow min-h-[200px] flex">
+      <div className="flex-1 p-4 flex flex-col">
+        {/* Logo y título */}
+        <div className="flex items-start space-x-4 mb-4">
+          {/* Company Logo */}
+          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Building className="h-8 w-8 text-gray-400" />
+          </div>
+
+          {/* Job Details */}
+          <div className="flex-1">
+            <div className="flex items-start justify-between">
+              <p className="text-sm text-gray-500">
                 Publicado hace {job.publishedDate}
               </p>
-              
-              <button className="bg-[#028bbf] hover:bg-[#027ba8] text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                Aplicar ahora
+              <button className="text-gray-400 hover:text-red-500 transition-colors">
+                <Heart className="h-5 w-5" />
               </button>
             </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">
+              {job.title}
+            </h3>
+            <p className="text-gray-600 font-medium">
+              {job.company}
+            </p>
           </div>
         </div>
-        
-        {/* Skills Match */}
-        <div className="ml-6 flex space-x-6">
+
+        {/* Detalles del trabajo en formato horizontal */}
+        <div className="flex items-center justify-between mt-4">
+          {/* Columna izquierda de detalles */}
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <MapPin className="h-4 w-4" />
+              <span>{job.location}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Building className="h-4 w-4" />
+              <span>{job.type}</span>
+            </div>
+          </div>
+
+          {/* Columna derecha de detalles */}
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Clock className="h-4 w-4" />
+              <span>{job.schedule}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <PiggyBank className="h-4 w-4" />
+              <span>{job.salary}</span>
+            </div>
+          </div>
+
+          {/* Botón de aplicar ACTUALIZADO */}
+          <button 
+            onClick={handleApplyClick}
+            className="bg-myworkin-blue hover:bg-myworkin-600 text-white px-8 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
+          >
+            Aplicar ahora
+          </button>
+        </div>
+      </div>
+
+      {/* Skills Match aquí */}
+      <div className="ml-6 flex flex-col self-stretch justify-center items-center bg-gradient-to-r from-teal-500 via-myworkin-500 to-teal-500 rounded-2xl px-8 w-[420px]">
+        <div className="flex space-x-8">
           <CircularProgress
             percentage={job.skills.technical}
             label="Habilidades técnicas"
-            color="text-green-500"
+            color="text-white"
           />
           <CircularProgress
             percentage={job.skills.soft}
             label="Habilidades blandas"
-            color="text-blue-500"
+            color="text-white"
           />
           <CircularProgress
             percentage={job.skills.experience}
             label="Experiencia"
-            color="text-teal-500"
+            color="text-white"
           />
         </div>
       </div>
     </div>
   );
 }
+
+// Donde tengas los datos de ejemplo de jobs
+const exampleJob = {
+  id: 1,
+  title: "UX/UI Designer",
+  company: "MyWorkIn", 
+  location: "Lima, Perú",
+  type: "Remoto",
+  schedule: "Tiempo completo",
+  salary: "s/ 1200",
+  publishedDate: "5 días",
+  applicationUrl: "https://ejemplo.com/apply", // URL de aplicación
+  skills: {
+    technical: 80,
+    soft: 80,
+    experience: 80
+  }
+};

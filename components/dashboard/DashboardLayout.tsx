@@ -14,14 +14,15 @@ import {
   LogOut,
   Menu,
   X,
-  Search,
-  Bell,
   MessageCircle,
-  Award,
-  ChevronDown
+  ChevronDown,
+  Laptop,
+  HelpCircle
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useCredits } from '@/hooks/useCredits';
+import CreditBalance from '../CreditBalance';
+import AutoCarousel from '../AutoCarousel';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -45,14 +46,14 @@ const sidebarItems = [
   {
     id: 'mis-postulaciones',
     label: 'Mis postulaciones',
-    icon: FileText,
+    icon: Laptop,
     href: '/postulaciones',
     badge: null
   },
   {
     id: 'mi-cv',
     label: 'Mi CV',
-    icon: User,
+    icon: FileText,
     href: '/crear-cv',
     badge: null
   }
@@ -87,15 +88,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#eff8ff]">
+    <div className="min-h-screen bg-white">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}>
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-4">
+        <div className="flex items-center justify-between h-16 mt-4 px-4">
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <img src="/MyWorkIn-web.png" alt="MyWorkIn" className="h-8" />
+            <img src="/MyWorkIn-web.png" alt="MyWorkIn" className="h-12" />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -106,18 +106,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Sidebar Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-2">
+        <nav className="flex-1 px-4 py-4 space-y-4">
           {sidebarItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.id}
                 href={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#028bbf] text-white'
+                className={`flex items-center space-x-3 px-3 py-4 rounded-lg text-sm font-medium transition-colors ${isActive
+                    ? 'bg-[#eff8ff] text-[#028bbf]'
                     : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
@@ -132,25 +131,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        {/* <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <Avatar user={user} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user.displayName || 'Usuario'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user.email}
-              </p>
-            </div>
-          </div>
-        </div> */}
+        <div className='m-2'>
+        <AutoCarousel />
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="">
           <div className="flex items-center justify-between h-16 px-4">
             {/* Mobile menu button */}
             <button
@@ -165,10 +154,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
               {/* Credits Badge */}
-              <div className="flex items-center space-x-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
-                <Award className="h-4 w-4" />
-                <span>{credits} créditos</span>
-              </div>
+              {/* Credit Balance Badge - Solo para usuarios autenticados */}
+              {user && (
+                <CreditBalance variant="compact" className="hidden md:flex" />
+              )}
 
               {/* Chat Button */}
               <button className="flex items-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2 rounded-full text-sm font-medium transition">
@@ -192,8 +181,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
                   <>
-                    <div 
-                      className="fixed inset-0 z-10" 
+                    <div
+                      className="fixed inset-0 z-10"
                       onClick={() => setUserDropdownOpen(false)}
                     />
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
@@ -230,7 +219,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className="p-6 m-4 border-none bg-[#eff8ff] rounded-2xl">
           {children}
         </main>
       </div>

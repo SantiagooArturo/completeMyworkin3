@@ -7,7 +7,6 @@ import JobListing from "@/components/job-listing"
 import CategoryNav from "@/components/category-nav"
 import { getRecentPracticesByCategory, getTodayPracticesByCategory, Practice } from "@/services/firebase"
 import Link from 'next/link'
-import Navbar from '@/components/navbar';
 
 interface CategoryData {
   icon: string;
@@ -53,7 +52,6 @@ export default function ClientBolsaTrabajoPage() {
   const formattedDate = extractionDate 
     ? new Date(extractionDate).toLocaleDateString('es-ES', { 
         day: 'numeric', 
-        
         month: 'long', 
         year: 'numeric' 
       })
@@ -100,103 +98,81 @@ export default function ClientBolsaTrabajoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100 font-poppins">
-      <Navbar />
+    <>
+      {/* Title Section - Oportunidades Laborales */}
+      <div className="mb-4 bg-[#028bbf] p-4 rounded-xl shadow-xl transform transition-transform duration-300 hover:scale-[1.01]">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="text-xl">💼</span>
+          <h2 className="text-2xl font-bold text-white">
+            Oportunidades Laborales
+          </h2>
+        </div>
+        <p className="text-white/90 ml-12 text-sm">
+          @MyWorkIn #PrácticasProfesionales
+        </p>
+      </div>
 
-      {/* Espaciador para compensar el header fijo */}
-      <div className="h-[52px]"></div>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-4 max-w-4xl">
-        {/* Title Section - Oportunidades Laborales */}
-        <div className="mb-4 bg-[#028bbf] p-4 rounded-xl shadow-xl transform transition-transform duration-300 hover:scale-[1.01]">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-xl">💼</span>
-            <h2 className="text-2xl font-bold text-white">
-              Oportunidades Laborales
-            </h2>
+      {/* Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Info Card con fecha de actualización */}
+        <div className="bg-white p-3 rounded-xl shadow-md flex items-center gap-3 border border-indigo-100">
+          <div className="text-indigo-500 bg-indigo-50 p-1.5 rounded-full">
+            <Info className="h-4 w-4" />
           </div>
-          <p className="text-white/90 ml-12 text-sm">
-            @MyWorkIn #PrácticasProfesionales
+          <p className="text-gray-700 text-xs">
+            Última actualización: <span className="font-medium text-indigo-700">{formattedDate}</span>
           </p>
         </div>
 
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Info Card con fecha de actualización */}
-          <div className="bg-white p-3 rounded-xl shadow-md flex items-center gap-3 border border-indigo-100">
-            <div className="text-indigo-500 bg-indigo-50 p-1.5 rounded-full">
-              <Info className="h-4 w-4" />
+        {/* Proceso de Aplicación */}
+        <div className="bg-white p-3 rounded-xl shadow-md border border-indigo-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="bg-[#028bbf] text-white h-6 w-6 rounded-full flex items-center justify-center mr-2 shadow-sm text-xs">1</span>
+              <h3 className="text-sm font-bold text-gray-800">Proceso:</h3>
             </div>
-            <p className="text-gray-700 text-xs">
-              Última actualización: <span className="font-medium text-indigo-700">{formattedDate}</span>
-            </p>
-          </div>
-
-          {/* Proceso de Aplicación */}
-          <div className="bg-white p-3 rounded-xl shadow-md border border-indigo-100">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
               <div className="flex items-center">
-                <span className="bg-[#028bbf] text-white h-6 w-6 rounded-full flex items-center justify-center mr-2 shadow-sm text-xs">1</span>
-                <h3 className="text-sm font-bold text-gray-800">Proceso:</h3>
+                <span className="text-lg mr-1">🔍</span>
+                <span className="text-gray-700 text-xs">Encuentra</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center">
-                  <span className="text-lg mr-1">🔍</span>
-                  <span className="text-gray-700 text-xs">Encuentra</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-lg mr-1">📋</span>
-                  <span className="text-gray-700 text-xs">Revisa</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-lg mr-1">✅</span>
-                  <span className="text-gray-700 text-xs">Postula</span>
-                </div>
+              <div className="flex items-center">
+                <span className="text-lg mr-1">📋</span>
+                <span className="text-gray-700 text-xs">Revisa</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-lg mr-1">✅</span>
+                <span className="text-gray-700 text-xs">Postula</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Menú de navegación por categorías */}
-        <CategoryNav categories={navigationCategories} />
+      {/* Menú de navegación por categorías */}
+      <CategoryNav categories={navigationCategories} />
 
-        {loading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#028bbf]"></div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {Object.entries(practicesByCategory).map(([category, practices]) => (
-              practices.length > 0 ? (
-                <JobCategory 
-                  key={category}
-                  id={category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
-                  icon={categoryIcons[category] || '📋'}
-                  title={`${category} (${practices.length})`}
-                  bgColor={category === 'Otros' ? 'bg-gray-50' : 'bg-amber-50'}
-                >
-                  {renderPractices(practices)}
-                </JobCategory>
-              ) : null
-            ))}
-          </div>
-        )}
-      </main>
-      
-      {/* Footer simplificado */}
-      <footer className="bg-white border-t border-gray-200 py-3 mt-4">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col justify-center items-center">
-            <p className="text-gray-600 text-xs mb-2">© 2025 MyWorkIn. Todos los derechos reservados.</p>
-            <div className="flex justify-center space-x-4 text-xs text-indigo-600">
-              <Link href="/terminos-condiciones" className="hover:text-indigo-800 transition-colors">Términos y Condiciones</Link>
-              <Link href="/politica-privacidad" className="hover:text-indigo-800 transition-colors">Política de Privacidad</Link>
-              <Link href="/politica-reembolsos" className="hover:text-indigo-800 transition-colors">Política de Reembolsos</Link>
-            </div>
-          </div>
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#028bbf]"></div>
         </div>
-      </footer>
-    </div>
+      ) : (
+        <div className="space-y-3">
+          {Object.entries(practicesByCategory).map(([category, practices]) => (
+            practices.length > 0 ? (
+              <JobCategory 
+                key={category}
+                id={category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
+                icon={categoryIcons[category] || '📋'}
+                title={`${category} (${practices.length})`}
+                bgColor={category === 'Otros' ? 'bg-gray-50' : 'bg-amber-50'}
+              >
+                {renderPractices(practices)}
+              </JobCategory>
+            ) : null
+          ))}
+        </div>
+      )}
+    </>
   );
-} 
+}
