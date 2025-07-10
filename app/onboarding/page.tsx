@@ -91,7 +91,7 @@ const WORK_TYPE_OPTIONS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [currentStep, setCurrentStep] = useState(4);
+  const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
   const [submitting, setSubmitting] = useState(false);
   const [showCompletionLoading, setShowCompletionLoading] = useState(false);
@@ -559,25 +559,7 @@ export default function OnboardingPage() {
               </RadioGroup>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-600 mb-2">
-                    Carrera actual <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={formData.currentCareer}
-                    onValueChange={value => updateFormData('currentCareer', value)}
-                  >
-                    <SelectTrigger className="w-full p-3 border border-gray-300 rounded-lg hover:border-[#028bbf] focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent">
-                      <SelectValue placeholder="Selecciona tu carrera" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CAREER_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+                {/* Centro de estudios a la izquierda */}
                 <div>
                   <label className="block text-gray-600 mb-2">
                     Centro de estudios
@@ -591,6 +573,26 @@ export default function OnboardingPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {STUDY_CENTER_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Carrera actual a la derecha */}
+                <div>
+                  <label className="block text-gray-600 mb-2">
+                    Carrera actual <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={formData.currentCareer}
+                    onValueChange={value => updateFormData('currentCareer', value)}
+                  >
+                    <SelectTrigger className="w-full p-3 border border-gray-300 rounded-lg hover:border-[#028bbf] focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent">
+                      <SelectValue placeholder="Selecciona tu carrera" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CAREER_OPTIONS.map(opt => (
                         <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -899,12 +901,7 @@ export default function OnboardingPage() {
                             <CheckCircle className="w-10 h-10 text-green-500 mb-2" strokeWidth={1.5} />
                             <span className="font-semibold text-green-700">CV Subido</span>
                             <span className="text-sm text-green-600 px-8 break-all">{uploadedCV.fileName}</span>
-                            <button
-                              onClick={handleCVAnalysis}
-                              className="mt-4 px-8 py-2 font-medium bg-primary text-white rounded-lg hover:bg-primary/500 transition-colors"
-                            >
-                              Analizar CV
-                            </button>
+                            
                           </>
                         ) : (
                           <>
@@ -1078,7 +1075,7 @@ export default function OnboardingPage() {
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isAnalyzing ? "Analizando CV..." : 
-           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Ir al Dashboard") : "Siguiente"}
+           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguiente") : "Siguiente"}
         </button>
       </div>
     </div>

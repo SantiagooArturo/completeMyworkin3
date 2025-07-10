@@ -219,7 +219,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Page Content */}
-        <main className="p-6 m-4 border-none bg-[#eff8ff] rounded-2xl">
+        <main className="p-6 m-4 border-none bg-[#eff8ff] min-h-[calc(120vh-16rem)] rounded-2xl">
           {children}
         </main>
       </div>

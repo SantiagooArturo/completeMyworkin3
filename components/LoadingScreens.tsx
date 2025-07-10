@@ -12,7 +12,7 @@ interface LoadingScreenProps {
   className?: string;
 }
 
-export default function LoadingScreen({ 
+export default function LoadingScreen({
   variant = 'default',
   message,
   subtitle,
@@ -21,117 +21,82 @@ export default function LoadingScreen({
   fullScreen = true,
   className = ''
 }: LoadingScreenProps) {
-  
   const getLoadingContent = () => {
     switch (variant) {
       case 'dashboard':
         return {
-          icon: <Loader2 className="h-12 w-12 text-myworkin-blue animate-spin" />,
+          icon: <Loader2 className="h-10 w-10 text-myworkin-blue animate-spin" />,
           title: message || 'Cargando dashboard...',
-          subtitle: subtitle || 'Preparando tu espacio de trabajo',
-          bgGradient: 'from-blue-50 via-indigo-50 to-purple-50'
+          subtitle: subtitle || '',
         };
-        
       case 'cv':
         return {
-          icon: <FileText className="h-12 w-12 text-myworkin-blue animate-pulse" />,
+          icon: <FileText className="h-10 w-10 text-myworkin-blue animate-pulse" />,
           title: message || 'Procesando CV...',
-          subtitle: subtitle || 'Preparando tu currículum vitae',
-          bgGradient: 'from-green-50 via-blue-50 to-teal-50'
+          subtitle: subtitle || '',
         };
-        
       case 'interview':
         return {
-          icon: <Bot className="h-12 w-12 text-myworkin-blue animate-bounce" />,
+          icon: <Bot className="h-10 w-10 text-myworkin-blue animate-bounce" />,
           title: message || 'Preparando entrevista...',
-          subtitle: subtitle || 'Configurando simulación con IA',
-          bgGradient: 'from-purple-50 via-pink-50 to-red-50'
+          subtitle: subtitle || '',
         };
-        
       case 'analysis':
         return {
-          icon: <Brain className="h-12 w-12 text-myworkin-blue animate-pulse" />,
+          icon: <Brain className="h-10 w-10 text-myworkin-blue animate-pulse" />,
           title: message || 'Analizando con IA...',
-          subtitle: subtitle || 'Procesando información',
-          bgGradient: 'from-orange-50 via-yellow-50 to-amber-50'
+          subtitle: subtitle || '',
         };
-        
       case 'upload':
         return {
-          icon: <Upload className="h-12 w-12 text-myworkin-blue animate-bounce" />,
+          icon: <Upload className="h-10 w-10 text-myworkin-blue animate-bounce" />,
           title: message || 'Subiendo archivo...',
-          subtitle: subtitle || 'Guardando tu documento',
-          bgGradient: 'from-cyan-50 via-sky-50 to-blue-50'
+          subtitle: subtitle || '',
         };
-        
       case 'processing':
         return {
-          icon: <Search className="h-12 w-12 text-myworkin-blue animate-spin" />,
+          icon: <Search className="h-10 w-10 text-myworkin-blue animate-spin" />,
           title: message || 'Procesando...',
-          subtitle: subtitle || 'Esto puede tomar unos momentos',
-          bgGradient: 'from-indigo-50 via-purple-50 to-pink-50'
+          subtitle: subtitle || '',
         };
-        
       default:
         return {
-          icon: <Loader2 className="h-12 w-12 text-myworkin-blue animate-spin" />,
+          icon: <Loader2 className="h-10 w-10 text-myworkin-blue animate-spin" />,
           title: message || 'Cargando...',
-          subtitle: subtitle || 'Por favor espera',
-          bgGradient: 'from-gray-50 via-slate-50 to-zinc-50'
+          subtitle: subtitle || '',
         };
     }
   };
 
   const content = getLoadingContent();
-  
-  const containerClasses = fullScreen 
-    ? `min-h-screen bg-gradient-to-br ${content.bgGradient} flex items-center justify-center`
-    : `flex items-center justify-center p-8 bg-gradient-to-br ${content.bgGradient} rounded-lg`;
+
+  const containerClasses = fullScreen
+    ? `min-h-screen flex items-center justify-center bg-white`
+    : `flex items-center justify-center p-8 bg-white rounded-lg`;
 
   return (
     <div className={`${containerClasses} ${className}`}>
-      <div className="text-center max-w-md mx-auto">
-        {/* Icon */}
+      <div className="text-center max-w-xs mx-auto">
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-white rounded-full shadow-lg">
+          <div className="p-3 bg-gray-100 rounded-full">
             {content.icon}
           </div>
         </div>
-        
-        {/* Title */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {content.title}
-        </h2>
-        
-        {/* Subtitle */}
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">{content.title}</h2>
         {content.subtitle && (
-          <p className="text-gray-600 mb-6">
-            {content.subtitle}
-          </p>
+          <p className="text-gray-500 mb-4">{content.subtitle}</p>
         )}
-        
-        {/* Progress Bar */}
         {showProgress && (
-          <div className="w-full max-w-sm mx-auto mb-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>Progreso</span>
-              <span>{progress || 0}%</span>
-            </div>
+          <div className="w-full max-w-xs mx-auto mb-2">
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-myworkin-blue h-2 rounded-full transition-all duration-300 ease-out"
+              <div
+                className="bg-myworkin-blue h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress || 0}%` }}
               />
             </div>
+            <div className="text-xs text-gray-400 mt-1 text-right">{progress || 0}%</div>
           </div>
         )}
-        
-        {/* Animated dots */}
-        <div className="flex justify-center space-x-1">
-          <div className="w-2 h-2 bg-myworkin-blue rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-myworkin-blue rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-2 h-2 bg-myworkin-blue rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-        </div>
       </div>
     </div>
   );

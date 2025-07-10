@@ -9,8 +9,31 @@ import {
   Search, 
   Filter,
   ChevronDown,
-  Calendar
+  Calendar,
+  DollarSign
 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Tipos para las columnas
 type ColumnType = 'guardados' | 'postulados' | 'entrevistas' | 'rechazados' | 'aceptados';
@@ -24,6 +47,7 @@ interface JobApplication {
   schedule: string;
   appliedDate: string;
   status: ColumnType;
+  salary?: string;
 }
 
 // Datos de ejemplo
@@ -36,7 +60,8 @@ const initialApplications: JobApplication[] = [
     type: 'Remoto',
     schedule: 'Tiempo completo',
     appliedDate: '07/01/25',
-    status: 'guardados'
+    status: 'guardados',
+    salary: 'S/ 1200'
   },
   {
     id: 2,
@@ -46,7 +71,8 @@ const initialApplications: JobApplication[] = [
     type: 'Híbrido',
     schedule: 'Tiempo completo',
     appliedDate: '07/01/25',
-    status: 'postulados'
+    status: 'postulados',
+    salary: 'S/ 1500'
   },
   {
     id: 3,
@@ -56,7 +82,8 @@ const initialApplications: JobApplication[] = [
     type: 'Presencial',
     schedule: 'Medio tiempo',
     appliedDate: '07/01/25',
-    status: 'entrevistas'
+    status: 'entrevistas',
+    salary: 'S/ 1800'
   },
   {
     id: 4,
@@ -66,7 +93,8 @@ const initialApplications: JobApplication[] = [
     type: 'Remoto',
     schedule: 'Tiempo completo',
     appliedDate: '06/01/25',
-    status: 'aceptados'
+    status: 'aceptados',
+    salary: 'S/ 1000'
   },
   {
     id: 5,
@@ -76,74 +104,110 @@ const initialApplications: JobApplication[] = [
     type: 'Híbrido',
     schedule: 'Tiempo completo',
     appliedDate: '05/01/25',
-    status: 'rechazados'
+    status: 'rechazados',
+    salary: 'S/ 900'
   }
 ];
 
 const columns = [
-  { id: 'guardados' as ColumnType, title: 'Guardados', count: 20, color: 'bg-blue-500' },
-  { id: 'postulados' as ColumnType, title: 'Postulados', count: 13, color: 'bg-purple-500' },
-  { id: 'entrevistas' as ColumnType, title: 'Entrevistas', count: 13, color: 'bg-orange-500' },
-  { id: 'rechazados' as ColumnType, title: 'Rechazados', count: 5, color: 'bg-red-500' },
-  { id: 'aceptados' as ColumnType, title: 'Aceptados', count: 9, color: 'bg-green-500' }
+  { id: 'guardados' as ColumnType, title: 'Guardados', count: 20, borderColor: 'border-blue-500', headerColor: 'bg-blue-500' },
+  { id: 'postulados' as ColumnType, title: 'Postulados', count: 13, borderColor: 'border-purple-500', headerColor: 'bg-purple-500' },
+  { id: 'entrevistas' as ColumnType, title: 'Entrevistas', count: 13, borderColor: 'border-orange-500', headerColor: 'bg-orange-500' },
+  { id: 'rechazados' as ColumnType, title: 'Rechazados', count: 5, borderColor: 'border-red-500', headerColor: 'bg-red-500' },
+  { id: 'aceptados' as ColumnType, title: 'Aceptados', count: 9, borderColor: 'border-green-500', headerColor: 'bg-green-500' }
 ];
 
 // Componente de JobCard simplificado
-function JobApplicationCard({ job, onDragStart }: { job: JobApplication; onDragStart: (job: JobApplication) => void }) {
+function JobApplicationCard({
+  job,
+  onDragStart,
+  onDelete,
+  borderColor,
+}: {
+  job: JobApplication;
+  onDragStart: (job: JobApplication) => void;
+  onDelete: (jobId: number) => void;
+  borderColor: string; // <-- NUEVO PROP
+}) {
+  const [showDialog, setShowDialog] = useState(false);
+
   return (
-    <div
-      draggable
-      onDragStart={() => onDragStart(job)}
-      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all cursor-move mb-3"
-    >
-      {/* Header con fecha */}
-      <div className="flex justify-between items-start mb-3">
-        <p className="text-xs text-gray-500">
-          Última actualización {job.appliedDate}
-        </p>
-      </div>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          draggable
+          onDragStart={() => onDragStart(job)}
+          className={`bg-white min-w-[340px] rounded-xl border-2 ${borderColor} p-4 hover:shadow-md transition-all cursor-move`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0" />
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg leading-tight">{job.title}</h3>
+              <p className="text-gray-600 text-base">{job.company}</p>
+            </div>
+          </div>
+          <hr className="my-2 border-blue-50" />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700 text-sm">
+            <div className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              <span>{job.location}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              <span>{job.schedule}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Building className="h-4 w-4" />
+              <span>{job.type}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <DollarSign className="h-4 w-4" />
+              <span>{job.salary ?? 'No disponible'}</span>
+            </div>
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={() => setShowDialog(true)} className="text-red-600">
+          Eliminar
+        </ContextMenuItem>
+      </ContextMenuContent>
 
-      {/* Logo y título */}
-      <div className="flex items-start space-x-3 mb-3">
-        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Building className="h-6 w-6 text-gray-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-sm leading-tight">
-            {job.title}
-          </h3>
-          <p className="text-gray-600 text-sm">
-            {job.company}
-          </p>
-        </div>
-      </div>
-
-      {/* Detalles */}
-      <div className="space-y-2">
-        <div className="flex items-center text-xs text-gray-600">
-          <MapPin className="h-3 w-3 mr-2" />
-          <span>{job.location}</span>
-        </div>
-        <div className="flex items-center text-xs text-gray-600">
-          <Building className="h-3 w-3 mr-2" />
-          <span>{job.type}</span>
-        </div>
-        <div className="flex items-center text-xs text-gray-600">
-          <Clock className="h-3 w-3 mr-2" />
-          <span>{job.schedule}</span>
-        </div>
-      </div>
-    </div>
+      <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar postulación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. ¿Seguro que deseas eliminar esta postulación?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                onDelete(job.id);
+                setShowDialog(false);
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ContextMenu>
   );
 }
 
 export default function PostulacionesPage() {
   const [applications, setApplications] = useState<JobApplication[]>(initialApplications);
   const [searchQuery, setSearchQuery] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [draggedJob, setDraggedJob] = useState<JobApplication | null>(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [estado, setEstado] = useState("");
+  const [tipoTrabajo, setTipoTrabajo] = useState("");
+  const [jornada, setJornada] = useState("");
 
   const handleDragStart = useCallback((job: JobApplication) => {
     setDraggedJob(job);
@@ -169,6 +233,10 @@ export default function PostulacionesPage() {
 
   const getApplicationsByStatus = (status: ColumnType) => {
     return applications.filter(app => app.status === status);
+  };
+
+  const handleDeleteJob = (jobId: number) => {
+    setApplications((prev) => prev.filter((job) => job.id !== jobId));
   };
 
   const filterOptions = [
@@ -197,7 +265,7 @@ export default function PostulacionesPage() {
               placeholder="Buscar en mis postulaciones"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-myworkin-500 focus:border-transparent transition-all duration-200 shadow-sm"
+              className="w-full pl-4 pr-12 py-3 bg-white border border-none rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-myworkin-500 focus:border-transparent transition-all duration-200 shadow-sm"
             />
             <div className="absolute inset-y-0 right-0 flex items-center pr-4">
               <Search className="h-5 w-5 text-gray-400" />
@@ -206,94 +274,127 @@ export default function PostulacionesPage() {
 
           {/* Filtros de fecha */}
           <div className="flex gap-2">
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder="Selecciona rango de fechas"
+              className="min-w-[220px] border border-myworkin-blue"
+            />
             <div className="relative">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-myworkin-500"
-                placeholder="04/17/2022"
-              />
-            </div>
-            <div className="relative">
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-myworkin-500"
-                placeholder="04/17/2022"
-              />
-            </div>
-            
-            {/* Botón Filtrar */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center space-x-2 px-6 py-3 bg-myworkin-500 text-white rounded-xl font-medium hover:bg-myworkin-600 transition-colors"
-              >
-                <Filter className="h-4 w-4" />
-                <span>Filtrar</span>
-              </button>
-              
-              {showFilterDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                  <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b border-gray-200">
-                    Filtros
-                  </div>
-                  {filterOptions.map((option) => (
-                    <div key={option} className="px-4 py-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">{option}</span>
-                        <select className="text-xs border border-gray-200 rounded px-2 py-1">
-                          <option>Selecciona {option.toLowerCase()}</option>
-                        </select>
-                      </div>
+              <Popover open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
+                <PopoverTrigger asChild>
+                  <Button variant='default' className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filtrar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[340px] p-4" align="end">
+                  <div className="space-y-4">
+                    {/* Estado */}
+                    <div>
+                      <Label htmlFor="estado" className="text-gray-700 mb-1 block">Estado</Label>
+                      <Select value={estado} onValueChange={setEstado}>
+                        <SelectTrigger id="estado" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                          <SelectValue placeholder="Selecciona estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="guardados">Guardados</SelectItem>
+                          <SelectItem value="postulados">Postulados</SelectItem>
+                          <SelectItem value="entrevistas">Entrevistas</SelectItem>
+                          <SelectItem value="rechazados">Rechazados</SelectItem>
+                          <SelectItem value="aceptados">Aceptados</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
-                  <div className="flex justify-between px-4 py-2 border-t border-gray-200">
-                    <button className="text-sm text-myworkin-500 hover:text-myworkin-600">
-                      Limpiar
-                    </button>
-                    <button className="text-sm bg-myworkin-500 text-white px-3 py-1 rounded hover:bg-myworkin-600">
-                      Aplicar
-                    </button>
+                    {/* Tipo trabajo */}
+                    <div>
+                      <Label htmlFor="tipo-trabajo" className="text-gray-700 mb-1 block">Tipo trabajo</Label>
+                      <Select value={tipoTrabajo} onValueChange={setTipoTrabajo}>
+                        <SelectTrigger id="tipo-trabajo" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                          <SelectValue placeholder="Selecciona tipo trabajo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="remoto">Remoto</SelectItem>
+                          <SelectItem value="hibrido">Híbrido</SelectItem>
+                          <SelectItem value="presencial">Presencial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Jornada */}
+                    <div>
+                      <Label htmlFor="jornada" className="text-gray-700 mb-1 block">Jornada</Label>
+                      <Select value={jornada} onValueChange={setJornada}>
+                        <SelectTrigger id="jornada" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                          <SelectValue placeholder="Selecciona jornada" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tiempo-completo">Tiempo completo</SelectItem>
+                          <SelectItem value="medio-tiempo">Medio tiempo</SelectItem>
+                          <SelectItem value="practicas">Prácticas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Botones */}
+                    <div className="flex justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        className="border-2 border-myworkin-500 text-myworkin-500 font-bold rounded-xl px-6"
+                        onClick={() => {
+                          setEstado("");
+                          setTipoTrabajo("");
+                          setJornada("");
+                          setShowFilterDropdown(false);
+                        }}
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        className="bg-myworkin-500 hover:bg-myworkin-600 font-bold rounded-xl px-6"
+                        onClick={() => setShowFilterDropdown(false)}
+                      >
+                        Filtrar
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
 
         {/* Kanban Board */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {columns.map((column) => (
-            <div
-              key={column.id}
-              className="bg-gray-50 rounded-lg p-4"
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, column.id)}
-            >
-              {/* Column Header */}
-              <div className="flex items-center space-x-2 mb-4">
-                <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                <h3 className="font-medium text-gray-900">{column.title}</h3>
-                <span className="bg-white text-gray-600 text-xs px-2 py-1 rounded-full">
-                  {getApplicationsByStatus(column.id).length}
-                </span>
-              </div>
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-[1200px]">
+            {columns.map((column) => (
+              <div
+                key={column.id}
+                className="bg-gray-50 rounded-lg min-w-[370px] max-w-[370px] flex-shrink-0"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, column.id)}
+              >
+                {/* Column Header */}
+                <div className={`rounded-t-lg px-4 py-3 mb-4 flex items-center justify-between ${column.headerColor}`}>
+                  <h3 className="font-medium text-white">{column.title}</h3>
+                  <span className="bg-white text-base font-bold px-3 py-1 rounded-full">
+                    {column.count}
+                  </span>
+                </div>
 
-              {/* Cards */}
-              <div className="space-y-3">
-                {getApplicationsByStatus(column.id).map((job) => (
-                  <JobApplicationCard
-                    key={job.id}
-                    job={job}
-                    onDragStart={handleDragStart}
-                  />
-                ))}
+                {/* Cards */}
+                <div className="space-y-3 m-4">
+                  {getApplicationsByStatus(column.id).map((job) => (
+                    <JobApplicationCard
+                      key={job.id}
+                      job={job}
+                      onDragStart={handleDragStart}
+                      onDelete={handleDeleteJob}
+                      borderColor={column.borderColor}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </DashboardLayout>
