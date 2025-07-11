@@ -32,7 +32,12 @@ function CrearCVContent() {
     if (user) {
       loadUserCVs();
     }
-  }, [user]);
+    
+    // Si viene del onboarding, mostrar el builder directamente
+    if (isFromOnboarding) {
+      setShowBuilder(true);
+    }
+  }, [user, isFromOnboarding]);
 
   // Funciones auxiliares
   const loadUserCVs = async () => {
@@ -206,21 +211,7 @@ function CrearCVContent() {
 
   if (showBuilder) {
     const builderContent = (
-      <>
-        {/* Banner informativo si viene del onboarding */}
-        {isFromOnboarding && (
-          <div className="bg-blue-50 border-b border-blue-200 p-4">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-lg font-semibold text-blue-900 mb-1">
-                Creando tu primer CV profesional
-              </h2>
-              <p className="text-blue-700">
-                Una vez que completes tu CV, continuaremos con tu proceso de onboarding y te llevaremos al dashboard.
-              </p>
-            </div>
-          </div>
-        )}
-        
+      <>        
         <div className="container mx-auto py-8">
           <div className="mb-6">
             {/* Botón Volver */}
@@ -262,7 +253,7 @@ function CrearCVContent() {
     if (isFromOnboarding) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-indigo-100">
-          <Navbar />
+          {/* <Navbar /> */}
           <div className="h-[52px]"></div>
           {builderContent}
         </div>

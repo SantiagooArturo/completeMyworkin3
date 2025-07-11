@@ -18,11 +18,12 @@ import PageWarningModal from './PageWarningModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
-import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info, GraduationCap } from 'lucide-react';
+import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CreditService } from '@/services/creditService';
 import { useCredits } from '@/hooks/useCredits';
+import { useToast } from "@/hooks/use-toast";
 
 import GuidePanel from './GuidePanel';
 
@@ -55,6 +56,7 @@ interface CVBuilderProps {
 export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRedirect = true }: CVBuilderProps) {
   const { user } = useAuth();
   const { credits, hasEnoughCredits, refreshCredits } = useCredits(user);
+  const { toast } = useToast();
   const [cvData, setCVData] = useState<CVData>(initialCVData);
   const [activeTab, setActiveTab] = useState('personal');
   const [showPreview, setShowPreview] = useState(true);
@@ -63,7 +65,6 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
   const [isSaving, setIsSaving] = useState(false);
   const [cvTitle, setCVTitle] = useState('Mi CV');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isStudentMode, setIsStudentMode] = useState(true); // Modo estudiante por defecto
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [pageInfo, setPageInfo] = useState({ totalPages: 1, currentPageHeight: 0 });
@@ -101,15 +102,20 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
 
   const loadExistingCV = async () => {
     try {
-      setIsLoading(true);      const savedCV = await cvBuilderService.getCV(cvId!);
+      setIsLoading(true);
+      const savedCV = await cvBuilderService.getCV(cvId!);
       if (savedCV) {
-        // Cargar datos del CV
         setCVData(savedCV.data as CVData);
         setCVTitle(savedCV.title);
-        setHasUnsavedChanges(false); // No hay cambios no guardados al cargar
+        setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error('Error cargando CV:', error);
+      toast({
+        title: "Error al cargar CV",
+        description: "No se pudo cargar el CV. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -208,40 +214,52 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
   };
   const handleSaveCV = async () => {
     if (!user) {
-      alert('Debes iniciar sesión para guardar tu CV');
+      toast({
+        title: "Error de autenticación",
+        description: "Debes iniciar sesión para guardar tu CV",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setIsSaving(true);
       
-      // Usar validación específica para estudiantes
       const validation = isStudentMode 
         ? validateStudentCV(cvData)
         : cvBuilderService.validateCVData(cvData);
         
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
+        toast({
+          title: "Campos incompletos",
+          description: "Por favor, completa todos los campos obligatorios marcados en rojo.",
+          variant: "destructive"
+        });
         return;
       }
 
-      // Solo consumir crédito para CVs nuevos (no para ediciones)
       if (!cvId) {
-        // Verificar si tiene suficientes créditos
         if (!hasEnoughCredits('cv-creation')) {
-          alert('No tienes suficientes créditos para crear un CV. Necesitas 1 crédito.');
+          toast({
+            title: "Créditos insuficientes",
+            description: "No tienes suficientes créditos para crear un CV. Necesitas 1 crédito.",
+            variant: "destructive"
+          });
           return;
         }
 
-        // Consumir crédito antes de guardar
         const consumeResult = await CreditService.consumeCredits(user, 'cv-creation', 'Creación de CV');
         
         if (!consumeResult.success) {
-          alert(consumeResult.message || 'Error al procesar los créditos');
+          toast({
+            title: "Error al procesar créditos",
+            description: consumeResult.message || 'Error al procesar los créditos',
+            variant: "destructive"
+          });
           return;
         }
         
-        // Actualizar balance de créditos en la UI
         await refreshCredits();
       }
 
@@ -253,50 +271,73 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
         savedCvId = await cvBuilderService.saveCV(user, cvData, cvTitle, 'harvard');
       }
 
-      setHasUnsavedChanges(false); // Marcar como guardado
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setHasUnsavedChanges(false);
       
-      // Si hay un callback personalizado, llamarlo
+      toast({
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span>CV guardado exitosamente</span>
+          </div>
+        ),
+        description: cvId ? "Tu CV ha sido actualizado correctamente" : "Tu CV se ha creado y guardado correctamente",
+        className: "border-green-200 bg-green-50"
+      });
+      
       if (onSave && savedCvId) {
         await onSave(cvData, savedCvId);
       }
     } catch (error) {
       console.error('Error al guardar CV:', error);
-      alert('Error al guardar el CV. Inténtalo de nuevo.');
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo guardar el CV. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
     } finally {
       setIsSaving(false);
     }
   };
   const handleDownloadPDF = async () => {
     try {
-      // Validación previa...
       const validation = isStudentMode 
         ? validateStudentCV(cvData)
         : cvBuilderService.validateCVData(cvData);
 
       if (!validation.isValid) {
         setValidationErrors(validation.errors);
+        toast({
+          title: "No se puede descargar el PDF",
+          description: "Por favor, completa todos los campos obligatorios antes de descargar.",
+          variant: "destructive"
+        });
         return;
       }
 
-      // 1. Generar PDF en memoria y obtener número de páginas real
       const { blob, totalPages, fileName } = await CVPDFGeneratorSimple.generatePDF(cvData);
       setPdfBlob(blob);
       setPdfPageCount(totalPages);
       setPdfFileName(fileName || 'CV.pdf');
 
-      // 2. Mostrar modal si hay más de 1 página
       if (totalPages > 1) {
         setShowPageWarning(true);
         return;
       }
 
-      // 3. Descargar directamente si 1 página
       await CVPDFGeneratorSimple.downloadPDFBlob(blob, fileName);
+      
+      toast({
+        title: "PDF descargado exitosamente",
+        description: "Tu CV se ha descargado correctamente.",
+        className: "border-green-200 bg-green-50"
+      });
     } catch (error) {
       console.error('Error al generar PDF:', error);
-      alert('Error al generar el PDF');
+      toast({
+        title: "Error al generar PDF",
+        description: "No se pudo generar el PDF. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -304,6 +345,12 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
     if (pdfBlob) {
       setShowPageWarning(false);
       await CVPDFGeneratorSimple.downloadPDFBlob(pdfBlob, pdfFileName);
+      
+      toast({
+        title: "PDF descargado exitosamente",
+        description: "Tu CV se ha descargado correctamente.",
+        className: "border-green-200 bg-green-50"
+      });
     }
   };
 
@@ -362,9 +409,9 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
               type="text"
               value={cvTitle}
               onChange={(e) => setCVTitle(e.target.value)}
-              className="text-lg font-medium bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none shadow-sm min-w-[250px]"
+              className="text-lg font-medium bg-white border border-gray-300 mb-2 rounded-md px-3 py-2 text-gray-900 focus:border-[#028bbf] focus:ring-1 focus:ring-[#028bbf] outline-none shadow-sm min-w-[250px]"
               placeholder="Nombre de tu CV"
-            />``
+            />
           </div>
         </div>
 
@@ -415,16 +462,7 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
         </div>
       </div>
 
-      {/* Alertas */}
-      {saveSuccess && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            CV guardado exitosamente
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* Alertas - Remover el Alert de saveSuccess y mantener solo validationErrors */}
       {validationErrors.length > 0 && (
         <Alert className="border-red-200 bg-red-50">
           <AlertCircle className="h-4 w-4 text-red-600" />
