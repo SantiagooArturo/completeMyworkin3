@@ -103,9 +103,9 @@ export const analyzeCV = async (pdfUrl, puestoPostular, originalFileName) => {
   }
 };
 
-export const matchesCV = async (cvUrl, puestoPostular, telefono) => {
+export const matchesCV = async (cvUrl, puestoPostular) => {
   try {
-    const url = `/api/proxy-match-cv?pdf_url=${encodeURIComponent(cvUrl)}&puesto=${encodeURIComponent(puestoPostular)}&numero=${encodeURIComponent(telefono)}`;
+    const url = `https://api-jobs-tyc1.onrender.com/analizar_practicas/?pdf_url=${encodeURIComponent(cvUrl)}&puesto=${encodeURIComponent(puestoPostular)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Error al buscar prácticas: ' + response.statusText);

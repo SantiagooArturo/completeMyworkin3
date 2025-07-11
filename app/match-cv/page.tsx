@@ -45,7 +45,6 @@ export default function MatchCV() {
 
   // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
   const [file, setFile] = useState<File | null>(null);
-  const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
@@ -173,11 +172,7 @@ export default function MatchCV() {
       setError("Por favor, selecciona un archivo PDF");
       return;
     }
-    if (!telefono || !puesto) {
-      setError("Completa todos los campos");
-      return;
-    }
-
+  
     // Verificar autenticación
     if (!user) {
       setError("Debes iniciar sesión para usar esta herramienta");
@@ -217,7 +212,7 @@ export default function MatchCV() {
       console.log("✅ CV subido exitosamente");
       
       console.log("🔍 Buscando prácticas...");
-      const trabajos = await matchesCV(pdfUrl, puesto, telefono);
+      const trabajos = await matchesCV(pdfUrl, puesto);
       console.log(`✅ Encontradas ${trabajos.length} prácticas`);
       
       // 3. CONFIRMAR consumo de créditos solo después del éxito
@@ -268,7 +263,6 @@ export default function MatchCV() {
     setShowInputs(true);
     setPracticas([]);
     setPuesto("");
-    setTelefono("");
     setFile(null);
     setUploaded(false);
   };
@@ -348,7 +342,6 @@ export default function MatchCV() {
               {showInputs && !showResults && !loading && (
                 <form className="max-w-lg mx-auto text-gray-800 bg-blue-50 rounded-xl p-6 shadow flex flex-col gap-4 animate-fade-in" onSubmit={handleBuscar}>
                   <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Completa tus datos</h3>
-                  <input type="tel" className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#028bbf]" placeholder="Número de teléfono (ej: 51999999999)" value={telefono} onChange={e => setTelefono(e.target.value)} required />
                   <input type="text" className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#028bbf]" placeholder="Puesto de trabajo que buscas" value={puesto} onChange={e => setPuesto(e.target.value)} required />
                   <button type="submit" className="px-6 py-3 bg-[#028bbf] text-white rounded-xl font-medium hover:bg-[#027ba8] transition-colors mt-2 disabled:opacity-60" disabled={loading}>Buscar prácticas</button>
                   {error && <p className="text-red-500 mt-2">{error}</p>}
