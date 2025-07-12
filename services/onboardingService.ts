@@ -18,8 +18,8 @@ export interface OnboardingData {
   // Step 4: CV Information
   cvSource: 'uploaded' | 'created' | null;
   cvId?: string;
-  cvFileName?: string;
-  cvFileUrl?: string;
+  cvFileName: string;
+  cvFileUrl: string;
   cvData?: {
     personalInfo: {
       fullName: string;

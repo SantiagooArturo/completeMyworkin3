@@ -98,8 +98,8 @@ function CrearCVContent() {
       // Integrar datos del CV al onboarding
       await OnboardingService.integrateCVData(user, cvId, cvData, 'created');
       
-      // Regresar al onboarding con el CV creado
-      router.push('/onboarding?step=4&cvCreated=true');
+      // ✅ CORREGIDO: Regresar al paso 3 con el CV creado
+      router.push('/onboarding?step=3&cvCreated=true&cvId=' + cvId);
       
     } catch (error) {
       console.error('Error integrando CV al onboarding:', error);

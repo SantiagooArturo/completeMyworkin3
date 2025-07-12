@@ -17,8 +17,11 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FileUp, FilePlus, Upload, CheckCircle } from 'lucide-react';
-import { cvReviewService } from '@/services/cvReviewService';
+import { matchPractices } from '@/services/matchPracticesService';
+import { OnboardingMatchService } from '@/services/onboardingMatchService';
 import LoadingScreen from '@/components/LoadingScreens';
+import OnboardingLoadingScreen from '@/components/OnboardingLoadingScreen';
+import CVSubmissionModal from '@/components/CVSubmissionModal';
 
 // Opciones para los selects y botones
 const CAREER_OPTIONS = [
@@ -92,10 +95,11 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 3;
   const [submitting, setSubmitting] = useState(false);
   const [showCompletionLoading, setShowCompletionLoading] = useState(false);
   const [completionProgress, setCompletionProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState<'saving' | 'searching' | 'preparing' | 'complete'>('saving');
 
   // Estado para los datos del formulario
   const [formData, setFormData] = useState<OnboardingData>({
@@ -122,6 +126,8 @@ export default function OnboardingPage() {
     workType: [], // Cambiado a string[] para selección múltiple
     cvSource: null, // Añadido para resolver el error
     hasCV: '',
+    cvFileName: '', // Añadido para resolver el error
+    cvFileUrl: '', // Añadido para resolver el error
   });
 
   const [areasOpen, setAreasOpen] = useState(false);
@@ -137,6 +143,9 @@ export default function OnboardingPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Estado para el modal de CV
+  const [showCVModal, setShowCVModal] = useState(false);
 
   // Cerrar dropdowns cuando se hace clic fuera
   useEffect(() => {
@@ -166,6 +175,17 @@ export default function OnboardingPage() {
   };
 
   const handleNext = async () => {
+    // Debug: Imprimir estado actual antes de avanzar
+    console.log('🎯 Estado actual antes de handleNext:', {
+      currentStep,
+      uploadedCV,
+      formData: {
+        interestedRoles: formData.interestedRoles,
+        cvFileUrl: formData.cvFileUrl,
+        hasCV: formData.hasCV
+      }
+    });
+
     // Guardar datos del paso actual antes de avanzar
     if (currentStep === 1) {
       await saveStepData({
@@ -186,8 +206,14 @@ export default function OnboardingPage() {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Paso final: completar onboarding
-      await completeOnboarding();
+      // Paso final: verificar si hay CV subido
+      if (!uploadedCV?.fileUrl) {
+        // Si no hay CV, mostrar modal para subirlo
+        setShowCVModal(true);
+      } else {
+        // Si hay CV, completar onboarding normalmente
+        await completeOnboarding();
+      }
     }
   };
 
@@ -208,6 +234,120 @@ export default function OnboardingPage() {
     }
   };
 
+  // Función para manejar el envío del modal CV
+  const handleCVModalSubmit = async (file: File, puesto: string) => {
+    try {
+      console.log('🔄 Iniciando proceso de CV modal...');
+      
+      // Subir el CV usando la misma lógica que handleCVUpload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('type', 'cv');
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Error al subir el archivo');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const fileUrl = uploadResult.url;
+      
+      if (!fileUrl) {
+        throw new Error('Error: No se recibió la URL del archivo subido');
+      }
+
+      console.log('✅ CV subido desde modal:', {
+        fileName: file.name,
+        fileUrl: fileUrl
+      });
+
+      // Actualizar estados
+      const cvData = {
+        fileName: file.name,
+        fileUrl: fileUrl
+      };
+      
+      setUploadedCV(cvData);
+      updateFormData('hasCV', 'uploaded');
+      updateFormData('cvFileName', file.name);
+      updateFormData('cvFileUrl', fileUrl);
+      
+      // Asegurar que el puesto esté en los roles seleccionados
+      const currentRoles = formData.interestedRoles;
+      const updatedRoles = currentRoles.includes(puesto) 
+        ? currentRoles 
+        : [...currentRoles, puesto];
+      
+      updateFormData('interestedRoles', updatedRoles);
+      
+      console.log('✅ Estados actualizados desde modal');
+      
+      // Cerrar modal
+      setShowCVModal(false);
+      
+      // Esperar un momento para asegurar que los estados se actualicen
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Mostrar pantalla de carga y proceder
+      setSubmitting(true);
+      setShowCompletionLoading(true);
+      setLoadingStep('saving');
+
+      // Guardar datos del onboarding
+      const completeData: any = {
+        educationType: formData.educationType,
+        currentCareer: formData.currentCareer,
+        studyCenter: formData.studyCenter,
+        studyStatus: formData.studyStatus,
+        currentCycle: formData.currentCycle,
+        graduationYear: formData.graduationYear,
+        interestedRoles: updatedRoles,
+        workType: formData.workType,
+        cvSource: 'uploaded',
+        cvFileName: file.name,
+        cvFileUrl: fileUrl
+      };
+      
+      await OnboardingService.completeOnboarding(user!, completeData);
+
+      // Hacer match practices
+      setLoadingStep('searching');
+      
+      console.log('📤 Ejecutando match con datos del modal:', {
+        puesto: puesto,
+        cv_url: fileUrl
+      });
+
+      const matchResult = await OnboardingMatchService.executeMatchWithRetry({
+        puesto: puesto,
+        cv_url: fileUrl
+      }, user!.uid);
+
+      console.log(`✅ Match completado: ${matchResult.practices.length} prácticas (${matchResult.source})`);
+      
+      // Finalizar
+      setLoadingStep('preparing');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setLoadingStep('complete');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Redirigir al portal de trabajo
+      router.push('/portal-trabajo');
+      
+    } catch (error) {
+      console.error('❌ Error en CVModalSubmit:', error);
+      setShowCompletionLoading(false);
+      setSubmitting(false);
+      throw error; // Re-lanzar para que el modal muestre el error
+    }
+  };
+
   // Función para completar onboarding
   const completeOnboarding = async () => {
     if (!user) return;
@@ -215,11 +355,10 @@ export default function OnboardingPage() {
     try {
       setSubmitting(true);
       setShowCompletionLoading(true);
-      setCompletionProgress(0);
-      
-      // Paso 1: Guardar datos del onboarding (20%)
-      setCompletionProgress(20);
-      const completeData = {
+      setLoadingStep('saving');
+
+      // Paso 1: Guardar datos del onboarding
+      const completeData: any = {
         educationType: formData.educationType,
         currentCareer: formData.currentCareer,
         studyCenter: formData.studyCenter,
@@ -228,39 +367,85 @@ export default function OnboardingPage() {
         graduationYear: formData.graduationYear,
         interestedRoles: formData.interestedRoles,
         workType: formData.workType,
-        cvSource: uploadedCV ? 'uploaded' as const : null,
-        cvFileName: uploadedCV?.fileName,
-        cvFileUrl: uploadedCV?.fileUrl
+        cvSource: uploadedCV ? 'uploaded' : null,
       };
+
+      if (uploadedCV?.fileName) completeData.cvFileName = uploadedCV.fileName;
+      if (uploadedCV?.fileUrl) completeData.cvFileUrl = uploadedCV.fileUrl;
       
       await OnboardingService.completeOnboarding(user, completeData);
-      
-      // Simular progreso de configuración
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setCompletionProgress(40);
-      
-      // Paso 2: Si hay CV, procesarlo (40%)
-      if (uploadedCV && formData.cvData) {
-        await OnboardingService.updateUserProfileFromCV(user, formData.cvData);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setCompletionProgress(60);
+
+      // Paso 2: Si hay CV y al menos un área, hacer match practices
+      if (uploadedCV?.fileUrl && formData.interestedRoles.length > 0) {
+        setLoadingStep('searching');
+        
+        try {
+          console.log('🔍 Verificando datos antes del match:', {
+            uploadedCV_fileUrl: uploadedCV.fileUrl,
+            formData_cvFileUrl: formData.cvFileUrl,
+            interestedRoles: formData.interestedRoles,
+            primerRol: formData.interestedRoles[0]
+          });
+
+          // Usar la URL más confiable
+          const cvUrl = uploadedCV.fileUrl || formData.cvFileUrl;
+          const puesto = formData.interestedRoles[0];
+
+          // Validación estricta antes de llamar al servicio
+          if (!cvUrl || cvUrl.trim() === '') {
+            throw new Error('URL del CV no disponible');
+          }
+
+          if (!puesto || puesto.trim() === '') {
+            throw new Error('Rol de interés no seleccionado');
+          }
+
+          console.log('📤 Payload final para match:', {
+            puesto: puesto,
+            cv_url: cvUrl
+          });
+
+          console.log('✅ Ejecutando match con retry logic...');
+          const matchResult = await OnboardingMatchService.executeMatchWithRetry({
+            puesto: puesto,
+            cv_url: cvUrl
+          }, user.uid);
+
+          console.log(`✅ Match completado con ${matchResult.practices.length} prácticas (${matchResult.source})`);
+          
+          // Paso 3: Preparando redirección
+          setLoadingStep('preparing');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          setLoadingStep('complete');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Redirigir al portal de trabajo
+          router.push('/portal-trabajo');
+        } catch (matchError) {
+          console.error('❌ Error en proceso de match:', matchError);
+          // Aún así redirigir al portal
+          router.push('/portal-trabajo');
+        }
+      } else {
+        console.log('⚠️ Sin CV o sin roles seleccionados:', {
+          hasCV: !!uploadedCV?.fileUrl,
+          cvUrl: uploadedCV?.fileUrl,
+          rolesCount: formData.interestedRoles.length,
+          roles: formData.interestedRoles
+        });
+        
+        // Si no hay CV, ir directo al dashboard
+        setLoadingStep('complete');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        router.push('/dashboard');
       }
-      
-      // Paso 3: Configurar perfil inicial (60%)
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setCompletionProgress(80);
-      
-      // Paso 4: Finalizar configuración (100%)
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setCompletionProgress(100);
-      
-      // Esperar un poco antes de redirigir
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      router.push('/dashboard');
+
     } catch (error) {
       console.error('Error completando onboarding:', error);
       setShowCompletionLoading(false);
+      // En caso de error, redirigir al dashboard
+      router.push('/dashboard');
     } finally {
       setSubmitting(false);
     }
@@ -385,109 +570,54 @@ export default function OnboardingPage() {
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
+        console.error('❌ Error en respuesta de upload:', errorData);
         throw new Error(errorData.error || 'Error al subir el archivo');
       }
 
-      const { fileUrl } = await uploadResponse.json();
+      const uploadResult = await uploadResponse.json();
+      console.log('📋 Respuesta completa de /api/upload:', uploadResult);
+      
+      // La API devuelve 'url', no 'fileUrl'
+      const fileUrl = uploadResult.url;
+      
+      if (!fileUrl) {
+        console.error('❌ No se recibió URL del archivo:', uploadResult);
+        throw new Error('Error: No se recibió la URL del archivo subido');
+      }
 
-      setUploadedCV({
+      console.log('✅ CV subido exitosamente:', {
         fileName: file.name,
-        fileUrl: fileUrl
+        fileUrl: fileUrl,
+        fileUrlType: typeof fileUrl
       });
 
-      // Actualizar formData
+      // Actualizar estado uploadedCV primero
+      const cvData = {
+        fileName: file.name,
+        fileUrl: fileUrl
+      };
+      
+      setUploadedCV(cvData);
+
+      // Actualizar formData con la URL
       updateFormData('hasCV', 'uploaded');
       updateFormData('cvFileName', file.name);
       updateFormData('cvFileUrl', fileUrl);
+
+      console.log('✅ Estados actualizados:', {
+        uploadedCV: cvData,
+        formDataUpdates: {
+          hasCV: 'uploaded',
+          cvFileName: file.name,
+          cvFileUrl: fileUrl
+        }
+      });
 
     } catch (error) {
       console.error('Error subiendo CV:', error);
       alert(error instanceof Error ? error.message : 'Error al subir el archivo');
     } finally {
       setUploadingCV(false);
-    }
-  };
-
-  // Función para manejar el análisis de CV
-  const handleCVAnalysis = async () => {
-    if (!user || !uploadedCV) {
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setAnalyzeProgress(0);
-    setAnalysisStep(0);
-
-    const analysisSteps = [
-      'Subiendo tu CV...',
-      'Analizando estructura...',
-      'Evaluando contenido...',
-      'Extrayendo datos personales...',
-      'Finalizando análisis...'
-    ];
-
-    try {
-      // Simular progreso de análisis
-      for (let i = 0; i < analysisSteps.length; i++) {
-        setAnalysisStep(i);
-        setAnalyzeProgress((i + 1) * 20);
-        
-        if (i === 2) {
-          // En el paso 3, hacer la petición real al servicio de análisis
-          const reviewId = await cvReviewService.createReview(user, {
-            fileName: uploadedCV.fileName,
-            position: formData.interestedRoles[0] || 'Estudiante',
-            fileUrl: uploadedCV.fileUrl
-          });
-
-          // Iniciar análisis
-          const analysisResponse = await fetch('/api/cv/analyze', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              fileUrl: uploadedCV.fileUrl,
-              fileName: uploadedCV.fileName,
-              position: formData.interestedRoles[0] || 'Estudiante',
-              reviewId: reviewId
-            }),
-          });
-
-          if (!analysisResponse.ok) {
-            throw new Error('Error al analizar el CV');
-          }
-
-          const analysisData = await analysisResponse.json();
-          
-          // Extraer datos del CV y guardarlos en formData
-          if (analysisData.extractedData) {
-            updateFormData('cvData', analysisData.extractedData);
-          }
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-
-      setAnalyzeProgress(100);
-      
-      // Consumir una revisión
-      await cvReviewService.consumeReview(user);
-      
-      // Marcar que el CV está listo y analizado
-      updateFormData('hasCV', 'analyzed');
-      
-      // Después del análisis, permitir continuar
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        // El usuario puede ahora hacer clic en "Siguiente" para ir al dashboard
-      }, 1000);
-
-    } catch (error) {
-      console.error('Error analizando CV:', error);
-      alert('Error al analizar el CV. Inténtalo de nuevo.');
-      setIsAnalyzing(false);
-      setAnalyzeProgress(0);
     }
   };
 
@@ -518,16 +648,7 @@ export default function OnboardingPage() {
 
   // Mostrar pantalla de carga al completar onboarding
   if (showCompletionLoading) {
-    return (
-      <LoadingScreen
-        variant="processing"
-        message="Configurando tu perfil..."
-        subtitle="Creando tu espacio de trabajo personalizado"
-        progress={completionProgress}
-        showProgress={true}
-        fullScreen={true}
-      />
-    );
+    return <OnboardingLoadingScreen currentStep={loadingStep} />;
   }
 
   const renderStepContent = () => {
@@ -678,7 +799,7 @@ export default function OnboardingPage() {
                               updateFormData('interestedRoles', formData.interestedRoles.filter(r => r !== role));
                             }}
                           >
-                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -732,7 +853,7 @@ export default function OnboardingPage() {
                               updateFormData('workType', formData.workType.filter(t => t !== type));
                             }}
                           >
-                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -765,103 +886,103 @@ export default function OnboardingPage() {
           </div>
         );
       
-      case 3:
-        return (
-          <div className="space-y-8">
-            {/* <div className="space-y-6">
-              {formData.interestedRoles.slice(0, 3).map((role, index) => (
-                <div key={role} className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-gray-900 mb-3 text-center">{role}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="text-2xl font-bold text-[#028bbf] mb-1">
-                        {index === 0 ? 'S/. 3,500' : index === 1 ? 'S/. 4,200' : 'S/. 3,800'}
-                      </div>
-                      <div className="text-gray-600">Salario promedio</div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="text-2xl font-bold text-green-600 mb-1">
-                        {index === 0 ? '850+' : index === 1 ? '620+' : '750+'}
-                      </div>
-                      <div className="text-gray-600">Ofertas activas</div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="text-2xl font-bold text-orange-600 mb-1">
-                        {index === 0 ? 'Alta' : index === 1 ? 'Media' : 'Alta'}
-                      </div>
-                      <div className="text-gray-600">Demanda</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-blue-200">
-                    <div className="text-xs text-gray-600">
-                      <span className="font-medium">Habilidades más demandadas:</span>
-                      <div className="flex flex-wrap gap-1 mt-1 justify-center">
-                        {role.includes('Frontend') && ['React', 'JavaScript', 'CSS'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                        {role.includes('Backend') && ['Node.js', 'Python', 'SQL'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                        {role.includes('Full Stack') && ['React', 'Node.js', 'MongoDB'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                        {role.includes('Mobile') && ['React Native', 'Flutter', 'Swift'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                        {role.includes('Data') && ['Python', 'SQL', 'Tableau'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                        {!role.includes('Frontend') && !role.includes('Backend') && !role.includes('Full Stack') && !role.includes('Mobile') && !role.includes('Data') && 
-                          ['Excel', 'Analytics', 'Communication'].map(skill => (
-                          <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      // case 3:
+      //   return (
+      //     <div className="space-y-8">
+      //       {/* <div className="space-y-6">
+      //         {formData.interestedRoles.slice(0, 3).map((role, index) => (
+      //           <div key={role} className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
+      //             <h3 className="font-semibold text-gray-900 mb-3 text-center">{role}</h3>
+      //             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      //               <div className="flex flex-col items-center justify-center text-center">
+      //                 <div className="text-2xl font-bold text-[#028bbf] mb-1">
+      //                   {index === 0 ? 'S/. 3,500' : index === 1 ? 'S/. 4,200' : 'S/. 3,800'}
+      //                 </div>
+      //                 <div className="text-gray-600">Salario promedio</div>
+      //               </div>
+      //               <div className="flex flex-col items-center justify-center text-center">
+      //                 <div className="text-2xl font-bold text-green-600 mb-1">
+      //                   {index === 0 ? '850+' : index === 1 ? '620+' : '750+'}
+      //                 </div>
+      //                 <div className="text-gray-600">Ofertas activas</div>
+      //               </div>
+      //               <div className="flex flex-col items-center justify-center text-center">
+      //                 <div className="text-2xl font-bold text-orange-600 mb-1">
+      //                   {index === 0 ? 'Alta' : index === 1 ? 'Media' : 'Alta'}
+      //                 </div>
+      //                 <div className="text-gray-600">Demanda</div>
+      //               </div>
+      //             </div>
+      //             <div className="mt-3 pt-3 border-t border-blue-200">
+      //               <div className="text-xs text-gray-600">
+      //                 <span className="font-medium">Habilidades más demandadas:</span>
+      //                 <div className="flex flex-wrap gap-1 mt-1 justify-center">
+      //                   {role.includes('Frontend') && ['React', 'JavaScript', 'CSS'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                   {role.includes('Backend') && ['Node.js', 'Python', 'SQL'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                   {role.includes('Full Stack') && ['React', 'Node.js', 'MongoDB'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                   {role.includes('Mobile') && ['React Native', 'Flutter', 'Swift'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                   {role.includes('Data') && ['Python', 'SQL', 'Tableau'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                   {!role.includes('Frontend') && !role.includes('Backend') && !role.includes('Full Stack') && !role.includes('Mobile') && !role.includes('Data') && 
+      //                     ['Excel', 'Analytics', 'Communication'].map(skill => (
+      //                     <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{skill}</span>
+      //                   ))}
+      //                 </div>
+      //               </div>
+      //             </div>
+      //           </div>
+      //         ))}
 
-              {formData.interestedRoles.length > 3 && (
-                <div className="text-center text-sm text-gray-600">
-                  Y {formData.interestedRoles.length - 3} roles más que también tienen gran demanda en el mercado
-                </div>
-              )}
-            </div> */}
-            {/* dos filas con 3 columnas */}
-            <div className="grid grid-rows-2 gap-6">
-              {/* Primera fila */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
-                    <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
-                      {/* Puedes poner un icono aquí si lo deseas */} 
-                    </div>
+      //         {formData.interestedRoles.length > 3 && (
+      //           <div className="text-center text-sm text-gray-600">
+      //             Y {formData.interestedRoles.length - 3} roles más que también tienen gran demanda en el mercado
+      //           </div>
+      //         )}
+      //       </div> */}
+      //       {/* dos filas con 3 columnas */}
+      //       <div className="grid grid-rows-2 gap-6">
+      //         {/* Primera fila */}
+      //         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      //           {[1, 2, 3].map((i) => (
+      //             <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
+      //               <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
+      //                 {/* Puedes poner un icono aquí si lo deseas */} 
+      //               </div>
 
-                    <p> 
-                    <span className="font-bold">Título {i} </span>
-                    lorem ipsum</p>
-                  </div>
-                ))}
-              </div>
-              {/* Segunda fila */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[4, 5, 6].map((i) => (
-                  <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
-                    <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
-                      {/* Puedes poner un icono aquí si lo deseas */}
-                    </div>
-                    <p>
-                      <span className="font-bold">Título {i} </span>
-                      lorem ipsum
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+      //               <p> 
+      //               <span className="font-bold">Título {i} </span>
+      //               lorem ipsum</p>
+      //             </div>
+      //           ))}
+      //         </div>
+      //         {/* Segunda fila */}
+      //         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      //           {[4, 5, 6].map((i) => (
+      //             <div key={i} className="flex flex-col items-center bg-[#eff8ff] rounded-xl shadow p-6">
+      //               <div className="w-14 h-14 rounded-full bg-gray-400 flex items-center justify-center mb-3">
+      //                 {/* Puedes poner un icono aquí si lo deseas */}
+      //               </div>
+      //               <p>
+      //                 <span className="font-bold">Título {i} </span>
+      //                 lorem ipsum
+      //               </p>
+      //             </div>
+      //           ))}
+      //         </div>
+      //       </div>
+      //     </div>
+      //   );
       
-      case 4:
+      case 3:
         return (
           <div className="space-y-8">
             {!isAnalyzing ? (
@@ -902,6 +1023,21 @@ export default function OnboardingPage() {
                             <span className="font-semibold text-green-700">CV Subido</span>
                             <span className="text-sm text-green-600 px-8 break-all">{uploadedCV.fileName}</span>
                             
+                            {/* Botón de debug temporal */}
+                            <button
+                              onClick={() => {
+                                console.log('🔍 Estado actual del CV:', {
+                                  uploadedCV_fileName: uploadedCV?.fileName,
+                                  uploadedCV_fileUrl: uploadedCV?.fileUrl,
+                                  formData_cvFileUrl: formData.cvFileUrl,
+                                  formData_hasCV: formData.hasCV
+                                });
+                                alert(`CV URL: ${uploadedCV?.fileUrl || 'NO DEFINIDA'}`);
+                              }}
+                              className="mt-2 px-4 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                            >
+                              🔍 Debug CV
+                            </button>
                           </>
                         ) : (
                           <>
@@ -1070,14 +1206,22 @@ export default function OnboardingPage() {
           disabled={
             (currentStep === 1 && (!formData.educationType || !formData.currentCareer || !formData.studyCenter || !formData.studyStatus)) ||
             (currentStep === 2 && (formData.interestedRoles.length === 0 || formData.workType.length === 0)) ||
-            (currentStep === 4 && (!formData.hasCV || formData.hasCV === 'uploaded' && !uploadedCV) || submitting || isAnalyzing)
+            submitting || isAnalyzing
           }
           className="px-8 py-3 rounded-lg bg-[#028bbf] hover:bg-[#027ba8] text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isAnalyzing ? "Analizando CV..." : 
-           currentStep === totalSteps ? (submitting ? "Finalizando..." : "Siguiente") : "Siguiente"}
+           currentStep === totalSteps ? (submitting ? "Finalizando..." : uploadedCV?.fileUrl ? "Finalizar" : "Continuar") : "Siguiente"}
         </button>
       </div>
+
+      {/* Modal para CV cuando no se ha subido */}
+      <CVSubmissionModal
+        isOpen={showCVModal}
+        onClose={() => setShowCVModal(false)}
+        onSubmit={handleCVModalSubmit}
+        interestedRoles={formData.interestedRoles}
+      />
     </div>
   );
 }

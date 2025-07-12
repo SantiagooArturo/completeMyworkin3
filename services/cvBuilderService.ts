@@ -232,6 +232,95 @@ export class CVBuilderService {
       throw new Error('Error al generar el PDF del CV');
     }
   }
+
+  /**
+   * Generar URL del PDF para un CV guardado usando R2
+   */
+  async generatePDFUrl(cvId: string): Promise<string> {
+    try {
+      // Obtener el CV de Firebase
+      const cv = await this.getCV(cvId);
+      if (!cv) {
+        throw new Error('CV no encontrado');
+      }
+
+      // Generar PDF usando el generador existente
+      const pdfResult = await CVPDFGeneratorSimple.generatePDF(cv.data);
+      
+      // Subir el PDF a R2 y obtener la URL
+      const fileName = `cv_${cvId}_${Date.now()}.pdf`;
+      
+      try {
+        // Convertir Blob a Buffer para R2
+        const arrayBuffer = await pdfResult.blob.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Usar el servicio de R2 para subir el archivo
+        const { uploadFileToR2 } = await import('@/services/cloudflareR2');
+        const publicUrl = await uploadFileToR2(buffer, fileName, 'application/pdf');
+        
+        return publicUrl;
+      } catch (r2Error) {
+        console.warn('Error subiendo a R2, usando fallback:', r2Error);
+        // Usar método de fallback si R2 falla
+        return await this.generatePDFUrlFallback(cvId);
+      }
+    } catch (error) {
+      console.error('Error generando URL del PDF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Método de fallback para generar URL del PDF sin R2
+   * Útil para development o cuando R2 no está disponible
+   */
+  async generatePDFUrlFallback(cvId: string): Promise<string> {
+    try {
+      const cv = await this.getCV(cvId);
+      if (!cv) {
+        throw new Error('CV no encontrado');
+      }
+
+      // Generar PDF y crear URL temporal usando createObjectURL
+      const pdfResult = await CVPDFGeneratorSimple.generatePDF(cv.data);
+      const pdfUrl = URL.createObjectURL(pdfResult.blob);
+      
+      console.warn('Usando URL temporal para PDF (fallback). Para producción, configure R2 correctamente.');
+      return pdfUrl;
+    } catch (error) {
+      console.error('Error en fallback de generación de PDF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generar PDF como Blob para poder subirlo
+   */
+  async generatePDFBlob(cvData: CVData, template: string = 'simple'): Promise<Blob> {
+    try {
+      // Usar el generador de PDF simple para crear el blob
+      const pdfResult = await CVPDFGeneratorSimple.generatePDF(cvData);
+      return pdfResult.blob;
+    } catch (error) {
+      console.error('Error generando PDF como Blob:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generar PDF con bytes para compatibilidad
+   */
+  static async generatePDFBytes(cvData: CVData): Promise<Uint8Array> {
+    try {
+      const pdfResult = await CVPDFGeneratorSimple.generatePDF(cvData);
+      const arrayBuffer = await pdfResult.blob.arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+    } catch (error) {
+      console.error('Error generando PDF bytes:', error);
+      throw error;
+    }
+  }
 }
 
 // Exportar instancia singleton

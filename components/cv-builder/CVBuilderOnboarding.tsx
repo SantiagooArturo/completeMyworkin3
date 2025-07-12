@@ -31,8 +31,8 @@ export default function CVBuilderOnboarding({ onComplete }: CVBuilderOnboardingP
       if (onComplete) {
         onComplete(cvId, cvData);
       } else {
-        // Redirigir al onboarding para completar el proceso
-        router.push('/onboarding?step=4&cvCreated=true');
+        // ✅ CORREGIDO: Redirigir al paso 3 con el CV creado
+        router.push(`/onboarding?step=3&cvCreated=true&cvId=${cvId}`);
       }
       
     } catch (error) {

@@ -33,6 +33,16 @@ const r2Client = new S3Client({
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'myworkin-uploads';
 const PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
 
+console.log('🔧 Variables adicionales R2:', {
+  BUCKET_NAME,
+  PUBLIC_URL: PUBLIC_URL ? 'CONFIGURADO' : 'FALTANTE',
+  PUBLIC_URL_preview: PUBLIC_URL ? `${PUBLIC_URL.substring(0, 30)}...` : 'UNDEFINED'
+});
+
+if (!PUBLIC_URL) {
+  console.error('❌ NEXT_PUBLIC_R2_PUBLIC_URL no está configurada');
+}
+
 /**
  * Subir un archivo a Cloudflare R2
  * @param file - Archivo a subir (File o Buffer)
@@ -117,7 +127,18 @@ export async function uploadFileToR2(
     const publicUrl = `${PUBLIC_URL}/${fileName}`;
     
     console.log('🔗 URL pública generada:', publicUrl);
-    console.log('📤 === FIN UPLOAD R2 ===');
+    console.log('� Variables usadas:', {
+      PUBLIC_URL,
+      fileName,
+      PUBLIC_URL_length: PUBLIC_URL.length,
+      fileName_length: fileName.length
+    });
+    console.log('�📤 === FIN UPLOAD R2 ===');
+    
+    if (!publicUrl || publicUrl === `/${fileName}`) {
+      console.error('❌ URL pública inválida generada');
+      throw new Error('Error generando URL pública: PUBLIC_URL no configurada');
+    }
     
     return publicUrl;
   } catch (error) {
