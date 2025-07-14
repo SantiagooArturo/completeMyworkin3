@@ -16,10 +16,10 @@ export interface Practica {
   similitud_experiencia: number;
   similitud_macro: number;
   similitud_total: number;
-  justificacion_requisitos: string;
-  justificacion_titulo: string;
-  justificacion_experiencia: string;
-  justificacion_macro: string;
+  // justificacion_requisitos: string;
+  // justificacion_titulo: string;
+  // justificacion_experiencia: string;
+  // justificacion_macro: string;
 }
 
 export interface MatchPracticesResponse {
