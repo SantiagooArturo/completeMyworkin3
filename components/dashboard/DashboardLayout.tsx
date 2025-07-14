@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      <div className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}>
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-16 mt-4 px-4">
@@ -131,13 +131,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className='p-4'>
+        <div className='p-4 mt-60'>
         <AutoCarousel size='sm'/>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-80">
         {/* Top Header */}
         <div className="">
           <div className="flex items-center justify-between h-16 px-4">

@@ -2,8 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-const CARDS = [
+interface CardCarousel {
+	label: string;
+	labelColor: string;
+	text: React.ReactNode;
+	link: string;
+}
+
+const CARDS: CardCarousel[] = [
 	{
 		label: 'Simulación de entrevistas',
 		labelColor: 'bg-yellow-100 text-yellow-700',
@@ -13,6 +21,7 @@ const CARDS = [
 				Prepárate para destacar y simula una entrevista con nuestro bot potenciado con IA
 			</>
 		),
+		link: '/interview-simulation', // Ruta de la herramienta
 	},
 	{
 		label: 'Análisis de CV con IA',
@@ -23,6 +32,7 @@ const CARDS = [
 				Analiza tu CV con IA y mejora tu perfil profesional.
 			</>
 		),
+		link: '/analizar-cv', // Ruta de la herramienta
 	},
 	{
 		label: 'Crear CV',
@@ -33,6 +43,7 @@ const CARDS = [
 				Créalo en minutos con formato Harvard y listo para postular.
 			</>
 		),
+		link: '/crear-cv', // Ruta de la herramienta
 	},
 ];
 
@@ -44,6 +55,7 @@ interface AutoCarouselProps {
 export default function AutoCarousel({ size = 'md', className = '' }: AutoCarouselProps) {
 	const [active, setActive] = useState(0);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const router = useRouter();
 
 	useEffect(() => {
 		timeoutRef.current && clearTimeout(timeoutRef.current);
@@ -106,20 +118,34 @@ export default function AutoCarousel({ size = 'md', className = '' }: AutoCarous
 							idx === active ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
 						}`}
 					>
-						<div className={`bg-[#f6fbff] ${config.borderRadius} shadow-md ${config.padding} ${config.minHeight} flex flex-col justify-between`}>
+						<div className={`bg-[#f6fbff] ${config.borderRadius} shadow-md ${config.padding} ${config.minHeight} flex flex-col justify-between hover:shadow-lg transition-shadow`}>
 							<div>
 								<span className={`px-3 py-1 rounded-lg ${config.labelSize} font-semibold ${card.labelColor}`}>
 									{card.label}
 								</span>
-								<button className="float-right text-gray-400 hover:text-gray-600">
+								<button
+									className="float-right text-gray-400 hover:text-blue-600 transition-colors"
+									onClick={() => router.push(card.link)}
+									aria-label={`Ir a ${card.label}`}
+									type="button"
+								>
 									<ChevronRight className={config.iconSize} />
 								</button>
 							</div>
 							<div className={`mt-4 mb-2 ${config.textSize} font-semibold text-gray-900 leading-snug`}>
 								{card.text}
 							</div>
+							
+							{/* Botón de acción */}
+							<button
+								onClick={() => router.push(card.link)}
+								className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+							>
+								Ir a herramienta
+							</button>
+							
 							{/* Paginación */}
-							<div className="flex justify-center gap-2 mt-4">
+							<div className="flex justify-center gap-2">
 								{CARDS.map((_, i) => (
 									<span
 										key={i}

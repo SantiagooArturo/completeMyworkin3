@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { OnboardingService } from "@/services/onboardingService";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -76,8 +77,9 @@ export default function RegisterPage() {
       }
       
       setLoading(false);
-      // Redirigir al onboarding para completar el perfil
-      router.push('/onboarding');
+      await OnboardingService.skipOnboarding(userCredential.user);
+      // Redirigir al portal de trabajo
+      router.push('/portal-trabajo');
       
     } catch (err: any) {
       let errorMessage = "No se pudo crear la cuenta";
