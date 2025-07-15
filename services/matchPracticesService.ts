@@ -20,6 +20,7 @@ export interface Practica {
   justificacion_titulo: string;
   justificacion_experiencia: string;
   justificacion_macro: string;
+  schedule?: string; // Agregado para compatibilidad con el filtro de jornada
 }
 
 export interface MatchPracticesResponse {

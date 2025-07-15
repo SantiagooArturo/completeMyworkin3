@@ -2,6 +2,8 @@
 
 import { MapPin, Clock, DollarSign, Heart, Building, PiggyBank } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface JobCardProps {
   job: {
@@ -61,6 +63,16 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
   );
 }
 
+function getPublishedAgo(dateString: string) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return formatDistanceToNow(date, { addSuffix: true, locale: es });
+  } catch {
+    return '';
+  }
+}
+
 export default function JobCard({ job }: JobCardProps) {
   const router = useRouter();
 
@@ -91,7 +103,7 @@ export default function JobCard({ job }: JobCardProps) {
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <p className="text-sm text-gray-500">
-                Publicado hace {job.publishedDate}
+                Publicado {getPublishedAgo(job.publishedDate)}
               </p>
               <button className="text-gray-400 hover:text-red-500 transition-colors">
                 <Heart className="h-5 w-5" />
