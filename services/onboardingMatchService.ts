@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { matchPractices, MatchPracticesRequest, Practica } from './matchPracticesService';
 
@@ -110,6 +110,14 @@ const MOCK_PRACTICES: Practica[] = [
 
 export class OnboardingMatchService {
   static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string): Promise<OnboardingMatchData> {
+    // 1. PRIMERO: Verificar si ya existe un match reciente en Firestore
+    const existingMatch = await this.getExistingMatch(userId, matchQuery);
+    if (existingMatch) {
+      console.log('✅ Usando prácticas guardadas (cache)');
+      return existingMatch;
+    }
+
+    // 2. SI NO EXISTE: Hacer nueva petición al API
     let retryCount = 0;
     let practices: Practica[] = [];
     let source: 'api' | 'mock' = 'mock';
@@ -176,6 +184,46 @@ export class OnboardingMatchService {
         timestamp: new Date(),
         retryCount
       };
+    }
+  }
+
+  // NUEVA FUNCIÓN: Verificar match existente
+  static async getExistingMatch(userId: string, matchQuery: MatchPracticesRequest): Promise<OnboardingMatchData | null> {
+    try {
+      const matchDoc = await getDoc(doc(db, 'onboarding_matches', userId));
+      
+      if (!matchDoc.exists()) {
+        return null;
+      }
+
+      const data = matchDoc.data() as OnboardingMatchData;
+      
+      // Verificar si el match es para el mismo puesto y CV
+      if (data.matchQuery?.puesto !== matchQuery.puesto || 
+          data.matchQuery?.cv_url !== matchQuery.cv_url) {
+        return null;
+      }
+
+      // Verificar si el match es reciente (menos de 2 horas)
+      const matchTime = data.timestamp?.toDate?.() || new Date(0);
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      
+      if (matchTime < twoHoursAgo) {
+        console.log('🕐 Match guardado es muy antiguo, buscando nuevo...');
+        return null;
+      }
+
+      console.log('🎯 Match encontrado en cache:', {
+        puesto: data.matchQuery?.puesto,
+        practices: data.practices.length,
+        source: data.source,
+        age: `${Math.round((Date.now() - matchTime.getTime()) / (1000 * 60))} minutos`
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error verificando match existente:', error);
+      return null;
     }
   }
 }

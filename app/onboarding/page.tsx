@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { X } from 'lucide-react';
 import Link from 'next/link';
 import { OnboardingData, OnboardingService } from '@/services/onboardingService';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import {
   Select,
@@ -356,6 +356,17 @@ export default function OnboardingPage() {
       setSubmitting(true);
       setShowCompletionLoading(true);
       setLoadingStep('saving');
+
+      // Obtener el puesto principal
+      const puestoPrincipal = formData.interestedRoles?.[0] || '';
+
+      // Actualizar el perfil del usuario con el puesto principal
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        position: puestoPrincipal,
+        updatedAt: new Date(),
+        // ...otros campos que ya actualizas...
+      });
 
       // Paso 1: Guardar datos del onboarding
       const completeData: any = {

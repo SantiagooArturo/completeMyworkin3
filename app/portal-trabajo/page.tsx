@@ -7,19 +7,11 @@ import JobCard from '@/components/dashboard/JobCard';
 import SimpleUploadCVModal from '@/components/SimpleUploadCVModal';
 import { OnboardingMatchService } from '@/services/onboardingMatchService';
 import { Practica } from '@/services/matchPracticesService';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { 
-  MapPin, 
-  Clock, 
-  DollarSign,
-  TrendingUp,
-  Users,
-  Award,
   Filter,
-  ChevronDown,
   Search,
-  Sparkles,
   ExternalLink,
   RefreshCw,
   Upload,
@@ -62,34 +54,34 @@ export default function PortalTrabajoPage() {
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!user) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
-        // Buscar datos del usuario en Firestore
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          
+          const puestoPrincipal = userData.position || 'Diseñador UX/UI';
+
           setUserProfile({
             hasCV: !!(userData.cvFileUrl || userData.cvFileName),
             cvFileName: userData.cvFileName || undefined,
             cvFileUrl: userData.cvFileUrl || undefined,
-            ultimoPuesto: userData.interestedRoles?.[0] || 'Diseñador UX/UI'
+            ultimoPuesto: puestoPrincipal
           });
 
-          // Si tiene CV, cargar prácticas automáticamente
+          // Inicializa los puestos seleccionados con el puesto principal del perfil
+          setSelectedPuestos([puestoPrincipal]);
+
+          // Si tiene CV, cargar prácticas automáticamente con el puesto correcto
           if (userData.cvFileUrl) {
-            await loadPracticas(userData.cvFileUrl, selectedPuestos);
+            await loadPracticas(userData.cvFileUrl, [puestoPrincipal]);
           }
         } else {
-          // Usuario sin datos, configurar perfil vacío
           setUserProfile({ hasCV: false });
         }
       } catch (error) {
-        console.error('Error cargando perfil de usuario:', error);
         setError('Error al cargar tu perfil. Por favor, recarga la página.');
         setUserProfile({ hasCV: false });
       } finally {
@@ -103,7 +95,6 @@ export default function PortalTrabajoPage() {
   // Función para cargar prácticas usando el servicio real
   const loadPracticas = async (cvUrl: string, puestos: string[]) => {
     try {
-      // Usar el primer puesto como principal para el match
       const puestoPrincipal = puestos[0] || 'Diseñador UX/UI';
       
       console.log('🔍 Cargando prácticas para:', {
@@ -112,18 +103,23 @@ export default function PortalTrabajoPage() {
         userId: user?.uid
       });
 
+      // Mostrar indicador de carga más específico
+      setLoading(true);
+      
       const matchResult = await OnboardingMatchService.executeMatchWithRetry({
         puesto: puestoPrincipal,
         cv_url: cvUrl
       }, user!.uid);
 
       setPracticas(matchResult.practices);
-      console.log(`✅ Prácticas cargadas: ${matchResult.practices.length} (${matchResult.source})`);
+      
+      // Mensaje más específico según la fuente
+      const sourceMessage = matchResult.source === 'api' ? 'nuevas' : 'guardadas';
+      console.log(`✅ Prácticas ${sourceMessage} cargadas: ${matchResult.practices.length} (${matchResult.source})`);
       
     } catch (error) {
       console.error('❌ Error cargando prácticas:', error);
       setError('Error al cargar prácticas. Mostrando resultados de ejemplo.');
-      // En caso de error, no mostrar nada para que aparezca el mensaje de error
       setPracticas([]);
     }
   };
@@ -191,6 +187,20 @@ export default function PortalTrabajoPage() {
       await loadPracticas(cvData.fileUrl, selectedPuestos);
       setLastRefresh(new Date());
       setLoading(false);
+    }
+  };
+
+  // Función para cambiar puesto principal
+  const handleChangePuestoPrincipal = async (nuevoPuesto: string) => {
+    if (!user) return;
+    setSelectedPuestos([nuevoPuesto]);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        position: nuevoPuesto,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error actualizando puesto principal:', error);
     }
   };
 
