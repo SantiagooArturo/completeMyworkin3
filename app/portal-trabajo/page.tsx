@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import JobCard from '@/components/dashboard/JobCard';
-import { PortalTrabajoService } from '@/services/portalTrabajoService';
+import SimpleUploadCVModal from '@/components/SimpleUploadCVModal';
+import { OnboardingMatchService } from '@/services/onboardingMatchService';
 import { Practica } from '@/services/matchPracticesService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
 import { 
   MapPin, 
   Clock, 
@@ -23,80 +26,6 @@ import {
   Plus,
   X
 } from 'lucide-react';
-
-// Datos mock de prácticas para visualización
-const mockPracticas: Practica[] = [
-  {
-    company: 'MyWorkin',
-    title: 'UX/UI Designer - Prácticas',
-    descripcion: 'Únete a nuestro equipo de diseño para crear experiencias digitales excepcionales. Trabajarás en proyectos reales con mentores experimentados.',
-    location: 'Lima, Perú',
-    salary: 'S/ 1200',
-    url: '#',
-    fecha_agregado: 'hace 3 días',
-    similitud_requisitos: 85,
-    similitud_titulo: 90,
-    similitud_experiencia: 75,
-    similitud_macro: 80,
-    similitud_total: 82
-  },
-  {
-    company: 'TechCorp Solutions',
-    title: 'Frontend Developer Intern',
-    descripcion: 'Desarrollo de interfaces web modernas usando React y TypeScript. Perfecta para estudiantes de sistemas que buscan experiencia práctica.',
-    location: 'Lima, Perú',
-    salary: 'S/ 1500',
-    url: '#',
-    fecha_agregado: 'hace 1 día',
-    similitud_requisitos: 78,
-    similitud_titulo: 85,
-    similitud_experiencia: 70,
-    similitud_macro: 88,
-    similitud_total: 80
-  },
-  {
-    company: 'StartupPeru',
-    title: 'Diseñador Gráfico Junior',
-    descripcion: 'Oportunidad de crecimiento en startup en expansión. Trabajarás en branding, marketing digital y diseño de productos.',
-    location: 'Arequipa, Perú',
-    salary: 'S/ 1000',
-    url: '#',
-    fecha_agregado: 'hace 5 días',
-    similitud_requisitos: 82,
-    similitud_titulo: 88,
-    similitud_experiencia: 65,
-    similitud_macro: 75,
-    similitud_total: 77
-  },
-  {
-    company: 'InnovaTech',
-    title: 'Product Designer Trainee',
-    descripcion: 'Programa de entrenamiento integral en diseño de productos digitales. Incluye capacitación en metodologías ágiles y design thinking.',
-    location: 'Cusco, Perú',
-    salary: 'S/ 1100',
-    url: '#',
-    fecha_agregado: 'hace 2 días',
-    similitud_requisitos: 90,
-    similitud_titulo: 85,
-    similitud_experiencia: 80,
-    similitud_macro: 85,
-    similitud_total: 85
-  },
-  {
-    company: 'Digital Agency',
-    title: 'Web Designer & Developer',
-    descripcion: 'Posición híbrida perfecta para quien domina tanto diseño como desarrollo web. Proyectos variados para clientes internacionales.',
-    location: 'Lima, Perú',
-    salary: 'S/ 1400',
-    url: '#',
-    fecha_agregado: 'hace 4 días',
-    similitud_requisitos: 75,
-    similitud_titulo: 80,
-    similitud_experiencia: 85,
-    similitud_macro: 78,
-    similitud_total: 79
-  }
-];
 
 const puestosDisponibles = [
   'Diseñador UI',
@@ -126,54 +55,95 @@ export default function PortalTrabajoPage() {
   const [userProfile, setUserProfile] = useState<UserProfile>({ hasCV: false });
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Simular carga de perfil de usuario
+  // Cargar perfil de usuario desde Firestore
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!user) return;
       
       setLoading(true);
+      setError(null);
       
-      // Simular carga de datos del usuario
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simular que el usuario tiene CV (para demo)
-      setUserProfile({
-        hasCV: true,
-        cvFileName: 'mi-cv.pdf',
-        cvFileUrl: 'https://example.com/cv.pdf',
-        ultimoPuesto: 'Diseñador UX/UI'
-      });
-      
-      // Cargar prácticas mock
-      setPracticas(mockPracticas);
-      setLoading(false);
+      try {
+        // Buscar datos del usuario en Firestore
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          
+          setUserProfile({
+            hasCV: !!(userData.cvFileUrl || userData.cvFileName),
+            cvFileName: userData.cvFileName || undefined,
+            cvFileUrl: userData.cvFileUrl || undefined,
+            ultimoPuesto: userData.interestedRoles?.[0] || 'Diseñador UX/UI'
+          });
+
+          // Si tiene CV, cargar prácticas automáticamente
+          if (userData.cvFileUrl) {
+            await loadPracticas(userData.cvFileUrl, selectedPuestos);
+          }
+        } else {
+          // Usuario sin datos, configurar perfil vacío
+          setUserProfile({ hasCV: false });
+        }
+      } catch (error) {
+        console.error('Error cargando perfil de usuario:', error);
+        setError('Error al cargar tu perfil. Por favor, recarga la página.');
+        setUserProfile({ hasCV: false });
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadUserProfile();
   }, [user]);
 
+  // Función para cargar prácticas usando el servicio real
+  const loadPracticas = async (cvUrl: string, puestos: string[]) => {
+    try {
+      // Usar el primer puesto como principal para el match
+      const puestoPrincipal = puestos[0] || 'Diseñador UX/UI';
+      
+      console.log('🔍 Cargando prácticas para:', {
+        puesto: puestoPrincipal,
+        cvUrl: cvUrl,
+        userId: user?.uid
+      });
+
+      const matchResult = await OnboardingMatchService.executeMatchWithRetry({
+        puesto: puestoPrincipal,
+        cv_url: cvUrl
+      }, user!.uid);
+
+      setPracticas(matchResult.practices);
+      console.log(`✅ Prácticas cargadas: ${matchResult.practices.length} (${matchResult.source})`);
+      
+    } catch (error) {
+      console.error('❌ Error cargando prácticas:', error);
+      setError('Error al cargar prácticas. Mostrando resultados de ejemplo.');
+      // En caso de error, no mostrar nada para que aparezca el mensaje de error
+      setPracticas([]);
+    }
+  };
+
   // Función para refrescar prácticas
   const handleRefresh = async () => {
     if (selectedPuestos.length === 0) {
-      alert('Selecciona al menos un puesto de interés');
+      setError('Selecciona al menos un puesto de interés');
+      return;
+    }
+
+    if (!userProfile.hasCV || !userProfile.cvFileUrl) {
+      setError('Necesitas tener un CV subido para buscar prácticas');
       return;
     }
 
     setLoading(true);
+    setError(null);
     
-    // Simular llamada a API
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Filtrar prácticas mock según puestos seleccionados
-    const filteredPracticas = mockPracticas.filter(practica => 
-      selectedPuestos.some(puesto => 
-        practica.title.toLowerCase().includes(puesto.toLowerCase()) ||
-        puesto.toLowerCase().includes(practica.title.toLowerCase().split(' ')[0])
-      )
-    );
-    
-    setPracticas(filteredPracticas.length > 0 ? filteredPracticas : mockPracticas);
+    await loadPracticas(userProfile.cvFileUrl, selectedPuestos);
     setLastRefresh(new Date());
     setLoading(false);
   };
@@ -201,10 +171,27 @@ export default function PortalTrabajoPage() {
     }
   };
 
-  // Función para simular subida de CV
+  // Función para abrir modal de subida de CV
   const handleUploadCV = () => {
-    // En implementación real, abriría modal de subida de CV
-    alert('Función de subida de CV (por implementar)');
+    setShowUploadModal(true);
+  };
+
+  // Función para manejar el éxito de la subida de CV
+  const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string }) => {
+    // Actualizar el perfil del usuario
+    setUserProfile({
+      hasCV: true,
+      cvFileName: cvData.fileName,
+      cvFileUrl: cvData.fileUrl
+    });
+
+    // Si hay puestos seleccionados, cargar prácticas automáticamente
+    if (selectedPuestos.length > 0) {
+      setLoading(true);
+      await loadPracticas(cvData.fileUrl, selectedPuestos);
+      setLastRefresh(new Date());
+      setLoading(false);
+    }
   };
 
   if (!user) {
@@ -263,6 +250,34 @@ export default function PortalTrabajoPage() {
                 className="px-6 py-3 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] transition-colors"
               >
                 Subir CV
+              </button>
+              <a
+                href="/bolsa-trabajo"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Ver Todas las Prácticas
+              </a>
+            </div>
+          </div>
+        ) : error ? (
+          /* Error al cargar prácticas */
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+              <ExternalLink className="h-12 w-12 text-red-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Error al cargar prácticas
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              {error}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="px-6 py-3 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Intentando...' : 'Reintentar'}
               </button>
               <a
                 href="/bolsa-trabajo"
@@ -596,6 +611,13 @@ export default function PortalTrabajoPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de subida de CV */}
+      <SimpleUploadCVModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadSuccess={handleUploadSuccess}
+      />
     </DashboardLayout>
   );
 }

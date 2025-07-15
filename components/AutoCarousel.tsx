@@ -137,12 +137,12 @@ export default function AutoCarousel({ size = 'md', className = '' }: AutoCarous
 							</div>
 							
 							{/* Botón de acción */}
-							<button
+							{/* <button
 								onClick={() => router.push(card.link)}
 								className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
 							>
 								Ir a herramienta
-							</button>
+							</button> */}
 							
 							{/* Paginación */}
 							<div className="flex justify-center gap-2">
