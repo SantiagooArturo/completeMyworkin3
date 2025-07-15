@@ -106,6 +106,17 @@ export default function PortalTrabajoPage() {
     loadUserProfile();
   }, [user]);
 
+  // Refresco automático de prácticas cada 5 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Solo refrescar si el usuario está autenticado, tiene CV y puesto seleccionado
+      if (user && userProfile.hasCV && userProfile.cvFileUrl && selectedPuestos.length > 0) {
+        handleRefresh();
+      }
+    }, 15 * 60 * 1000); // 15 minutos
+    return () => clearInterval(interval);
+  }, [user, userProfile.hasCV, userProfile.cvFileUrl, selectedPuestos]);
+
   // Función para cargar prácticas usando el servicio real
   const loadPracticas = async (cvUrl: string, puestos: string[]) => {
     try {
@@ -684,8 +695,9 @@ export default function PortalTrabajoPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Ordenar por */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="ordenarPor">
                     Ordenar por
+                    <span className="ml-1 text-gray-400 cursor-help" title="Elige cómo se ordenan los resultados: relevancia, fecha, salario o empresa.">ⓘ</span>
                   </label>
                   <Select value={ordenarPor} onValueChange={setOrdenarPor}>
                     <SelectTrigger className="w-full">
@@ -699,11 +711,11 @@ export default function PortalTrabajoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Fecha */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="fecha">
                     Fecha
+                    <span className="ml-1 text-gray-400 cursor-help" title="Filtra prácticas según la fecha en que fueron publicadas.">ⓘ</span>
                   </label>
                   <Select value={fecha} onValueChange={setFecha}>
                     <SelectTrigger className="w-full">
@@ -717,11 +729,11 @@ export default function PortalTrabajoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Tipo de Trabajo */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="tipoTrabajo">
                     Tipo Trabajo
+                    <span className="ml-1 text-gray-400 cursor-help" title="Selecciona el tipo de puesto que buscas: práctica, trainee o junior.">ⓘ</span>
                   </label>
                   <Select value={tipoTrabajo} onValueChange={setTipoTrabajo}>
                     <SelectTrigger className="w-full">
@@ -735,11 +747,11 @@ export default function PortalTrabajoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Experiencia */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="experiencia">
                     Experiencia
+                    <span className="ml-1 text-gray-400 cursor-help" title="Filtra por nivel de experiencia requerida para la práctica.">ⓘ</span>
                   </label>
                   <Select value={experiencia} onValueChange={setExperiencia}>
                     <SelectTrigger className="w-full">
@@ -753,11 +765,11 @@ export default function PortalTrabajoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Salario */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="salario">
                     Salario
+                    <span className="ml-1 text-gray-400 cursor-help" title="Filtra prácticas según el rango salarial ofrecido.">ⓘ</span>
                   </label>
                   <Select value={salario} onValueChange={setSalario}>
                     <SelectTrigger className="w-full">
@@ -771,11 +783,11 @@ export default function PortalTrabajoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Jornada */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="jornada">
                     Jornada
+                    <span className="ml-1 text-gray-400 cursor-help" title="Filtra por tipo de jornada laboral: completa, parcial o flexible.">ⓘ</span>
                   </label>
                   <Select value={jornada} onValueChange={setJornada}>
                     <SelectTrigger className="w-full">
@@ -900,6 +912,26 @@ export default function PortalTrabajoPage() {
 
             {/* 4. Lista de Prácticas */}
             <div className="space-y-4">
+              {/* 8. Mensajes personalizados de error y estados vacíos */}
+              {error && (
+                <div className="text-center py-12" role="alert">
+                  <div className="w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg className="h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{error}</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">Por favor, intenta nuevamente o revisa tu conexión.</p>
+                </div>
+              )}
+              {sortedPracticas.length === 0 && !error && (
+                <div className="text-center py-12" role="status">
+                  <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                    <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No se encontraron prácticas</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">Prueba cambiando los filtros o busca en otra categoría.</p>
+                </div>
+              )}
+              {/* 7. Mejor accesibilidad y mobile: aria-labels y clases responsive */}
               {sortedPracticas.map((practice: Practica, index: number) => {
                 const jobData = {
                   id: index + 1,
@@ -909,7 +941,7 @@ export default function PortalTrabajoPage() {
                   type: "Práctica",
                   schedule: practice.schedule || "Tiempo completo",
                   salary: practice.salary,
-                  publishedDate: practice.fecha_agregado, // <-- PASA LA FECHA ISO ORIGINAL
+                  publishedDate: new Date(practice.fecha_agregado).toLocaleString('es-PE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                   applicationUrl: practice.url,
                   skills: {
                     technical: Math.round(practice.similitud_requisitos),
@@ -917,9 +949,8 @@ export default function PortalTrabajoPage() {
                     experience: Math.round(practice.similitud_experiencia)
                   }
                 };
-
                 return (
-                  <JobCard key={`${practice.company}-${index}`} job={jobData} />
+                  <JobCard key={`${practice.company}-${index}`} job={jobData} aria-label={`Práctica en ${practice.company}, puesto ${practice.title}`} />
                 );
               })}
               

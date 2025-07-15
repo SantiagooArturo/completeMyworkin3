@@ -103,7 +103,7 @@ export default function JobCard({ job }: JobCardProps) {
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <p className="text-sm text-gray-500">
-                Publicado {getPublishedAgo(job.publishedDate)}
+                Publicado {job.publishedDate}
               </p>
               <button className="text-gray-400 hover:text-red-500 transition-colors">
                 <Heart className="h-5 w-5" />
@@ -177,21 +177,3 @@ export default function JobCard({ job }: JobCardProps) {
     </div>
   );
 }
-
-// Donde tengas los datos de ejemplo de jobs
-const exampleJob = {
-  id: 1,
-  title: "UX/UI Designer",
-  company: "MyWorkIn", 
-  location: "Lima, Perú",
-  type: "Remoto",
-  schedule: "Tiempo completo",
-  salary: "s/ 1200",
-  publishedDate: "5 días",
-  applicationUrl: "https://ejemplo.com/apply", // URL de aplicación
-  skills: {
-    technical: 80,
-    soft: 80,
-    experience: 80
-  }
-};
