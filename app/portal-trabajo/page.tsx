@@ -602,19 +602,19 @@ export default function PortalTrabajoPage() {
                     {selectedPuesto}
                   </span>
                 </div>
-                <button
+                {/* <button
                   onClick={handleRefresh}
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                   {loading ? 'Actualizando...' : 'Refrescar'}
-                </button>
+                </button> */}
               </div>
               
               {/* Puestos predefinidos para cambiar */}
               <div className="flex flex-wrap gap-2">
-                {puestosDisponibles.map((puesto) => (
+                {/* {puestosDisponibles.map((puesto) => (
                   <button
                     key={puesto}
                     onClick={() => handleSelectPuesto(puesto)}
@@ -626,7 +626,7 @@ export default function PortalTrabajoPage() {
                   >
                     {puesto}
                   </button>
-                ))}
+                ))} */}
                 
                 {/* Botón para puesto personalizado */}
                 {showCustomInput ? (
