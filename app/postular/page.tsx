@@ -58,9 +58,15 @@ function PostularContent() {
 
 const handlePostularClick = () => {
   trackButtonClick('Postular ahora');
-  setIsModalOpen(true); // Mostrar el modal cuando se haga clic en el botón
+  window.open(jobUrl, "_blank"); // Primero abre el link
   
-  // Aquí agregarás la lógica para guardar en Firestore
+  setIsModalOpen(true); // Luego muestra el modal
+
+  // El guardado en Firestore y la redirección se harán si se confirma en el modal
+};
+
+const handleConfirmPostular = () => {
+  // Guardamos la postulación en Firestore solo si el usuario está autenticado
   if (user && jobUrl) {
     const postulacionRef = collection(db, "mispostulaciones"); // Accedemos a la colección "mispostulaciones"
     
@@ -73,14 +79,20 @@ const handlePostularClick = () => {
     })
       .then(() => {
         console.log("Postulación guardada exitosamente");
-        window.open(jobUrl, "_blank"); // Abrimos la URL
-        closeModal(); // Cerramos el modal
+        router.push('/postulaciones'); // Redirige a la página de postulaciones
       })
       .catch((error) => {
         console.error("Error al guardar la postulación: ", error);
       });
   }
+
+  closeModal(); // Cierra el modal después de la confirmación
 };
+
+const handleCancelPostular = () => {
+  closeModal(); // Solo cierra el modal si el usuario cancela
+};
+
 
   const handleToolClick = (toolName: string) => {
     trackButtonClick(`Herramienta - ${toolName}`);
@@ -228,16 +240,16 @@ const handlePostularClick = () => {
           <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-8 w-96">
               <h2 className="text-2xl font-bold text-center mb-4">Confirmación de Postulación</h2>
-              <p className="text-center mb-4">¿Estás seguro de que deseas postularte?</p>
+              <p className="text-center mb-4">¿Postulaste al puesto?</p>
               <div className="flex justify-around">
                 <button
-                  onClick={closeModal}
+                  onClick={handleCancelPostular}
                   className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => window.open(jobUrl, '_blank')}
+                  onClick={handleConfirmPostular}
                   className="bg-[#028bbf] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#027ba8]"
                 >
                   Confirmar

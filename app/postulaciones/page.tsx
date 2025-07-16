@@ -47,6 +47,7 @@ import {
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
+import { db2 } from "@/firebase/config-jobs"; // Asegúrate de importar db2 correctamente
 
 // Tipos para las columnas
 type ColumnType =
@@ -66,6 +67,7 @@ interface JobApplication {
   appliedDate: string;
   status: ColumnType;
   salary?: string;
+  url: string;
 }
 
 // Datos de las columnas
@@ -244,6 +246,75 @@ export default function PostulacionesPage() {
 
     fetchApplications();
   }, [user]);
+
+
+  const [practicasData, setPracticasData] = useState<any[]>([]);
+
+
+useEffect(() => {
+  const fetchApplications = async () => {
+    if (!user) return;
+
+    // Obtener las aplicaciones de la base de datos
+    const q = query(
+      collection(db, "mispostulaciones"),
+      where("email", "==", user.email)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const applicationsData: JobApplication[] = querySnapshot.docs.map(
+      (doc) => doc.data() as JobApplication
+    );
+
+    console.log("Aplicaciones filtradas por email:", applicationsData);
+
+    // Ahora obtenemos las prácticas y asignamos la información a las aplicaciones que coinciden por título
+    const practicasCollection = collection(db2, "practicas");
+    const querySnapshotPracticas = await getDocs(practicasCollection);
+    
+    if (!querySnapshotPracticas.empty) {
+      const practicasList = querySnapshotPracticas.docs.map((doc) => doc.data());
+      console.log("Datos obtenidos de 'practicas2':", practicasList);
+
+      // Aquí almacenamos una copia de las aplicaciones para evitar agregar datos duplicados
+      const updatedApplications = applicationsData.map((application) => {
+        // Buscar si ya existe una práctica que coincida con el título
+        const matchedPractica = practicasList.find(
+          (practica) => practica.title === application.title
+        );
+
+        // Si encontramos una práctica que coincida, agregarle la información de la práctica
+        if (matchedPractica) {
+          return {
+            ...application, // Mantener todos los datos de la aplicación original
+            company: matchedPractica.company,
+            location: matchedPractica.location,
+            salary: matchedPractica.salary,
+            description: matchedPractica.description,
+            url: matchedPractica.url,
+          };
+        }
+
+        return application; // Si no hay coincidencia, mantenemos la aplicación tal cual
+      });
+
+      // Eliminar las aplicaciones duplicadas basándonos en el título
+      const uniqueApplications = updatedApplications.filter((value, index, self) => {
+        return index === self.findIndex((t) => t.title === value.title); // Compara por título para eliminar duplicados
+      });
+
+      // Mostrar en consola las aplicaciones con los nuevos campos añadidos y sin duplicados
+      console.log("Aplicaciones con la información de prácticas añadida sin duplicados:", uniqueApplications);
+
+      // Actualizamos el estado con las aplicaciones enriquecidas
+      setApplications(uniqueApplications);
+    }
+  };
+
+  fetchApplications();
+}, [user]);
+
+
 
   const handleDragStart = useCallback((job: JobApplication) => {
     setDraggedJob(job);
