@@ -42,7 +42,7 @@ interface UserProfile {
 export default function PortalTrabajoPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [selectedPuestos, setSelectedPuestos] = useState<string[]>([]);
+  const [selectedPuesto, setSelectedPuesto] = useState<string>('');
   const [customPuesto, setCustomPuesto] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [practicas, setPracticas] = useState<Practica[]>([]);
@@ -82,17 +82,16 @@ export default function PortalTrabajoPage() {
             ultimoPuesto: puestoPrincipal
           });
 
-          // Solo inicializar puestos y cargar prácticas si tiene puesto definido
+          // Solo inicializar puesto si está definido
           if (puestoPrincipal) {
-            setSelectedPuestos([puestoPrincipal]);
+            setSelectedPuesto(puestoPrincipal);
             
             // Si tiene CV y puesto, cargar prácticas automáticamente
             if (userData.cvFileUrl) {
-              await loadPracticas(userData.cvFileUrl, [puestoPrincipal]);
+              await loadPracticas(userData.cvFileUrl, puestoPrincipal);
             }
           } else {
-            // Si no tiene puesto, inicializar con array vacío
-            setSelectedPuestos([]);
+            setSelectedPuesto('');
           }
         } else {
           setUserProfile({ hasCV: false });
@@ -112,35 +111,31 @@ export default function PortalTrabajoPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       // Solo refrescar si el usuario está autenticado, tiene CV y puesto seleccionado
-      if (user && userProfile.hasCV && userProfile.cvFileUrl && selectedPuestos.length > 0) {
+      if (user && userProfile.hasCV && userProfile.cvFileUrl && selectedPuesto) {
         handleRefresh();
       }
     }, 15 * 60 * 1000); // 15 minutos
     return () => clearInterval(interval);
-  }, [user, userProfile.hasCV, userProfile.cvFileUrl, selectedPuestos]);
+  }, [user, userProfile.hasCV, userProfile.cvFileUrl, selectedPuesto]);
 
   // Función para cargar prácticas usando el servicio real
-  const loadPracticas = async (cvUrl: string, puestos: string[]) => {
+  const loadPracticas = async (cvUrl: string, puesto: string) => {
     try {
-      const puestoPrincipal = puestos[0] || 'Diseñador UX/UI';
-      
       console.log('🔍 Cargando prácticas para:', {
-        puesto: puestoPrincipal,
+        puesto: puesto,
         cvUrl: cvUrl,
         userId: user?.uid
       });
 
-      // Mostrar indicador de carga más específico
       setLoading(true);
       
       const matchResult = await OnboardingMatchService.executeMatchWithRetry({
-        puesto: puestoPrincipal,
+        puesto: puesto,
         cv_url: cvUrl
       }, user!.uid);
 
       setPracticas(matchResult.practices);
       
-      // Mensaje más específico según la fuente
       const sourceMessage = matchResult.source === 'api' ? 'nuevas' : 'guardadas';
       console.log(`✅ Prácticas ${sourceMessage} cargadas: ${matchResult.practices.length} (${matchResult.source})`);
       
@@ -153,8 +148,8 @@ export default function PortalTrabajoPage() {
 
   // Función para refrescar prácticas
   const handleRefresh = async () => {
-    if (selectedPuestos.length === 0) {
-      setError('Selecciona al menos un puesto de interés');
+    if (!selectedPuesto) {
+      setError('Selecciona un puesto de interés');
       return;
     }
 
@@ -166,31 +161,17 @@ export default function PortalTrabajoPage() {
     setLoading(true);
     setError(null);
     
-    await loadPracticas(userProfile.cvFileUrl, selectedPuestos);
+    await loadPracticas(userProfile.cvFileUrl, selectedPuesto);
     setLastRefresh(new Date());
     setLoading(false);
   };
 
   // Función para agregar puesto personalizado
   const handleAddCustomPuesto = () => {
-    if (customPuesto.trim() && !selectedPuestos.includes(customPuesto.trim())) {
-      setSelectedPuestos([...selectedPuestos, customPuesto.trim()]);
+    if (customPuesto.trim()) {
+      setSelectedPuesto(customPuesto.trim());
+      handleChangePuestoPrincipal(customPuesto.trim());
       setCustomPuesto('');
-      setShowCustomInput(false);
-    }
-  };
-
-  // Función para remover puesto
-  const removePuesto = (puesto: string) => {
-    setSelectedPuestos(selectedPuestos.filter(p => p !== puesto));
-  };
-
-  // Función para toggle puesto predefinido
-  const togglePuesto = (puesto: string) => {
-    if (selectedPuestos.includes(puesto)) {
-      removePuesto(puesto);
-    } else {
-      setSelectedPuestos([...selectedPuestos, puesto]);
     }
   };
 
@@ -201,17 +182,16 @@ export default function PortalTrabajoPage() {
 
   // Función para manejar el éxito de la subida de CV
   const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string }) => {
-    // Actualizar el perfil del usuario
     setUserProfile({
       hasCV: true,
       cvFileName: cvData.fileName,
       cvFileUrl: cvData.fileUrl
     });
 
-    // Si hay puestos seleccionados, cargar prácticas automáticamente
-    if (selectedPuestos.length > 0) {
+    // Si hay puesto seleccionado, cargar prácticas automáticamente
+    if (selectedPuesto) {
       setLoading(true);
-      await loadPracticas(cvData.fileUrl, selectedPuestos);
+      await loadPracticas(cvData.fileUrl, selectedPuesto);
       setLastRefresh(new Date());
       setLoading(false);
     }
@@ -220,7 +200,7 @@ export default function PortalTrabajoPage() {
   // Función para cambiar puesto principal
   const handleChangePuestoPrincipal = async (nuevoPuesto: string) => {
     if (!user) return;
-    setSelectedPuestos([nuevoPuesto]);
+    setSelectedPuesto(nuevoPuesto);
     try {
       await updateDoc(doc(db, 'users', user.uid), {
         position: nuevoPuesto,
@@ -230,7 +210,7 @@ export default function PortalTrabajoPage() {
       // Si tiene CV, cargar prácticas automáticamente con el nuevo puesto
       if (userProfile.hasCV && userProfile.cvFileUrl) {
         setLoading(true);
-        await loadPracticas(userProfile.cvFileUrl, [nuevoPuesto]);
+        await loadPracticas(userProfile.cvFileUrl, nuevoPuesto);
         setLastRefresh(new Date());
         setLoading(false);
       }
@@ -389,10 +369,15 @@ export default function PortalTrabajoPage() {
       // Alfabético por empresa
       return a.company.localeCompare(b.company, 'es', { sensitivity: 'base' });
     }
-    // Relevancia: usa el mejor indicador de match (similitud_total si existe, sino como venga)
+    // Relevancia: usar la suma de las 4 similitudes como match general
     if (ordenarPor === 'relevancia') {
-      const getMatch = (p: any) => typeof p.similitud_total === 'number' ? p.similitud_total : 0;
-      return getMatch(b) - getMatch(a);
+      const getMatchGeneral = (p: Practica) => {
+        return (p.similitud_requisitos || 0) + 
+               (p.similitud_titulo || 0) + 
+               (p.similitud_experiencia || 0) + 
+               (p.similitud_macro || 0);
+      };
+      return getMatchGeneral(b) - getMatchGeneral(a);
     }
     return 0;
   });
@@ -404,6 +389,12 @@ export default function PortalTrabajoPage() {
     setSalario('todos');
     setJornada('todas');
     setFecha('todas');
+  };
+
+  // Función para seleccionar puesto
+  const handleSelectPuesto = (puesto: string) => {
+    setSelectedPuesto(puesto);
+    handleChangePuestoPrincipal(puesto);
   };
 
   if (!user) {
@@ -425,7 +416,7 @@ export default function PortalTrabajoPage() {
             </h1>
           </div>
           <p className="text-gray-600">
-            {userProfile.hasCV && selectedPuestos.length > 0
+            {userProfile.hasCV && selectedPuesto
               ? `Hemos encontrado ${practicas.length} prácticas compatibles con tu perfil`
               : userProfile.hasCV 
                 ? 'Selecciona tu puesto de interés para ver prácticas personalizadas'
@@ -446,7 +437,7 @@ export default function PortalTrabajoPage() {
               </p>
             </div>
           </div>
-        ) : userProfile.hasCV && selectedPuestos.length === 0 ? (
+        ) : userProfile.hasCV && !selectedPuesto ? (
           /* Con CV pero sin puesto seleccionado - Solicitar puesto */
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
@@ -464,10 +455,7 @@ export default function PortalTrabajoPage() {
               {puestosDisponibles.map((puesto) => (
                 <button
                   key={puesto}
-                  onClick={() => {
-                    setSelectedPuestos([puesto]);
-                    handleChangePuestoPrincipal(puesto);
-                  }}
+                  onClick={() => handleSelectPuesto(puesto)}
                   className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-[#028bbf] hover:text-[#028bbf] transition-colors"
                 >
                   {puesto}
@@ -487,20 +475,12 @@ export default function PortalTrabajoPage() {
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && customPuesto.trim()) {
-                      setSelectedPuestos([customPuesto.trim()]);
-                      handleChangePuestoPrincipal(customPuesto.trim());
-                      setCustomPuesto('');
+                      handleAddCustomPuesto();
                     }
                   }}
                 />
                 <button
-                  onClick={() => {
-                    if (customPuesto.trim()) {
-                      setSelectedPuestos([customPuesto.trim()]);
-                      handleChangePuestoPrincipal(customPuesto.trim());
-                      setCustomPuesto('');
-                    }
-                  }}
+                  onClick={handleAddCustomPuesto}
                   disabled={!customPuesto.trim()}
                   className="px-6 py-2 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
@@ -614,27 +594,41 @@ export default function PortalTrabajoPage() {
             </div>
 
             {/* 2. Selector de Puestos de Interés */}
-            <div className="mb-6  rounded-xl border-gray-200 ">
+            <div className="mb-6 rounded-xl border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                {/* <h3 className="text-lg font-semibold text-gray-900">Puestos de Interés</h3> */}
-                              {/* Puestos Seleccionados */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedPuestos.map((puesto) => (
-                  <span
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">Puesto seleccionado:</span>
+                  <span className="px-3 py-1 bg-[#028bbf] text-white rounded-full text-sm">
+                    {selectedPuesto}
+                  </span>
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? 'Actualizando...' : 'Refrescar'}
+                </button>
+              </div>
+              
+              {/* Puestos predefinidos para cambiar */}
+              <div className="flex flex-wrap gap-2">
+                {puestosDisponibles.map((puesto) => (
+                  <button
                     key={puesto}
-                    className="flex items-center gap-2 px-3 py-1 bg-[#028bbf] text-white rounded-full text-sm"
+                    onClick={() => handleSelectPuesto(puesto)}
+                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                      selectedPuesto === puesto
+                        ? 'bg-[#028bbf] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     {puesto}
-                    <button
-                      onClick={() => removePuesto(puesto)}
-                      className="hover:bg-white/20 rounded-full p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
+                  </button>
                 ))}
                 
-                {/* Input para puesto personalizado */}
+                {/* Botón para puesto personalizado */}
                 {showCustomInput ? (
                   <div className="flex items-center gap-2">
                     <input
@@ -650,7 +644,7 @@ export default function PortalTrabajoPage() {
                       onClick={handleAddCustomPuesto}
                       className="px-3 py-1 bg-green-500 text-white rounded-full text-sm hover:bg-green-600"
                     >
-                      Agregar
+                      Seleccionar
                     </button>
                     <button
                       onClick={() => setShowCustomInput(false)}
@@ -668,35 +662,6 @@ export default function PortalTrabajoPage() {
                     Puesto personalizado
                   </button>
                 )}
-              </div>
-                <button
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  {loading ? 'Actualizando...' : 'Refrescar'}
-                </button>
-              </div>
-              
-
-
-              {/* Puestos Predefinidos */}
-              <div className="flex flex-wrap gap-2">
-                {puestosDisponibles.map((puesto) => (
-                  <button
-                    key={puesto}
-                    onClick={() => togglePuesto(puesto)}
-                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                      selectedPuestos.includes(puesto)
-                        ? 'bg-gray-200 text-gray-600 cursor-default'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                    disabled={selectedPuestos.includes(puesto)}
-                  >
-                    {puesto}
-                  </button>
-                ))}
               </div>
             </div>
 

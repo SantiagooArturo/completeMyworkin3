@@ -60,6 +60,12 @@ export default function PracticaDetailPage() {
 
   // Preparar datos para gráficos de similitud
   const getSimilitudData = (practica: Practica): SimilitudData[] => {
+    // Calcular el match general como la suma de las 4 similitudes
+    const matchGeneral = (practica.similitud_requisitos || 0) + 
+                         (practica.similitud_titulo || 0) + 
+                         (practica.similitud_experiencia || 0) + 
+                         (practica.similitud_macro || 0);
+
     return [
       {
         label: 'Habilidades técnicas',
@@ -80,10 +86,16 @@ export default function PracticaDetailPage() {
         justificacion: practica.justificacion_experiencia || 'No disponible'
       },
       {
-        label: 'Match general',
+        label: 'Macro',
         value: practica.similitud_macro || 0,
         color: '#8B5CF6',
         justificacion: practica.justificacion_macro || 'No disponible'
+      },
+      {
+        label: 'Match general',
+        value: matchGeneral, // Ahora usa la suma correcta
+        color: '#6366F1',
+        justificacion: 'Suma de todas las similitudes: técnicas, blandas, experiencia y macro'
       }
     ];
   };
@@ -205,12 +217,21 @@ export default function PracticaDetailPage() {
                 {/* Match Score Compacto */}
                 <div className="bg-white/10 rounded-lg px-3 py-2 text-center">
                   <div className="text-xl font-bold text-white">
-                    {Math.round(practica.similitud_macro)}%
+                    {Math.round((practica.similitud_requisitos || 0) + 
+                                (practica.similitud_titulo || 0) + 
+                                (practica.similitud_experiencia || 0) + 
+                                (practica.similitud_macro || 0))}%
                   </div>
                   <div className="text-[10px] text-blue-100 font-medium">
-                    {practica.similitud_macro >= 70 ? 'EXCELENTE' : 
-                     practica.similitud_macro >= 50 ? 'BUENO' : 
-                     practica.similitud_macro >= 30 ? 'REGULAR' : 'BAJO'} MATCH
+                    {(() => {
+                      const total = (practica.similitud_requisitos || 0) + 
+                                    (practica.similitud_titulo || 0) + 
+                                    (practica.similitud_experiencia || 0) + 
+                                    (practica.similitud_macro || 0);
+                      return total >= 70 ? 'EXCELENTE' : 
+                             total >= 50 ? 'BUENO' : 
+                             total >= 30 ? 'REGULAR' : 'BAJO';
+                    })()} MATCH
                   </div>
                 </div>
                 
@@ -259,4 +280,4 @@ export default function PracticaDetailPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}

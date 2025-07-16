@@ -89,7 +89,7 @@ const CircularChart = ({ data }: { data: SimilitudData }) => {
 };
 
 export default function PracticaMatchCharts({ similitudes }: MatchChartsProps) {
-  // Use the match general value directly from the similitudes array
+  // Usar el valor de match general directamente desde el array de similitudes
   const matchGeneral = similitudes.find(s => s.label.toLowerCase() === 'match general')?.value || 0;
 
   // Determinar nivel de match
@@ -116,11 +116,11 @@ export default function PracticaMatchCharts({ similitudes }: MatchChartsProps) {
           </p>
         </div>
         <div className="text-right">
-          <div className="text-xl font-bold text-red-500">
-            {matchGeneral}%
+          <div className={`text-xl font-bold ${nivelMatch.color}`}>
+            {Math.round(matchGeneral)}%
           </div>
-          <div className="text-[10px] font-medium text-red-500">
-            Bajo
+          <div className={`text-[10px] font-medium ${nivelMatch.color}`}>
+            {nivelMatch.nivel.toUpperCase()}
           </div>
         </div>
       </div>
@@ -133,4 +133,4 @@ export default function PracticaMatchCharts({ similitudes }: MatchChartsProps) {
       </div>
     </div>
   );
-} 
+}
