@@ -37,9 +37,12 @@ export default function Navbar() {
               <Link href="/" className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium">
                 Inicio
               </Link>
-              <Link href="/bolsa-trabajo" className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium">
-                Bolsa de trabajo
+              <Link href="/salarios-practicas" className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium">
+                Salarios prácticas
               </Link>
+              {/* <Link href="/bolsa-trabajo" className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium">
+                Bolsa de trabajo
+              </Link> */}
               <NavigationMenu>
                 <NavigationMenuList>
                   <NavigationMenuItem>
@@ -221,12 +224,19 @@ export default function Navbar() {
                 Inicio
               </Link>
               <Link
+                href="/salarios-practicas"
+                className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Salarios prácticas
+              </Link>
+              {/* <Link
                 href="/bolsa-trabajo"
                 className="text-gray-700 hover:text-[#028bbf] transition-colors text-sm font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Bolsa de trabajo
-              </Link>
+              </Link> */}
               <div className="space-y-2">
                 <div className="text-gray-700 font-medium text-sm">Bots de empleabilidad</div>
                 <div className="pl-4 space-y-2">
