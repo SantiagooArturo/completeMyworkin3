@@ -1,0 +1,22 @@
+.DS_Store
+node_modules/
+.next/
+.env
+.env.local
+.env.production
+
+# Firebase credentials
+*firebase-adminsdk*.json
+serviceAccountKey.json
+firebase-service-account.json
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
+# Other sensitive files
+*.pem
+*.key
+
+prompt.md
+/docs
+/.github
