@@ -955,9 +955,10 @@ export default function PortalTrabajoPage() {
                   publishedDate: new Date(practice.fecha_agregado).toLocaleString('es-PE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                   applicationUrl: practice.url,
                   skills: {
-                    technical: Math.round(practice.similitud_requisitos),
-                    soft: Math.round(practice.similitud_titulo),
-                    experience: Math.round(practice.similitud_experiencia)
+                    technical: practice.similitud_requisitos,
+                    soft: practice.similitud_titulo,
+                    experience: practice.similitud_experiencia,
+                    macro: practice.similitud_macro
                   }
                 };
                 return (

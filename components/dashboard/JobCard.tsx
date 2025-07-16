@@ -20,6 +20,7 @@ interface JobCardProps {
       technical: number;
       soft: number;
       experience: number;
+      macro?: number;
     };
   };
   index?: number; // Para navegación al detalle
@@ -78,19 +79,16 @@ function getPublishedAgo(dateString: string) {
 export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   const router = useRouter();
 
+  // Calcular el match general como la suma de las 4 similitudes
+  const matchGeneral = job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0);
+
   const handleApplyClick = (e: React.MouseEvent) => {
-    // Prevenir que el click se propague al card
     e.stopPropagation();
-    
-    // Opcional: tracking
-    // trackButtonClick(`Aplicar desde Dashboard - ${job.title}`);
-    
     const params = new URLSearchParams({
       title: job.title,
       url: job.applicationUrl || '',
       worky: 'https://mc.ht/s/SH1lIgc'
     });
-    
     router.push(`/postular?${params.toString()}`);
   };
 
@@ -177,21 +175,11 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       </div>
 
       {/* Skills Match aquí */}
-      <div className="ml-6 flex flex-col self-stretch justify-center items-center bg-gradient-to-r from-teal-500 via-myworkin-500 to-teal-500 rounded-2xl px-8 w-[420px]">
+      <div className="ml-6 flex flex-col self-stretch justify-center items-center bg-gradient-to-r from-teal-500 via-myworkin-500 to-teal-500 rounded-2xl px-8 w-auto">
         <div className="flex space-x-8">
           <CircularProgress
-            percentage={job.skills.technical}
-            label="Habilidades técnicas"
-            color="text-white"
-          />
-          <CircularProgress
-            percentage={job.skills.soft}
-            label="Habilidades blandas"
-            color="text-white"
-          />
-          <CircularProgress
-            percentage={job.skills.experience}
-            label="Experiencia"
+            percentage={Math.round(matchGeneral)}
+            label="Match General"
             color="text-white"
           />
         </div>
