@@ -3,11 +3,14 @@
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X, FileText, Download, Upload, Eye, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X, FileText, Download, Upload, Eye, ExternalLink, CheckCircle2, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import SimpleUploadCVModal from '@/components/SimpleUploadCVModal';
+import CVProfilePreviewModal from '@/components/CVProfilePreviewModal';
+import CVTimelineComponent from '@/components/CVTimelineComponent';
+import { CVProfileMappingService, MappingResult, ExtractedProfileData } from '@/services/cvProfileMappingService';
 
 interface UserProfile {
   hasCV: boolean;
@@ -36,6 +39,16 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile>({ hasCV: false });
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Estados para la funcionalidad de autocompletado de CV
+  const [isExtractingData, setIsExtractingData] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [mappingResult, setMappingResult] = useState<MappingResult | null>(null);
+  const [cvTimelineData, setCvTimelineData] = useState<{
+    experience: any[];
+    education: any[];
+    projects: any[];
+  }>({ experience: [], education: [], projects: [] });
 
   // Cargar datos del perfil desde Firestore
   useEffect(() => {
@@ -68,6 +81,13 @@ export default function ProfilePage() {
             university: userData.university || '',
             bio: userData.bio || '',
             position: userData.position || ''
+          });
+
+          // ✅ FIX: Cargar datos del timeline desde Firebase
+          setCvTimelineData({
+            experience: userData.cvExperience || [],
+            education: userData.cvEducation || [],
+            projects: userData.cvProjects || []
           });
         }
       } catch (error) {
@@ -132,10 +152,115 @@ export default function ProfilePage() {
       cvFileUrl: cvData.fileUrl
     });
 
-    // Guardar en Firestore (ya se hace automáticamente en SimpleUploadCVModal)
-    // El modal ya actualiza los campos: cvFileName, cvFileUrl, hasCV en la BD
-    
+    // Cerrar modal de upload
     setShowUploadModal(false);
+
+    // ✨ NUEVA FUNCIONALIDAD: Extraer datos del CV automáticamente
+    await extractAndPreviewCVData(cvData.fileName, cvData.fileUrl);
+  };
+
+  // Nueva función para extraer datos del CV y mostrar preview
+  const extractAndPreviewCVData = async (fileName: string, fileUrl: string) => {
+    setIsExtractingData(true);
+    
+    try {
+      console.log('🔍 Iniciando extracción de datos del CV...');
+      
+      // Paso 1: Extraer datos del CV usando nuestro API
+      const extractResponse = await fetch('/api/cv/extract-profile-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvFileUrl: fileUrl,
+          fileName: fileName
+        }),
+      });
+
+      if (!extractResponse.ok) {
+        throw new Error('Error al extraer datos del CV');
+      }
+
+      const extractResult = await extractResponse.json();
+      console.log('✅ Datos extraídos exitosamente:', extractResult);
+
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error('No se pudieron extraer datos válidos del CV');
+      }
+
+      // Paso 2: Mapear datos extraídos al perfil del usuario
+      const currentProfile = await CVProfileMappingService.getCurrentProfile(user!);
+      const mappingResult = await CVProfileMappingService.mapCVDataToProfile(
+        extractResult.data as ExtractedProfileData,
+        currentProfile
+      );
+
+      console.log('🎯 Mapeo completado:', mappingResult);
+
+      // Paso 3: Configurar datos del timeline
+      setCvTimelineData({
+        experience: extractResult.data.experience || [],
+        education: extractResult.data.education || [],
+        projects: extractResult.data.projects || []
+      });
+
+      // Paso 4: Mostrar modal de preview si hay datos para aplicar
+      if (mappingResult.newData.length > 0 || mappingResult.conflicts.length > 0) {
+        setMappingResult(mappingResult);
+        setShowPreviewModal(true);
+      } else {
+        // Si no hay cambios que aplicar, mostrar mensaje informativo
+        console.log('ℹ️ No se encontraron datos nuevos para aplicar al perfil');
+      }
+
+    } catch (error) {
+      console.error('❌ Error durante la extracción de datos del CV:', error);
+      // En caso de error, no interrumpir el flujo normal
+      // El usuario aún puede usar el CV normalmente
+    } finally {
+      setIsExtractingData(false);
+    }
+  };
+
+  // Función para manejar cuando se aplican los cambios del CV
+  const handleApplyChanges = async () => {
+    // Recargar el perfil del usuario para mostrar los cambios aplicados
+    if (user) {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        
+        setUserProfile({
+          hasCV: !!(userData.cvFileUrl || userData.cvFileName),
+          cvFileName: userData.cvFileName || undefined,
+          cvFileUrl: userData.cvFileUrl || undefined,
+          phone: userData.phone,
+          location: userData.location,
+          university: userData.university,
+          bio: userData.bio,
+          position: userData.position
+        });
+
+        // Actualizar datos del formulario también
+        setProfileData({
+          displayName: user?.displayName || userData.displayName || '',
+          email: user?.email || '',
+          phone: userData.phone || '',
+          location: userData.location || '',
+          university: userData.university || '',
+          bio: userData.bio || '',
+          position: userData.position || ''
+        });
+
+        // ✅ FIX: También recargar timeline después de aplicar cambios
+        setCvTimelineData({
+          experience: userData.cvExperience || [],
+          education: userData.cvEducation || [],
+          projects: userData.cvProjects || []
+        });
+      }
+    }
   };
 
   const handleDownloadCV = () => {
@@ -413,31 +538,56 @@ export default function ProfilePage() {
                            </p>
                          </div>
                          
-                         {/* Estado del CV */}
-                         <div className="flex items-center text-green-700 mb-3">
-                           <CheckCircle2 className="h-4 w-4 mr-2 flex-shrink-0" />
-                           <span className="text-sm font-medium">CV activo y disponible</span>
-                         </div>
+                                                   {/* Estado del CV */}
+                          <div className="flex items-center text-green-700 mb-3">
+                            <CheckCircle2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                            <span className="text-sm font-medium">CV activo y disponible</span>
+                          </div>
+
+                          {/* Nuevo: Indicador de funcionalidad inteligente */}
+                          <div className="flex items-center text-purple-600 mb-3 bg-purple-50 p-2 rounded-lg">
+                            <Zap className="h-4 w-4 mr-2 flex-shrink-0" />
+                            <span className="text-xs font-medium">Autocompletado inteligente activado</span>
+                          </div>
                        </div>
 
                       {/* Acciones del CV */}
                       <div className="flex flex-col space-y-2">
-                        <button
-                          onClick={handleDownloadCV}
-                          className="flex items-center justify-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2 rounded-lg font-medium transition w-full"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>Ver CV</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowUploadModal(true)}
-                          className="flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition w-full"
-                        >
-                          <Upload className="h-4 w-4" />
-                          <span>Actualizar CV</span>
-                        </button>
+                                                 <button
+                           onClick={handleDownloadCV}
+                           className="flex items-center justify-center space-x-2 bg-[#028bbf] hover:bg-[#027ba8] text-white px-4 py-2 rounded-lg font-medium transition w-full"
+                         >
+                           <Eye className="h-4 w-4" />
+                           <span>Ver CV</span>
+                           <ExternalLink className="h-3 w-3" />
+                         </button>
+                         
+                         <button
+                           onClick={() => setShowUploadModal(true)}
+                           className="flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition w-full"
+                         >
+                           <Upload className="h-4 w-4" />
+                           <span>Actualizar CV</span>
+                         </button>
+
+                         {/* Botón para extraer datos manualmente */}
+                         <button
+                           onClick={() => extractAndPreviewCVData(userProfile.cvFileName || '', userProfile.cvFileUrl || '')}
+                           disabled={isExtractingData || !userProfile.cvFileUrl}
+                           className="flex items-center justify-center space-x-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                         >
+                           {isExtractingData ? (
+                             <>
+                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                               <span>Extrayendo...</span>
+                             </>
+                           ) : (
+                             <>
+                               <Sparkles className="h-4 w-4" />
+                               <span>Autocompletar perfil</span>
+                             </>
+                           )}
+                         </button>
                       </div>
                     </div>
                   </div>
@@ -492,13 +642,46 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Timeline de experiencia extraída del CV */}
+        {(cvTimelineData.experience.length > 0 || cvTimelineData.education.length > 0 || cvTimelineData.projects.length > 0) && (
+          <div className="mt-8">
+            <CVTimelineComponent
+              experience={cvTimelineData.experience}
+              education={cvTimelineData.education}
+              projects={cvTimelineData.projects}
+              title="Timeline Profesional"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            />
+          </div>
+        )}
       </div>
+
+      {/* Indicador de extracción de datos */}
+      {isExtractingData && (
+        <div className="fixed bottom-4 right-4 z-40 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          <div>
+            <div className="font-medium">Analizando tu CV</div>
+            <div className="text-sm text-purple-100">Extrayendo datos automáticamente...</div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de subida de CV */}
       <SimpleUploadCVModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadSuccess={handleUploadSuccess}
+      />
+
+      {/* Modal de preview de datos extraídos */}
+      <CVProfilePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        mappingResult={mappingResult}
+        user={user}
+        onApplyChanges={handleApplyChanges}
       />
     </DashboardLayout>
   );

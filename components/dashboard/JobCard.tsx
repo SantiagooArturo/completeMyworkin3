@@ -22,6 +22,8 @@ interface JobCardProps {
       experience: number;
     };
   };
+  index?: number; // Para navegación al detalle
+  onCardClick?: (index: number) => void; // Callback para click en el card
 }
 
 function CircularProgress({ percentage, label, color }: { percentage: number; label: string; color: string }) {
@@ -73,10 +75,13 @@ function getPublishedAgo(dateString: string) {
   }
 }
 
-export default function JobCard({ job }: JobCardProps) {
+export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   const router = useRouter();
 
-  const handleApplyClick = () => {
+  const handleApplyClick = (e: React.MouseEvent) => {
+    // Prevenir que el click se propague al card
+    e.stopPropagation();
+    
     // Opcional: tracking
     // trackButtonClick(`Aplicar desde Dashboard - ${job.title}`);
     
@@ -89,8 +94,17 @@ export default function JobCard({ job }: JobCardProps) {
     router.push(`/postular?${params.toString()}`);
   };
 
+  const handleCardClick = () => {
+    if (typeof index === 'number' && onCardClick) {
+      onCardClick(index);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl border-gray-200 p-1 hover:shadow-md transition-shadow min-h-[200px] flex">
+    <div 
+      className="bg-white rounded-xl border-gray-200 p-1 hover:shadow-md transition-shadow min-h-[200px] flex cursor-pointer group"
+      onClick={handleCardClick}
+    >
       <div className="flex-1 p-4 flex flex-col">
         {/* Logo y título */}
         <div className="flex items-start space-x-4 mb-4">
@@ -105,11 +119,19 @@ export default function JobCard({ job }: JobCardProps) {
               <p className="text-sm text-gray-500">
                 Publicado {job.publishedDate}
               </p>
-              <button className="text-gray-400 hover:text-red-500 transition-colors">
-                <Heart className="h-5 w-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-400 group-hover:text-[#028bbf] transition-colors opacity-0 group-hover:opacity-100">
+                  Click para ver detalle
+                </span>
+                <button 
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Heart className="h-5 w-5" />
+                </button>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
+            <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#028bbf] transition-colors">
               {job.title}
             </h3>
             <p className="text-gray-600 font-medium">
@@ -147,7 +169,7 @@ export default function JobCard({ job }: JobCardProps) {
           {/* Botón de aplicar ACTUALIZADO */}
           <button 
             onClick={handleApplyClick}
-            className="bg-myworkin-blue hover:bg-myworkin-600 text-white px-8 py-3 rounded-xl font-medium transition-colors whitespace-nowrap"
+            className="bg-myworkin-blue hover:bg-myworkin-600 text-white px-8 py-3 rounded-xl font-medium transition-colors whitespace-nowrap z-10 relative"
           >
             Aplicar ahora
           </button>

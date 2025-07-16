@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import JobCard from '@/components/dashboard/JobCard';
 import SimpleUploadCVModal from '@/components/SimpleUploadCVModal';
@@ -40,6 +41,7 @@ interface UserProfile {
 
 export default function PortalTrabajoPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedPuestos, setSelectedPuestos] = useState<string[]>([]);
   const [customPuesto, setCustomPuesto] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -235,6 +237,15 @@ export default function PortalTrabajoPage() {
     } catch (error) {
       console.error('Error actualizando puesto principal:', error);
     }
+  };
+
+  // Función para manejar click en card de práctica
+  const handleCardClick = (index: number) => {
+    // Guardar las prácticas ordenadas en localStorage para acceso desde la página de detalle
+    localStorage.setItem('matched_practices', JSON.stringify(sortedPracticas));
+    
+    // Navegar a la página de detalle usando el índice en el array ordenado
+    router.push(`/practica/${index}`);
   };
 
   // Utilidad para filtrar por fecha
@@ -932,9 +943,9 @@ export default function PortalTrabajoPage() {
                 </div>
               )}
               {/* 7. Mejor accesibilidad y mobile: aria-labels y clases responsive */}
-              {sortedPracticas.map((practice: Practica, index: number) => {
+              {sortedPracticas.map((practice: Practica, sortedIndex: number) => {
                 const jobData = {
-                  id: index + 1,
+                  id: sortedIndex + 1,
                   title: practice.title,
                   company: practice.company,
                   location: practice.location,
@@ -950,7 +961,13 @@ export default function PortalTrabajoPage() {
                   }
                 };
                 return (
-                  <JobCard key={`${practice.company}-${index}`} job={jobData} aria-label={`Práctica en ${practice.company}, puesto ${practice.title}`} />
+                  <JobCard 
+                    key={`${practice.company}-${sortedIndex}`} 
+                    job={jobData} 
+                    index={sortedIndex}
+                    onCardClick={handleCardClick}
+                    aria-label={`Práctica en ${practice.company}, puesto ${practice.title}`} 
+                  />
                 );
               })}
               
