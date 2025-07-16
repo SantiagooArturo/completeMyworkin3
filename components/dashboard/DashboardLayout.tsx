@@ -30,17 +30,17 @@ interface DashboardLayoutProps {
 
 const sidebarItems = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-    badge: null
-  },
-  {
     id: 'portal-trabajo',
     label: 'Portal de trabajo',
     icon: Briefcase,
     href: '/portal-trabajo',
+    badge: null
+  },
+    {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    href: '/dashboard',
     badge: null
   },
   {
