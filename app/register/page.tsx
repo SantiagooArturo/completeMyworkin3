@@ -76,6 +76,34 @@ export default function RegisterPage() {
         console.error('Error creando cuenta de créditos:', creditError);
       }
       
+      // 📧 NUEVO: Enviar email de bienvenida desde santi@myworkinpe.lat
+      try {
+        console.log('📧 Enviando email de bienvenida a:', email);
+        
+        const emailResponse = await fetch('/api/email/send-welcome', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            displayName: displayName.trim(),
+            credits: 10 // Los créditos de bienvenida que reciben
+          }),
+        });
+
+        const emailResult = await emailResponse.json();
+
+        if (emailResult.success) {
+          console.log('✅ Email de bienvenida enviado exitosamente:', emailResult.messageId);
+        } else {
+          console.error('❌ Error enviando email de bienvenida:', emailResult.error);
+        }
+      } catch (emailError) {
+        // No fallar el registro si el email falla
+        console.error('❌ Error inesperado enviando email de bienvenida:', emailError);
+      }
+      
       setLoading(false);
       await OnboardingService.skipOnboarding(userCredential.user);
       // Redirigir al portal de trabajo
