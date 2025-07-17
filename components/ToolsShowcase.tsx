@@ -25,28 +25,28 @@ const tools: Tool[] = [
     name: 'Match IA',
     description: 'Encuentra las prácticas que mejor se ajustan a tu perfil con IA',
     icon: <Target className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/VIDEO_ID_1'
+    videoUrl: 'https://www.youtube.com/embed/_2GnA5RXMG0'
   },
   {
     id: 'cv-builder',
     name: 'CV Builder IA',
     description: 'Crea un CV profesional optimizado para cada postulación',
     icon: <FileText className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/VIDEO_ID_2'
+    videoUrl: 'https://www.youtube.com/embed/-m71NYbXR5M'
   },
   {
     id: 'interview',
     name: 'Simulador de Entrevistas',
     description: 'Practica entrevistas con un entrevistador virtual inteligente',
     icon: <Mic className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/VIDEO_ID_3'
+    videoUrl: 'https://www.youtube.com/embed/6O5vFbw0T70'
   },
   {
     id: 'cv-analysis',
     name: 'Análisis de CV',
     description: 'Recibe feedback detallado y mejora tu CV con IA',
     icon: <Search className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/VIDEO_ID_4'
+    videoUrl: 'https://www.youtube.com/embed/FWZenEqyH6M'
   }
 ];
 
@@ -126,7 +126,7 @@ export default function ToolsShowcase() {
             <div className="bg-gradient-to-r from-gray-900/5 to-gray-900/10 rounded-2xl p-4">
               <div className="aspect-video w-full rounded-xl overflow-hidden shadow-2xl">
                 <iframe
-                  src={activeTool?.videoUrl}
+                  src={`${activeTool?.videoUrl}?autoplay=1&mute=1`}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

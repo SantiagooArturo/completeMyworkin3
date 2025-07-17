@@ -46,10 +46,12 @@ export default function Home() {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Tu búsqueda laboral completa.
+              Prepárate, postula
+y consigue tu
+
               <br />
               <span className="text-[#028bbf] border-b-4 border-[#028bbf]/20">
-                Impulsada por un perfil.
+                Primer trabajo
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
