@@ -27,6 +27,33 @@ export default function LoginModal({ open, onClose }: { open: boolean; onClose: 
           });
         }
         
+        // 📧 NUEVO: Enviar email de bienvenida desde santi@myworkinpe.lat
+        try {
+          console.log('📧 Enviando email de bienvenida desde modal a:', email);
+          
+          const emailResponse = await fetch('/api/email/send-welcome', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: email,
+              displayName: displayName || 'Usuario',
+              credits: 10
+            }),
+          });
+
+          const emailResult = await emailResponse.json();
+          
+          if (emailResult.success) {
+            console.log('✅ Email de bienvenida enviado desde modal:', emailResult.messageId);
+          } else {
+            console.error('❌ Error enviando email desde modal:', emailResult.error);
+          }
+        } catch (emailError) {
+          console.error('❌ Error inesperado enviando email desde modal:', emailError);
+        }
+        
         setLoading(false);
         onClose();
       } else {
