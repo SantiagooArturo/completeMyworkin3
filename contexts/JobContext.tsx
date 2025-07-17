@@ -17,14 +17,17 @@ interface JobData {
   publishedDate?: string;
   endDate?: string;
   // Campos adicionales que podrían venir de las prácticas
-  similitud_requisitos?: number;
-  similitud_titulo?: number;
-  similitud_experiencia?: number;
-  similitud_macro?: number;
+  requisitos_tecnicos?: number;
+  similitud_puesto?: number;
+  afinidad_sector?: number;
+  similitud_semantica?: number;
+  juicio_sistema?: number;
+  similitud_total?: number;
   justificacion_requisitos?: string;
-  justificacion_titulo?: string;
-  justificacion_experiencia?: string;
-  justificacion_macro?: string;
+  justificacion_puesto?: string;
+  justificacion_afinidad?: string;
+  justificacion_semantica?: string;
+  justificacion_juicio?: string;
 }
 
 interface JobContextType {

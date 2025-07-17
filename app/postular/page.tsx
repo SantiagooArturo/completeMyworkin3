@@ -138,15 +138,18 @@ function PostularContent() {
         requirements: selectedJob?.requirements || "",
         publishedDate: selectedJob?.publishedDate || "",
         endDate: selectedJob?.endDate || "",
-        // Agregar datos de similitud si están disponibles
-        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
-        similitud_titulo: selectedJob?.similitud_titulo || 0,
-        similitud_experiencia: selectedJob?.similitud_experiencia || 0,
-        similitud_macro: selectedJob?.similitud_macro || 0,
+        // Agregar datos de similitud con los nuevos campos
+        requisitos_tecnicos: selectedJob?.requisitos_tecnicos || 0,
+        similitud_puesto: selectedJob?.similitud_puesto || 0,
+        afinidad_sector: selectedJob?.afinidad_sector || 0,
+        similitud_semantica: selectedJob?.similitud_semantica || 0,
+        juicio_sistema: selectedJob?.juicio_sistema || 0,
+        similitud_total: selectedJob?.similitud_total || 0,
         justificacion_requisitos: selectedJob?.justificacion_requisitos || "",
-        justificacion_titulo: selectedJob?.justificacion_titulo || "",
-        justificacion_experiencia: selectedJob?.justificacion_experiencia || "",
-        justificacion_macro: selectedJob?.justificacion_macro || "",
+        justificacion_puesto: selectedJob?.justificacion_puesto || "",
+        justificacion_afinidad: selectedJob?.justificacion_afinidad || "",
+        justificacion_semantica: selectedJob?.justificacion_semantica || "",
+        justificacion_juicio: selectedJob?.justificacion_juicio || "",
         createdAt: new Date() // Fecha de creación
       })
         .then(() => {
@@ -189,15 +192,18 @@ function PostularContent() {
         requirements: selectedJob?.requirements || "",
         publishedDate: selectedJob?.publishedDate || "",
         endDate: selectedJob?.endDate || "",
-        // Agregar datos de similitud si están disponibles
-        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
-        similitud_titulo: selectedJob?.similitud_titulo || 0,
-        similitud_experiencia: selectedJob?.similitud_experiencia || 0,
-        similitud_macro: selectedJob?.similitud_macro || 0,
+        // Agregar datos de similitud con los nuevos campos
+        requisitos_tecnicos: selectedJob?.requisitos_tecnicos || 0,
+        similitud_puesto: selectedJob?.similitud_puesto || 0,
+        afinidad_sector: selectedJob?.afinidad_sector || 0,
+        similitud_semantica: selectedJob?.similitud_semantica || 0,
+        juicio_sistema: selectedJob?.juicio_sistema || 0,
+        similitud_total: selectedJob?.similitud_total || 0,
         justificacion_requisitos: selectedJob?.justificacion_requisitos || "",
-        justificacion_titulo: selectedJob?.justificacion_titulo || "",
-        justificacion_experiencia: selectedJob?.justificacion_experiencia || "",
-        justificacion_macro: selectedJob?.justificacion_macro || "",
+        justificacion_puesto: selectedJob?.justificacion_puesto || "",
+        justificacion_afinidad: selectedJob?.justificacion_afinidad || "",
+        justificacion_semantica: selectedJob?.justificacion_semantica || "",
+        justificacion_juicio: selectedJob?.justificacion_juicio || "",
         createdAt: new Date()
       })
         .then(() => {

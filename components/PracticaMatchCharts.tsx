@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Info, TrendingUp, User, Target, Star } from 'lucide-react';
+import { Info, TrendingUp, User, Target, Star, Briefcase } from 'lucide-react';
 import { MatchChartsProps, SimilitudData } from '@/types/practica';
 
 // Componente para un gráfico circular individual
@@ -16,14 +16,18 @@ const CircularChart = ({ data }: { data: SimilitudData }) => {
 
   const getIcon = (label: string) => {
     switch (label.toLowerCase()) {
-      case 'habilidades técnicas':
+      case 'requisitos técnicos':
         return <TrendingUp className="h-5 w-5" />;
-      case 'habilidades blandas':
-        return <User className="h-5 w-5" />;
-      case 'experiencia':
-        return <Star className="h-5 w-5" />;
-      case 'título':
+      case 'similitud puesto':
         return <Target className="h-5 w-5" />;
+      case 'afinidad sector':
+        return <Briefcase className="h-5 w-5" />;
+      case 'similitud semántica':
+        return <User className="h-5 w-5" />;
+      case 'juicio sistema':
+        return <Star className="h-5 w-5" />;
+      case 'match general':
+        return <Info className="h-5 w-5" />;
       default:
         return <Info className="h-5 w-5" />;
     }

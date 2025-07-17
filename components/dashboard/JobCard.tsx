@@ -18,6 +18,7 @@ interface JobCardProps {
     publishedDate: string;
     applicationUrl?: string; // AGREGAR ESTA PROPIEDAD OPCIONAL
     skills: {
+      general: number; // Match general
       technical: number;
       soft: number;
       experience: number;
@@ -81,8 +82,6 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   const router = useRouter();
   const { setSelectedJob } = useJobContext();
 
-  // Calcular el match general como la suma de las 4 similitudes
-  const matchGeneral = job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0);
 
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -98,11 +97,18 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       salary: job.salary,
       url: job.applicationUrl || '',
       publishedDate: job.publishedDate,
-      // Agregar datos de similitud si están disponibles
-      similitud_requisitos: job.skills.technical,
-      similitud_titulo: job.skills.soft,
-      similitud_experiencia: job.skills.experience,
-      similitud_macro: job.skills.macro,
+      // Agregar datos de similitud con nueva estructura
+      requisitos_tecnicos: job.skills.technical,
+      similitud_puesto: job.skills.soft,
+      afinidad_sector: job.skills.experience,
+      similitud_semantica: job.skills.macro || 0,
+      juicio_sistema: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
+      similitud_total: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
+      justificacion_requisitos: 'Evaluación de requisitos técnicos',
+      justificacion_puesto: 'Evaluación de compatibilidad con puesto',
+      justificacion_afinidad: 'Evaluación de afinidad con el sector',
+      justificacion_semantica: 'Evaluación semántica del perfil',
+      justificacion_juicio: 'Evaluación general del sistema',
     });
     
     const params = new URLSearchParams({
@@ -199,7 +205,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       <div className="ml-6 flex flex-col self-stretch justify-center items-center bg-gradient-to-r from-teal-500 via-myworkin-500 to-teal-500 rounded-2xl px-8 w-auto">
         <div className="flex space-x-8">
           <CircularProgress
-            percentage={Math.round(matchGeneral)}
+            percentage={job.skills.general}
             label="Match General"
             color="text-white"
           />

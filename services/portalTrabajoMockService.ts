@@ -42,15 +42,17 @@ export class PortalTrabajoMockService {
         salary: '$800 - $1200',
         url: 'https://example.com/practica1',
         fecha_agregado: '2023-10-01',
-        similitud_requisitos: 0.85,
-        similitud_titulo: 0.9,
-        similitud_experiencia: 0.8,
-        similitud_macro: 0.75,
-        similitud_total: 0.8,
+        requisitos_tecnicos: 85,
+        similitud_puesto: 90,
+        afinidad_sector: 80,
+        similitud_semantica: 75,
+        juicio_sistema: 82,
+        similitud_total: 82,
         justificacion_requisitos: 'Cumple con los requisitos básicos.',
-        justificacion_titulo: 'Título relevante en diseño.',
-        justificacion_experiencia: 'Experiencia previa en proyectos similares.',
-        justificacion_macro: 'Sector en crecimiento.'
+        justificacion_puesto: 'Título relevante en diseño.',
+        justificacion_afinidad: 'Experiencia previa en proyectos similares.',
+        justificacion_semantica: 'Sector en crecimiento.',
+        justificacion_juicio: 'Sistema recomienda esta oportunidad.'
       },
       // Más prácticas mock...
     ];

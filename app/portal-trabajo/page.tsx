@@ -369,13 +369,10 @@ export default function PortalTrabajoPage() {
       // Alfabético por empresa
       return a.company.localeCompare(b.company, 'es', { sensitivity: 'base' });
     }
-    // Relevancia: usar la suma de las 4 similitudes como match general
+    // Relevancia: usar similitud_total directamente del backend
     if (ordenarPor === 'relevancia') {
       const getMatchGeneral = (p: Practica) => {
-        return (p.similitud_requisitos || 0) + 
-               (p.similitud_titulo || 0) + 
-               (p.similitud_experiencia || 0) + 
-               (p.similitud_macro || 0);
+        return p.similitud_total || 0;
       };
       return getMatchGeneral(b) - getMatchGeneral(a);
     }
@@ -920,10 +917,11 @@ export default function PortalTrabajoPage() {
                   publishedDate: new Date(practice.fecha_agregado).toLocaleString('es-PE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                   applicationUrl: practice.url,
                   skills: {
-                    technical: practice.similitud_requisitos,
-                    soft: practice.similitud_titulo,
-                    experience: practice.similitud_experiencia,
-                    macro: practice.similitud_macro
+                    general: practice.similitud_total,
+                    technical: practice.requisitos_tecnicos,
+                    soft: practice.similitud_puesto,
+                    experience: practice.afinidad_sector,
+                    macro: practice.similitud_semantica
                   }
                 };
                 return (

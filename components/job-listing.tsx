@@ -29,15 +29,18 @@ export default function JobListing({ practice }: JobListingProps) {
       requirements: practice.requirements,
       publishedDate: practice.posted_date,
       endDate: practice.end_date,
-      // Agregar datos de similitud si están disponibles usando any para evitar errores de tipo
-      similitud_requisitos: (practice as any).similitud_requisitos,
-      similitud_titulo: (practice as any).similitud_titulo,
-      similitud_experiencia: (practice as any).similitud_experiencia,
-      similitud_macro: (practice as any).similitud_macro,
+      // Agregar datos de similitud con nueva estructura
+      requisitos_tecnicos: (practice as any).requisitos_tecnicos,
+      similitud_puesto: (practice as any).similitud_puesto,
+      afinidad_sector: (practice as any).afinidad_sector,
+      similitud_semantica: (practice as any).similitud_semantica,
+      juicio_sistema: (practice as any).juicio_sistema,
+      similitud_total: (practice as any).similitud_total,
       justificacion_requisitos: (practice as any).justificacion_requisitos,
-      justificacion_titulo: (practice as any).justificacion_titulo,
-      justificacion_experiencia: (practice as any).justificacion_experiencia,
-      justificacion_macro: (practice as any).justificacion_macro,
+      justificacion_puesto: (practice as any).justificacion_puesto,
+      justificacion_afinidad: (practice as any).justificacion_afinidad,
+      justificacion_semantica: (practice as any).justificacion_semantica,
+      justificacion_juicio: (practice as any).justificacion_juicio,
     });
     
     const params = new URLSearchParams({

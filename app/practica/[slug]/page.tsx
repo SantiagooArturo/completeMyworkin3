@@ -46,15 +46,18 @@ export default function PracticaDetailPage() {
         requirements: practica.descripcion || '', // Usar descripción si no hay requisitos específicos
         publishedDate: practica.fecha_agregado,
         endDate: practica.fecha_agregado, // Usar fecha_agregado si no hay fecha_limite
-        // Datos de similitud específicos del match
-        similitud_requisitos: practica.similitud_requisitos,
-        similitud_titulo: practica.similitud_titulo,
-        similitud_experiencia: practica.similitud_experiencia,
-        similitud_macro: practica.similitud_macro,
+        // Datos de similitud específicos del match con los nuevos campos
+        requisitos_tecnicos: practica.requisitos_tecnicos,
+        similitud_puesto: practica.similitud_puesto,
+        afinidad_sector: practica.afinidad_sector,
+        similitud_semantica: practica.similitud_semantica,
+        juicio_sistema: practica.juicio_sistema,
+        similitud_total: practica.similitud_total,
         justificacion_requisitos: practica.justificacion_requisitos,
-        justificacion_titulo: practica.justificacion_titulo,
-        justificacion_experiencia: practica.justificacion_experiencia,
-        justificacion_macro: practica.justificacion_macro,
+        justificacion_puesto: practica.justificacion_puesto,
+        justificacion_afinidad: practica.justificacion_afinidad,
+        justificacion_semantica: practica.justificacion_semantica,
+        justificacion_juicio: practica.justificacion_juicio,
       });
       
       // Redirigir a la página de postular
@@ -95,42 +98,42 @@ export default function PracticaDetailPage() {
 
   // Preparar datos para gráficos de similitud
   const getSimilitudData = (practica: Practica): SimilitudData[] => {
-    // Calcular el match general como la suma de las 4 similitudes
-    const matchGeneral = (practica.similitud_requisitos || 0) + 
-                         (practica.similitud_titulo || 0) + 
-                         (practica.similitud_experiencia || 0) + 
-                         (practica.similitud_macro || 0);
-
     return [
       {
-        label: 'Habilidades técnicas',
-        value: practica.similitud_requisitos || 0,
+        label: 'Requisitos Técnicos',
+        value: practica.requisitos_tecnicos || 0,
         color: '#10B981',
         justificacion: practica.justificacion_requisitos || 'No disponible'
       },
       {
-        label: 'Habilidades blandas',
-        value: practica.similitud_titulo || 0,
+        label: 'Similitud Puesto',
+        value: practica.similitud_puesto || 0,
         color: '#3B82F6',
-        justificacion: practica.justificacion_titulo || 'No disponible'
+        justificacion: practica.justificacion_puesto || 'No disponible'
       },
       {
-        label: 'Experiencia',
-        value: practica.similitud_experiencia || 0,
+        label: 'Afinidad Sector',
+        value: practica.afinidad_sector || 0,
         color: '#F59E0B',
-        justificacion: practica.justificacion_experiencia || 'No disponible'
+        justificacion: practica.justificacion_afinidad || 'No disponible'
       },
       {
-        label: 'Macro',
-        value: practica.similitud_macro || 0,
+        label: 'Similitud Semántica',
+        value: practica.similitud_semantica || 0,
         color: '#8B5CF6',
-        justificacion: practica.justificacion_macro || 'No disponible'
+        justificacion: practica.justificacion_semantica || 'No disponible'
       },
       {
-        label: 'Match general',
-        value: matchGeneral, // Ahora usa la suma correcta
+        label: 'Juicio Sistema',
+        value: practica.juicio_sistema || 0,
+        color: '#EF4444',
+        justificacion: practica.justificacion_juicio || 'No disponible'
+      },
+      {
+        label: 'Match General',
+        value: practica.similitud_total || 0, // Usar el valor calculado del backend
         color: '#6366F1',
-        justificacion: 'Suma de todas las similitudes: técnicas, blandas, experiencia y macro'
+        justificacion: 'Evaluación integral de compatibilidad calculada por el sistema'
       }
     ];
   };
@@ -252,17 +255,11 @@ export default function PracticaDetailPage() {
                 {/* Match Score Compacto */}
                 <div className="bg-white/10 rounded-lg px-3 py-2 text-center">
                   <div className="text-xl font-bold text-white">
-                    {Math.round((practica.similitud_requisitos || 0) + 
-                                (practica.similitud_titulo || 0) + 
-                                (practica.similitud_experiencia || 0) + 
-                                (practica.similitud_macro || 0))}%
+                    {Math.round(practica.similitud_total || 0)}%
                   </div>
                   <div className="text-[10px] text-blue-100 font-medium">
                     {(() => {
-                      const total = (practica.similitud_requisitos || 0) + 
-                                    (practica.similitud_titulo || 0) + 
-                                    (practica.similitud_experiencia || 0) + 
-                                    (practica.similitud_macro || 0);
+                      const total = practica.similitud_total || 0;
                       return total >= 70 ? 'EXCELENTE' : 
                              total >= 50 ? 'BUENO' : 
                              total >= 30 ? 'REGULAR' : 'BAJO';

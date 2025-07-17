@@ -41,15 +41,17 @@ describe('matchPractices Service Tests', () => {
           salary: '$1000',
           url: 'https://test.com/job',
           fecha_agregado: '2024-01-01',
-          similitud_requisitos: 85,
-          similitud_titulo: 90,
-          similitud_experiencia: 80,
-          similitud_macro: 88,
+          requisitos_tecnicos: 85,
+          similitud_puesto: 90,
+          afinidad_sector: 80,
+          similitud_semantica: 88,
+          juicio_sistema: 75,
           similitud_total: 86,
           justificacion_requisitos: 'Test justification',
-          justificacion_titulo: 'Test title justification',
-          justificacion_experiencia: 'Test experience justification',
-          justificacion_macro: 'Test macro justification'
+          justificacion_puesto: 'Test title justification',
+          justificacion_afinidad: 'Test experience justification',
+          justificacion_semantica: 'Test macro justification',
+          justificacion_juicio: 'Test system judgment'
         }
       ]
     };

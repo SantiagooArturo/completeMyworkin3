@@ -9,17 +9,20 @@ export interface Practica {
   descripcion: string;
   location: string;
   
-  // Datos de similitud/match
-  similitud_requisitos: number;
-  similitud_titulo: number;
-  similitud_experiencia: number;
-  similitud_macro: number;
+  // Datos de similitud/match (nueva estructura)
+  requisitos_tecnicos: number;
+  similitud_puesto: number;
+  afinidad_sector: number;
+  similitud_semantica: number;
+  juicio_sistema: number;
+  similitud_total: number;
   
-  // Justificaciones de IA
+  // Justificaciones de IA (nueva estructura)
   justificacion_requisitos: string;
-  justificacion_titulo: string;
-  justificacion_experiencia: string;
-  justificacion_macro: string;
+  justificacion_puesto: string;
+  justificacion_afinidad: string;
+  justificacion_semantica: string;
+  justificacion_juicio: string;
 }
 
 // Respuesta del API de match
