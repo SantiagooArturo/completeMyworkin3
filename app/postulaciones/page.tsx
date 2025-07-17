@@ -196,6 +196,42 @@ function JobApplicationCard({
   );
 }
 
+// Componente Skeleton para las job cards
+function JobApplicationCardSkeleton({ borderColor }: { borderColor: string }) {
+  return (
+    <div
+      className={`bg-white min-w-[340px] rounded-xl border-2 ${borderColor} p-4 animate-pulse`}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-12 h-12 bg-gray-300 rounded-md flex-shrink-0" />
+        <div>
+          <div className="h-5 bg-gray-300 rounded w-32 mb-1"></div>
+          <div className="h-4 bg-gray-300 rounded w-24"></div>
+        </div>
+      </div>
+      <hr className="my-2 border-blue-50" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+          <div className="h-3 bg-gray-300 rounded w-16"></div>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+          <div className="h-3 bg-gray-300 rounded w-20"></div>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+          <div className="h-3 bg-gray-300 rounded w-14"></div>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+          <div className="h-3 bg-gray-300 rounded w-18"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PostulacionesPage() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -210,6 +246,7 @@ export default function PostulacionesPage() {
   const [jornada, setJornada] = useState("");
 
   const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -229,90 +266,86 @@ export default function PostulacionesPage() {
     const fetchApplications = async () => {
       if (!user) return;
 
+      setIsLoading(true);
+      
+      // Obtener las aplicaciones de la base de datos
       const q = query(
         collection(db, "mispostulaciones"),
         where("email", "==", user.email)
       );
-
+      
       const querySnapshot = await getDocs(q);
       const applicationsData: JobApplication[] = querySnapshot.docs.map(
-        (doc) => doc.data() as JobApplication
+        (doc) => {
+          const data = doc.data();
+          return {
+            id: data.id || Math.random(), // Generar ID si no existe
+            title: data.title || "Sin título",
+            company: data.company || "Sin empresa",
+            location: data.location || "Sin ubicación",
+            type: data.type || "Sin especificar",
+            schedule: data.schedule || "Sin horario",
+            appliedDate: data.appliedDate || new Date().toLocaleDateString(),
+            status: data.status || "guardados",
+            salary: data.salary || "No disponible",
+            url: data.url || ""
+          } as JobApplication;
+        }
       );
 
       console.log("Aplicaciones filtradas por email:", applicationsData);
 
-      setApplications(applicationsData);
+      // Ahora obtenemos las prácticas y asignamos la información a las aplicaciones que coinciden por título
+      const practicasCollection = collection(db2, "practicas");
+      const querySnapshotPracticas = await getDocs(practicasCollection);
+      
+      if (!querySnapshotPracticas.empty) {
+        const practicasList = querySnapshotPracticas.docs.map((doc) => doc.data());
+        console.log("Datos obtenidos de 'practicas2':", practicasList);
+
+        // Aquí almacenamos una copia de las aplicaciones para evitar agregar datos duplicados
+        const updatedApplications = applicationsData.map((application) => {
+          // Buscar si ya existe una práctica que coincida con el título
+          const matchedPractica = practicasList.find(
+            (practica) => practica.title === application.title
+          );
+
+          // Si encontramos una práctica que coincida, agregarle la información de la práctica
+          if (matchedPractica) {
+            return {
+              ...application, // Mantener todos los datos de la aplicación original
+              company: matchedPractica.company || application.company,
+              location: matchedPractica.location || application.location,
+              salary: matchedPractica.salary || application.salary,
+              type: matchedPractica.type || application.type,
+              schedule: matchedPractica.schedule || application.schedule,
+              description: matchedPractica.description,
+              url: matchedPractica.url || application.url,
+            };
+          }
+
+          return application; // Si no hay coincidencia, mantenemos la aplicación tal cual
+        });
+
+        // Eliminar las aplicaciones duplicadas basándonos en el título
+        const uniqueApplications = updatedApplications.filter((value, index, self) => {
+          return index === self.findIndex((t) => t.title === value.title); // Compara por título para eliminar duplicados
+        });
+
+        // Mostrar en consola las aplicaciones con los nuevos campos añadidos y sin duplicados
+        console.log("Aplicaciones con la información de prácticas añadida sin duplicados:", uniqueApplications);
+
+        // Actualizamos el estado con las aplicaciones enriquecidas
+        setApplications(uniqueApplications);
+      } else {
+        setApplications(applicationsData);
+      }
+      
+      setIsLoading(false);
     };
 
     fetchApplications();
   }, [user]);
-
-
-  const [practicasData, setPracticasData] = useState<any[]>([]);
-
-
-useEffect(() => {
-  const fetchApplications = async () => {
-    if (!user) return;
-
-    // Obtener las aplicaciones de la base de datos
-    const q = query(
-      collection(db, "mispostulaciones"),
-      where("email", "==", user.email)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const applicationsData: JobApplication[] = querySnapshot.docs.map(
-      (doc) => doc.data() as JobApplication
-    );
-
-    console.log("Aplicaciones filtradas por email:", applicationsData);
-
-    // Ahora obtenemos las prácticas y asignamos la información a las aplicaciones que coinciden por título
-    const practicasCollection = collection(db2, "practicas");
-    const querySnapshotPracticas = await getDocs(practicasCollection);
-    
-    if (!querySnapshotPracticas.empty) {
-      const practicasList = querySnapshotPracticas.docs.map((doc) => doc.data());
-      console.log("Datos obtenidos de 'practicas2':", practicasList);
-
-      // Aquí almacenamos una copia de las aplicaciones para evitar agregar datos duplicados
-      const updatedApplications = applicationsData.map((application) => {
-        // Buscar si ya existe una práctica que coincida con el título
-        const matchedPractica = practicasList.find(
-          (practica) => practica.title === application.title
-        );
-
-        // Si encontramos una práctica que coincida, agregarle la información de la práctica
-        if (matchedPractica) {
-          return {
-            ...application, // Mantener todos los datos de la aplicación original
-            company: matchedPractica.company,
-            location: matchedPractica.location,
-            salary: matchedPractica.salary,
-            description: matchedPractica.description,
-            url: matchedPractica.url,
-          };
-        }
-
-        return application; // Si no hay coincidencia, mantenemos la aplicación tal cual
-      });
-
-      // Eliminar las aplicaciones duplicadas basándonos en el título
-      const uniqueApplications = updatedApplications.filter((value, index, self) => {
-        return index === self.findIndex((t) => t.title === value.title); // Compara por título para eliminar duplicados
-      });
-
-      // Mostrar en consola las aplicaciones con los nuevos campos añadidos y sin duplicados
-      console.log("Aplicaciones con la información de prácticas añadida sin duplicados:", uniqueApplications);
-
-      // Actualizamos el estado con las aplicaciones enriquecidas
-      setApplications(uniqueApplications);
-    }
-  };
-
-  fetchApplications();
-}, [user]);
 
 
 
@@ -517,21 +550,32 @@ useEffect(() => {
                 >
                   <h3 className="font-medium text-white">{column.title}</h3>
                   <span className="bg-white text-base font-bold px-3 py-1 rounded-full">
-                    {getApplicationsByStatus(column.id).length}
+                    {isLoading ? "..." : getApplicationsByStatus(column.id).length}
                   </span>
                 </div>
 
                 {/* Cards */}
                 <div className="space-y-3 m-4">
-                  {getApplicationsByStatus(column.id).map((job, index) => (
-                    <JobApplicationCard
-                      key={job.id || index} // Usamos `job.id` si existe, si no usamos `index`
-                      job={job}
-                      onDragStart={handleDragStart}
-                      onDelete={handleDeleteJob}
-                      borderColor={column.borderColor}
-                    />
-                  ))}
+                  {isLoading ? (
+                    // Mostrar skeleton mientras carga
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <JobApplicationCardSkeleton
+                        key={index}
+                        borderColor={column.borderColor}
+                      />
+                    ))
+                  ) : (
+                    // Mostrar las cards reales cuando ya cargaron
+                    getApplicationsByStatus(column.id).map((job, index) => (
+                      <JobApplicationCard
+                        key={job.id || index} // Usamos `job.id` si existe, si no usamos `index`
+                        job={job}
+                        onDragStart={handleDragStart}
+                        onDelete={handleDeleteJob}
+                        borderColor={column.borderColor}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             ))}

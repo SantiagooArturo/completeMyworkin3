@@ -4,6 +4,7 @@ import { MapPin, Clock, DollarSign, Heart, Building, PiggyBank } from 'lucide-re
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useJobContext } from '@/contexts/JobContext';
 
 interface JobCardProps {
   job: {
@@ -78,12 +79,32 @@ function getPublishedAgo(dateString: string) {
 
 export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   const router = useRouter();
+  const { setSelectedJob } = useJobContext();
 
   // Calcular el match general como la suma de las 4 similitudes
   const matchGeneral = job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0);
 
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Guardar los datos completos del trabajo en el contexto
+    setSelectedJob({
+      id: job.id.toString(),
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      type: job.type,
+      schedule: job.schedule,
+      salary: job.salary,
+      url: job.applicationUrl || '',
+      publishedDate: job.publishedDate,
+      // Agregar datos de similitud si están disponibles
+      similitud_requisitos: job.skills.technical,
+      similitud_titulo: job.skills.soft,
+      similitud_experiencia: job.skills.experience,
+      similitud_macro: job.skills.macro,
+    });
+    
     const params = new URLSearchParams({
       title: job.title,
       url: job.applicationUrl || '',

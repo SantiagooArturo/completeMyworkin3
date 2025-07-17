@@ -3,6 +3,7 @@
 import { Practice } from '@/services/firebase';
 import { trackApplicationStart } from '@/utils/analytics';
 import { useRouter } from 'next/navigation';
+import { useJobContext } from '@/contexts/JobContext';
 
 interface JobListingProps {
   practice: Practice;
@@ -10,9 +11,35 @@ interface JobListingProps {
 
 export default function JobListing({ practice }: JobListingProps) {
   const router = useRouter();
+  const { setSelectedJob } = useJobContext();
 
   const handleApply = () => {
     trackApplicationStart(practice.title);
+    
+    // Guardar los datos completos del trabajo en el contexto
+    setSelectedJob({
+      id: practice.id?.toString() || Date.now().toString(),
+      title: practice.title,
+      company: practice.company,
+      location: practice.location || 'No especificado',
+      type: 'Práctica profesional',
+      schedule: 'Tiempo completo',
+      salary: practice.salary || 'No especificado',
+      url: practice.link || practice.url || '',
+      requirements: practice.requirements,
+      publishedDate: practice.posted_date,
+      endDate: practice.end_date,
+      // Agregar datos de similitud si están disponibles usando any para evitar errores de tipo
+      similitud_requisitos: (practice as any).similitud_requisitos,
+      similitud_titulo: (practice as any).similitud_titulo,
+      similitud_experiencia: (practice as any).similitud_experiencia,
+      similitud_macro: (practice as any).similitud_macro,
+      justificacion_requisitos: (practice as any).justificacion_requisitos,
+      justificacion_titulo: (practice as any).justificacion_titulo,
+      justificacion_experiencia: (practice as any).justificacion_experiencia,
+      justificacion_macro: (practice as any).justificacion_macro,
+    });
+    
     const params = new URLSearchParams({
       title: practice.title,
       url: practice.link || practice.url || '',

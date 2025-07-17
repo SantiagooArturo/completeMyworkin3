@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Building, 
   MapPin, 
@@ -19,13 +20,47 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PracticaMatchCharts from '@/components/PracticaMatchCharts';
 import PracticaTools from '@/components/PracticaTools';
 import { Practica, SimilitudData } from '@/types/practica';
+import { useJobContext } from '@/contexts/JobContext';
 
 export default function PracticaDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { setSelectedJob } = useJobContext();
   const [practica, setPractica] = useState<Practica | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Función para manejar el clic en "Aplicar ahora"
+  const handleApplyClick = () => {
+    if (practica) {
+      // Establecer los datos completos del trabajo en el contexto
+      setSelectedJob({
+        title: practica.title,
+        company: practica.company,
+        location: practica.location,
+        type: 'Remoto', // Valor por defecto, puedes ajustar según tus datos
+        schedule: 'Tiempo completo', // Valor por defecto, puedes ajustar según tus datos
+        salary: practica.salary || 'A negociar',
+        url: practica.url,
+        description: practica.descripcion,
+        requirements: practica.descripcion || '', // Usar descripción si no hay requisitos específicos
+        publishedDate: practica.fecha_agregado,
+        endDate: practica.fecha_agregado, // Usar fecha_agregado si no hay fecha_limite
+        // Datos de similitud específicos del match
+        similitud_requisitos: practica.similitud_requisitos,
+        similitud_titulo: practica.similitud_titulo,
+        similitud_experiencia: practica.similitud_experiencia,
+        similitud_macro: practica.similitud_macro,
+        justificacion_requisitos: practica.justificacion_requisitos,
+        justificacion_titulo: practica.justificacion_titulo,
+        justificacion_experiencia: practica.justificacion_experiencia,
+        justificacion_macro: practica.justificacion_macro,
+      });
+      
+      // Redirigir a la página de postular
+      router.push(`/postular?title=${encodeURIComponent(practica.title)}&url=${encodeURIComponent(practica.url)}`);
+    }
+  };
 
   // Obtener práctica desde localStorage o API
   useEffect(() => {
@@ -236,15 +271,13 @@ export default function PracticaDetailPage() {
                 </div>
                 
                 {/* Botón de aplicar */}
-                <a
-                  href={practica.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={handleApplyClick}
                   className="bg-white text-[#028bbf] hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1"
                 >
                   <span>Aplicar ahora</span>
                   <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                </button>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { Poppins } from 'next/font/google'
 import './globals.css'
 import Script from 'next/script'
 import { AuthProvider } from "../hooks/useAuth"
+import { JobProvider } from "../contexts/JobContext"
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -41,7 +42,9 @@ export default function RootLayout({
       </head>
       <body className="font-poppins">
         <AuthProvider>
-          {children}
+          <JobProvider>
+            {children}
+          </JobProvider>
         </AuthProvider>
       </body>
     </html>

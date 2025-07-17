@@ -7,7 +7,7 @@ import { Bot, Zap, FileText, Play, Users, Search } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
-
+import { useJobContext } from "@/contexts/JobContext";
 
 import { auth, db } from '../../firebase/config'; // Asegúrate de que la ruta de importación sea correcta
 import { onAuthStateChanged } from 'firebase/auth';
@@ -19,17 +19,19 @@ import { addDoc, collection, DocumentData, FieldValue, getDocs } from "firebase/
 function PostularContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { selectedJob, clearSelectedJob } = useJobContext();
 
   const workyUrl = searchParams.get('worky') || 'https://mc.ht/s/SH1lIgc';
-  const jobTitle = searchParams.get('title') || 'Práctica profesional';
-  const jobUrl = searchParams.get('url') || '';
+  const jobTitle = searchParams.get('title') || selectedJob?.title || 'Práctica profesional';
+  const jobUrl = searchParams.get('url') || selectedJob?.url || '';
 
   const [isModalOpen, setIsModalOpen] = useState(false); // Estado para manejar la visibilidad del modal
   const [isSecondModalOpen, setIsSecondModalOpen] = useState(false); // Estado para el segundo modal
   const [isThirdModalOpen, setIsThirdModalOpen] = useState(false); // Estado para el tercer modal
   console.log('JOBs', jobTitle);
 
-
+  // Estado para rastrear las herramientas utilizadas
+  const [toolsUsed, setToolsUsed] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
 
 
@@ -41,30 +43,78 @@ function PostularContent() {
       if (user) {
         console.log('Usuario autenticado:', user);
         setUser(user);
+        // Cargar herramientas utilizadas desde localStorage
+        const storedTools = localStorage.getItem(`tools_used_${jobTitle}`);
+        if (storedTools) {
+          setToolsUsed(JSON.parse(storedTools));
+        }
       } else {
         console.log('No hay usuario autenticado');
         setUser(null);
       }
     });
 
-    // Cleanup para dejar de escuchar cuando el componente se desmonte
     return () => unsubscribe();
-  }, []);
+  }, [jobTitle]);
 
 
 
 
   const handleAnalyzeCVClick = () => {
     trackButtonClick('Analizar CV desde Entrenar');
+    // Agregar herramienta a la lista
+    addToolUsed('analizar-cv');
   };
 
   const handlePostularClick = () => {
     trackButtonClick('Postular ahora');
-    // window.open(jobUrl, "_blank"); 
+    window.open(jobUrl, "_blank"); 
 
     setIsModalOpen(true); // Luego muestra el modal
 
     // El guardado en Firestore y la redirección se harán si se confirma en el modal
+  };
+
+  // Función para agregar herramienta utilizada
+  const addToolUsed = (tool: string) => {
+    const currentTools = JSON.parse(localStorage.getItem(`tools_used_${jobTitle}`) || '[]');
+    if (!currentTools.includes(tool)) {
+      const newTools = [...currentTools, tool];
+      localStorage.setItem(`tools_used_${jobTitle}`, JSON.stringify(newTools));
+      setToolsUsed(newTools);
+    }
+  };
+
+  // Función para obtener el icono y color de cada herramienta
+  const getToolIcon = (tool: string) => {
+    switch (tool) {
+      case 'analizar-cv':
+        return { icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-100' };
+      case 'interview-simulation':
+        return { icon: Play, color: 'text-green-600', bgColor: 'bg-green-100' };
+      case 'crear-cv':
+        return { icon: FileText, color: 'text-purple-600', bgColor: 'bg-purple-100' };
+      case 'match-cv':
+        return { icon: Search, color: 'text-orange-600', bgColor: 'bg-orange-100' };
+      default:
+        return { icon: FileText, color: 'text-gray-600', bgColor: 'bg-gray-100' };
+    }
+  };
+
+  const handleToolClick = (toolName: string) => {
+    trackButtonClick(`Herramienta - ${toolName}`);
+    // Agregar herramienta según el nombre
+    if (toolName === 'Practicar Entrevistas') {
+      addToolUsed('interview-simulation');
+    } else if (toolName === 'Crear CV') {
+      addToolUsed('crear-cv');
+    } else if (toolName === 'Análisis CV') {
+      addToolUsed('analizar-cv');
+    } else if (toolName === 'Simulación Entrevistas') {
+      addToolUsed('interview-simulation');
+    } else if (toolName === 'Match CV') {
+      addToolUsed('match-cv');
+    }
   };
 
   const handleConfirmPostular = () => {
@@ -73,14 +123,36 @@ function PostularContent() {
       const postulacionRef = collection(db, "mispostulaciones"); // Accedemos a la colección "mispostulaciones"
 
       addDoc(postulacionRef, {
+        id: Date.now(), // ID único basado en timestamp
         status: "postulados",
         email: user.email,
         title: jobTitle,
+        company: selectedJob?.company || "Empresa por definir",
+        location: selectedJob?.location || "Ubicación por definir",
+        type: selectedJob?.type || "Remoto",
+        schedule: selectedJob?.schedule || "Tiempo completo",
+        appliedDate: new Date().toLocaleDateString(),
+        salary: selectedJob?.salary || "A negociar",
         url: jobUrl,
+        description: selectedJob?.description || "",
+        requirements: selectedJob?.requirements || "",
+        publishedDate: selectedJob?.publishedDate || "",
+        endDate: selectedJob?.endDate || "",
+        // Agregar datos de similitud si están disponibles
+        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
+        similitud_titulo: selectedJob?.similitud_titulo || 0,
+        similitud_experiencia: selectedJob?.similitud_experiencia || 0,
+        similitud_macro: selectedJob?.similitud_macro || 0,
+        justificacion_requisitos: selectedJob?.justificacion_requisitos || "",
+        justificacion_titulo: selectedJob?.justificacion_titulo || "",
+        justificacion_experiencia: selectedJob?.justificacion_experiencia || "",
+        justificacion_macro: selectedJob?.justificacion_macro || "",
         createdAt: new Date() // Fecha de creación
       })
         .then(() => {
           console.log("Postulación guardada exitosamente");
+          // Limpiar el contexto después de guardar
+          clearSelectedJob();
           // En lugar de redirigir, mostramos el modal de entrevista
           setIsModalOpen(false);
           setIsThirdModalOpen(true);
@@ -102,14 +174,36 @@ function PostularContent() {
       const postulacionRef = collection(db, "mispostulaciones");
 
       addDoc(postulacionRef, {
+        id: Date.now(), // ID único basado en timestamp
         status: "guardados",
         email: user.email,
         title: jobTitle,
+        company: selectedJob?.company || "Empresa por definir",
+        location: selectedJob?.location || "Ubicación por definir",
+        type: selectedJob?.type || "Remoto",
+        schedule: selectedJob?.schedule || "Tiempo completo",
+        appliedDate: new Date().toLocaleDateString(),
+        salary: selectedJob?.salary || "A negociar",
         url: jobUrl,
+        description: selectedJob?.description || "",
+        requirements: selectedJob?.requirements || "",
+        publishedDate: selectedJob?.publishedDate || "",
+        endDate: selectedJob?.endDate || "",
+        // Agregar datos de similitud si están disponibles
+        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
+        similitud_titulo: selectedJob?.similitud_titulo || 0,
+        similitud_experiencia: selectedJob?.similitud_experiencia || 0,
+        similitud_macro: selectedJob?.similitud_macro || 0,
+        justificacion_requisitos: selectedJob?.justificacion_requisitos || "",
+        justificacion_titulo: selectedJob?.justificacion_titulo || "",
+        justificacion_experiencia: selectedJob?.justificacion_experiencia || "",
+        justificacion_macro: selectedJob?.justificacion_macro || "",
         createdAt: new Date()
       })
         .then(() => {
           console.log("Práctica guardada exitosamente");
+          // Limpiar el contexto después de guardar
+          clearSelectedJob();
           router.push('/postulaciones'); // Redirige a la página de postulaciones
         })
         .catch((error) => {
@@ -121,28 +215,31 @@ function PostularContent() {
 
   const handleDiscardPractice = () => {
     setIsSecondModalOpen(false);
+    // Limpiar el contexto cuando se descarta
+    clearSelectedJob();
     router.push('/dashboard'); // Redirige al dashboard
   };
 
   const handlePracticeNow = () => {
     setIsThirdModalOpen(false);
+    // Limpiar el contexto al finalizar
+    clearSelectedJob();
     router.push('/interview-simulation'); // Redirige a la simulación de entrevista
   };
 
   const handlePracticeLater = () => {
     setIsThirdModalOpen(false);
+    // Limpiar el contexto al finalizar
+    clearSelectedJob();
     router.push('/postulaciones'); // Redirige a la página de postulaciones
-  };
-
-
-  const handleToolClick = (toolName: string) => {
-    trackButtonClick(`Herramienta - ${toolName}`);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setIsSecondModalOpen(false);
     setIsThirdModalOpen(false);
+    // Limpiar el contexto cuando se cierra el modal
+    clearSelectedJob();
   };
 
   return (
@@ -161,6 +258,49 @@ function PostularContent() {
             Usa nuestras herramientas de IA para maximizar tus posibilidades de éxito
           </p>
         </div>
+
+        {/* Herramientas utilizadas */}
+        {toolsUsed.length > 0 && (
+          <div className="mb-8">
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Herramientas utilizadas para este puesto
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Has usado {toolsUsed.length} herramienta{toolsUsed.length > 1 ? 's' : ''} de preparación
+                </p>
+              </div>
+              <div className="flex justify-center gap-6">
+                {toolsUsed.map((tool, index) => {
+                  const { icon: Icon, color, bgColor } = getToolIcon(tool);
+                  const toolNames = {
+                    'analizar-cv': 'Análisis CV',
+                    'interview-simulation': 'Simulación Entrevista',
+                    'crear-cv': 'Crear CV',
+                    'match-cv': 'Match CV'
+                  };
+                  return (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center gap-2 group cursor-pointer"
+                      title={toolNames[tool as keyof typeof toolNames] || tool}
+                    >
+                      <div
+                        className={`w-16 h-16 ${bgColor} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-md`}
+                      >
+                        <Icon className={`h-8 w-8 ${color}`} />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700 text-center">
+                        {toolNames[tool as keyof typeof toolNames] || tool}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sección de decisión principal */}
         <div className="max-w-4xl mx-auto mb-16">
@@ -198,7 +338,9 @@ function PostularContent() {
                 <Link href="/analizar-cv">
                   <button
                     className="w-full bg-[#028bbf] text-white px-6 py-4 rounded-xl font-semibold hover:bg-[#027ba8] transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
-                    onClick={handleAnalyzeCVClick}
+                    onClick={() => {
+                      handleAnalyzeCVClick();
+                    }}
                   >
                     <FileText className="h-5 w-5" />
                     Analizar mi CV con IA
@@ -209,7 +351,9 @@ function PostularContent() {
                   <Link href="/interview-simulation">
                     <button
                       className="w-full bg-gray-100 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
-                      onClick={() => handleToolClick('Practicar Entrevistas')}
+                      onClick={() => {
+                        handleToolClick('Practicar Entrevistas');
+                      }}
                     >
                       Practicar Entrevistas
                     </button>
@@ -217,7 +361,9 @@ function PostularContent() {
                   <Link href="/crear-cv">
                     <button
                       className="w-full bg-gray-100 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
-                      onClick={() => handleToolClick('Crear CV')}
+                      onClick={() => {
+                        handleToolClick('Crear CV');
+                      }}
                     >
                       Crear CV
                     </button>
@@ -263,7 +409,9 @@ function PostularContent() {
 
               {jobUrl ? (
                 <button
-                  onClick={handlePostularClick}
+                  onClick={() => {
+                    handlePostularClick();
+                  }}
                   className="w-full bg-gray-600 text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-700 transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
                 >
                   <FileText className="h-5 w-5" />
