@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from "react";
 import Navbar from "@/components/navbar";
 import { trackButtonClick } from "@/utils/analytics";
 import { Bot, Zap, FileText, Play, Users, Search } from "lucide-react";
@@ -8,13 +9,50 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
 
+import { auth, db } from '../../firebase/config'; // Asegúrate de que la ruta de importación sea correcta
+import { onAuthStateChanged } from 'firebase/auth';
+import { adminDb } from "@/firebase/admin-config";
+import { addDoc, collection, DocumentData, FieldValue, getDocs } from "firebase/firestore";
+
+
+
 function PostularContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const workyUrl = searchParams.get('worky') || 'https://mc.ht/s/SH1lIgc';
   const jobTitle = searchParams.get('title') || 'Práctica profesional';
   const jobUrl = searchParams.get('url') || '';
+
+  const [isModalOpen, setIsModalOpen] = useState(false); // Estado para manejar la visibilidad del modal
+  const [isSecondModalOpen, setIsSecondModalOpen] = useState(false); // Estado para el segundo modal
+  const [isThirdModalOpen, setIsThirdModalOpen] = useState(false); // Estado para el tercer modal
+  console.log('JOBs', jobTitle);
+
+
+  const [user, setUser] = useState<any>(null);
+
+
+
+
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('Usuario autenticado:', user);
+        setUser(user);
+      } else {
+        console.log('No hay usuario autenticado');
+        setUser(null);
+      }
+    });
+
+    // Cleanup para dejar de escuchar cuando el componente se desmonte
+    return () => unsubscribe();
+  }, []);
+
+
+
 
   const handleAnalyzeCVClick = () => {
     trackButtonClick('Analizar CV desde Entrenar');
@@ -22,13 +60,89 @@ function PostularContent() {
 
   const handlePostularClick = () => {
     trackButtonClick('Postular ahora');
-    if (jobUrl) {
-      window.open(jobUrl, '_blank');
+    // window.open(jobUrl, "_blank"); 
+
+    setIsModalOpen(true); // Luego muestra el modal
+
+    // El guardado en Firestore y la redirección se harán si se confirma en el modal
+  };
+
+  const handleConfirmPostular = () => {
+    // Guardamos la postulación en Firestore solo si el usuario está autenticado
+    if (user && jobUrl) {
+      const postulacionRef = collection(db, "mispostulaciones"); // Accedemos a la colección "mispostulaciones"
+
+      addDoc(postulacionRef, {
+        status: "postulados",
+        email: user.email,
+        title: jobTitle,
+        url: jobUrl,
+        createdAt: new Date() // Fecha de creación
+      })
+        .then(() => {
+          console.log("Postulación guardada exitosamente");
+          // En lugar de redirigir, mostramos el modal de entrevista
+          setIsModalOpen(false);
+          setIsThirdModalOpen(true);
+        })
+        .catch((error) => {
+          console.error("Error al guardar la postulación: ", error);
+        });
     }
   };
 
+  const handleCancelPostular = () => {
+    setIsModalOpen(false);
+    setIsSecondModalOpen(true); // Mostrar el segundo modal
+  };
+
+  const handleSaveForLater = () => {
+    // Guardamos la práctica como "guardados" en Firestore
+    if (user && jobUrl) {
+      const postulacionRef = collection(db, "mispostulaciones");
+
+      addDoc(postulacionRef, {
+        status: "guardados",
+        email: user.email,
+        title: jobTitle,
+        url: jobUrl,
+        createdAt: new Date()
+      })
+        .then(() => {
+          console.log("Práctica guardada exitosamente");
+          router.push('/postulaciones'); // Redirige a la página de postulaciones
+        })
+        .catch((error) => {
+          console.error("Error al guardar la práctica: ", error);
+        });
+    }
+    setIsSecondModalOpen(false);
+  };
+
+  const handleDiscardPractice = () => {
+    setIsSecondModalOpen(false);
+    router.push('/dashboard'); // Redirige al dashboard
+  };
+
+  const handlePracticeNow = () => {
+    setIsThirdModalOpen(false);
+    router.push('/interview-simulation'); // Redirige a la simulación de entrevista
+  };
+
+  const handlePracticeLater = () => {
+    setIsThirdModalOpen(false);
+    router.push('/postulaciones'); // Redirige a la página de postulaciones
+  };
+
+
   const handleToolClick = (toolName: string) => {
     trackButtonClick(`Herramienta - ${toolName}`);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setIsSecondModalOpen(false);
+    setIsThirdModalOpen(false);
   };
 
   return (
@@ -47,6 +161,7 @@ function PostularContent() {
             Usa nuestras herramientas de IA para maximizar tus posibilidades de éxito
           </p>
         </div>
+
         {/* Sección de decisión principal */}
         <div className="max-w-4xl mx-auto mb-16">
           <div className="grid md:grid-cols-2 gap-8">
@@ -89,10 +204,10 @@ function PostularContent() {
                     Analizar mi CV con IA
                   </button>
                 </Link>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <Link href="/interview-simulation">
-                    <button 
+                    <button
                       className="w-full bg-gray-100 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
                       onClick={() => handleToolClick('Practicar Entrevistas')}
                     >
@@ -100,7 +215,7 @@ function PostularContent() {
                     </button>
                   </Link>
                   <Link href="/crear-cv">
-                    <button 
+                    <button
                       className="w-full bg-gray-100 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
                       onClick={() => handleToolClick('Crear CV')}
                     >
@@ -163,7 +278,103 @@ function PostularContent() {
           </div>
         </div>
 
-        {/* Sección de estadísticas y testimonios */}
+        {/* Modal 1: Confirmación de postulación */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 w-[40%] border-none">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold text-left">¿Lograste completar la postulación?</h2>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-left mb-4">Queremos ayudarte a llevar un buen seguimiento de tus postulaciones. Si aplicaste, la añadiremos automáticamente a tu Job Tracker.</p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={handleCancelPostular}
+                  className="bg-inherit text-myworkin-blue border border-myworkin-blue px-6 py-2 rounded-lg font-medium"
+                >
+                  No postulé
+                </button>
+                <button
+                  onClick={handleConfirmPostular}
+                  className="bg-myworkin-blue text-white px-6 py-2 rounded-lg font-medium hover:bg-myworkin-blue-dark transition-colors"
+                >
+                  Sí, postulé con éxito
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal 2: No pudo completar la postulación */}
+        {isSecondModalOpen && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 w-[40%] border-none">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold text-left">¿No pudiste completar la postulación?</h2>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-left mb-4">Sabemos que a veces algo se cruza en el camino. ¿Quieres guardar esta práctica para retomarla más adelante?</p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={handleDiscardPractice}
+                  className="bg-inherit text-myworkin-blue border border-myworkin-blue px-6 py-2 rounded-lg font-medium"
+                >
+                  No, descartar
+                </button>
+                <button
+                  onClick={handleSaveForLater}
+                  className="bg-myworkin-blue text-white px-6 py-2 rounded-lg font-medium hover:bg-myworkin-blue-dark transition-colors"
+                >
+                  Sí, guardar práctica
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal 3: Práctica de entrevista */}
+        {isThirdModalOpen && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 w-[40%] border-none">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold text-left">¿Quieres practicar tu entrevista para este puesto?</h2>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-left mb-4">Te ayudamos a prepararte con preguntas reales y feedback automático. Así, cuando llegue la entrevista, ya sabrás qué decir y cómo decirlo.</p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={handlePracticeLater}
+                  className="bg-inherit text-myworkin-blue border border-myworkin-blue px-6 py-2 rounded-lg font-medium"
+                >
+                  Quizás más tarde
+                </button>
+                <button
+                  onClick={handlePracticeNow}
+                  className="bg-myworkin-blue text-white px-6 py-2 rounded-lg font-medium hover:bg-myworkin-blue-dark transition-colors"
+                >
+                  Sí, practicar ahora
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sección de estadísticas y testimonios - MyWorkIn */}
         <div className="max-w-6xl mx-auto mb-16">
           <div className="bg-gradient-to-r from-[#028bbf] to-[#0369a1] rounded-2xl p-8 text-white">
             <div className="text-center mb-8">
@@ -174,7 +385,7 @@ function PostularContent() {
                 Datos reales de nuestros usuarios que usaron nuestras herramientas
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-8 text-center">
               <div>
                 <div className="text-4xl font-bold mb-2">85%</div>
@@ -191,12 +402,13 @@ function PostularContent() {
             </div>
           </div>
         </div>
+
         {/* Sección de herramientas principales */}
         <div className="max-w-6xl mx-auto mb-16">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
             Prepárate con nuestras herramientas de <span className="text-[#028bbf]">Inteligencia Artificial</span>
           </h2>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Análisis de CV */}
             <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 transform hover:scale-105 transition-all duration-300">
@@ -299,13 +511,14 @@ function PostularContent() {
             </div>
           </div>
         </div>
+
         {/* Tips finales optimizados */}
         <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               Proceso recomendado para postular
             </h3>
-            
+
             <div className="grid md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -314,7 +527,7 @@ function PostularContent() {
                 <h4 className="font-semibold text-gray-900 mb-2">Analizar CV</h4>
                 <p className="text-gray-600 text-sm">Recibe feedback detallado de IA</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-blue-600 font-bold">2</span>
@@ -322,7 +535,7 @@ function PostularContent() {
                 <h4 className="font-semibold text-gray-900 mb-2">Optimizar CV</h4>
                 <p className="text-gray-600 text-sm">Aplicar mejoras sugeridas</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-purple-600 font-bold">3</span>
@@ -330,7 +543,7 @@ function PostularContent() {
                 <h4 className="font-semibold text-gray-900 mb-2">Practicar</h4>
                 <p className="text-gray-600 text-sm">Simular entrevista con IA</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-orange-600 font-bold">4</span>

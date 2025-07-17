@@ -1,22 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { 
-  Building, 
-  MapPin, 
-  Clock, 
-  Search, 
+import { useState, useCallback, useEffect } from "react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import {
+  Building,
+  MapPin,
+  Clock,
+  Search,
   Filter,
   ChevronDown,
   Calendar,
-  DollarSign
-} from 'lucide-react';
+  DollarSign,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -34,9 +44,18 @@ import {
   AlertDialogDescription,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { auth, db } from "@/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
+import { db2 } from "@/firebase/config-jobs"; // Asegúrate de importar db2 correctamente
 
 // Tipos para las columnas
-type ColumnType = 'guardados' | 'postulados' | 'entrevistas' | 'rechazados' | 'aceptados';
+type ColumnType =
+  | "guardados"
+  | "postulados"
+  | "entrevistas"
+  | "rechazados"
+  | "aceptados";
 
 interface JobApplication {
   id: number;
@@ -48,76 +67,48 @@ interface JobApplication {
   appliedDate: string;
   status: ColumnType;
   salary?: string;
+  url: string;
 }
 
-// Datos de ejemplo
-const initialApplications: JobApplication[] = [
-  {
-    id: 1,
-    title: 'UX/UI Designer',
-    company: 'MyWorkin',
-    location: 'Lima, Perú',
-    type: 'Remoto',
-    schedule: 'Tiempo completo',
-    appliedDate: '07/01/25',
-    status: 'guardados',
-    salary: 'S/ 1200'
-  },
-  {
-    id: 2,
-    title: 'Frontend Developer',
-    company: 'TechCorp',
-    location: 'Lima, Perú',
-    type: 'Híbrido',
-    schedule: 'Tiempo completo',
-    appliedDate: '07/01/25',
-    status: 'postulados',
-    salary: 'S/ 1500'
-  },
-  {
-    id: 3,
-    title: 'Product Designer',
-    company: 'DesignCo',
-    location: 'Arequipa, Perú',
-    type: 'Presencial',
-    schedule: 'Medio tiempo',
-    appliedDate: '07/01/25',
-    status: 'entrevistas',
-    salary: 'S/ 1800'
-  },
-  {
-    id: 4,
-    title: 'Marketing Digital',
-    company: 'StartupPeru',
-    location: 'Lima, Perú',
-    type: 'Remoto',
-    schedule: 'Tiempo completo',
-    appliedDate: '06/01/25',
-    status: 'aceptados',
-    salary: 'S/ 1000'
-  },
-  {
-    id: 5,
-    title: 'Desarrollador Backend',
-    company: 'TechSolutions',
-    location: 'Cusco, Perú',
-    type: 'Híbrido',
-    schedule: 'Tiempo completo',
-    appliedDate: '05/01/25',
-    status: 'rechazados',
-    salary: 'S/ 900'
-  }
-];
-
+// Datos de las columnas
 const columns = [
-  { id: 'guardados' as ColumnType, title: 'Guardados', count: 20, borderColor: 'border-blue-500', headerColor: 'bg-blue-500' },
-  { id: 'postulados' as ColumnType, title: 'Postulados', count: 13, borderColor: 'border-purple-500', headerColor: 'bg-purple-500' },
-  { id: 'entrevistas' as ColumnType, title: 'Entrevistas', count: 13, borderColor: 'border-orange-500', headerColor: 'bg-orange-500' },
-  { id: 'rechazados' as ColumnType, title: 'Rechazados', count: 5, borderColor: 'border-red-500', headerColor: 'bg-red-500' },
-  { id: 'aceptados' as ColumnType, title: 'Aceptados', count: 9, borderColor: 'border-green-500', headerColor: 'bg-green-500' }
+  {
+    id: "guardados" as ColumnType,
+    title: "Guardados",
+    count: 0,
+    borderColor: "border-blue-500",
+    headerColor: "bg-blue-500",
+  },
+  {
+    id: "postulados" as ColumnType,
+    title: "Postulados",
+    count: 0,
+    borderColor: "border-purple-500",
+    headerColor: "bg-purple-500",
+  },
+  {
+    id: "entrevistas" as ColumnType,
+    title: "Entrevistas",
+    count: 0,
+    borderColor: "border-orange-500",
+    headerColor: "bg-orange-500",
+  },
+  {
+    id: "rechazados" as ColumnType,
+    title: "Rechazados",
+    count: 0,
+    borderColor: "border-red-500",
+    headerColor: "bg-red-500",
+  },
+  {
+    id: "aceptados" as ColumnType,
+    title: "Aceptados",
+    count: 0,
+    borderColor: "border-green-500",
+    headerColor: "bg-green-500",
+  },
 ];
 
-// Componente de JobCard simplificado
 function JobApplicationCard({
   job,
   onDragStart,
@@ -127,7 +118,7 @@ function JobApplicationCard({
   job: JobApplication;
   onDragStart: (job: JobApplication) => void;
   onDelete: (jobId: number) => void;
-  borderColor: string; // <-- NUEVO PROP
+  borderColor: string;
 }) {
   const [showDialog, setShowDialog] = useState(false);
 
@@ -142,7 +133,9 @@ function JobApplicationCard({
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0" />
             <div>
-              <h3 className="font-bold text-gray-900 text-lg leading-tight">{job.title}</h3>
+              <h3 className="font-bold text-gray-900 text-lg leading-tight">
+                {job.title}
+              </h3>
               <p className="text-gray-600 text-base">{job.company}</p>
             </div>
           </div>
@@ -162,13 +155,16 @@ function JobApplicationCard({
             </div>
             <div className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
-              <span>{job.salary ?? 'No disponible'}</span>
+              <span>{job.salary ?? "No disponible"}</span>
             </div>
           </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => setShowDialog(true)} className="text-red-600">
+        <ContextMenuItem
+          onClick={() => setShowDialog(true)}
+          className="text-red-600"
+        >
           Eliminar
         </ContextMenuItem>
       </ContextMenuContent>
@@ -178,7 +174,8 @@ function JobApplicationCard({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar postulación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. ¿Seguro que deseas eliminar esta postulación?
+              Esta acción no se puede deshacer. ¿Seguro que deseas eliminar esta
+              postulación?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -200,14 +197,124 @@ function JobApplicationCard({
 }
 
 export default function PostulacionesPage() {
-  const [applications, setApplications] = useState<JobApplication[]>(initialApplications);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ from: undefined, to: undefined });
   const [draggedJob, setDraggedJob] = useState<JobApplication | null>(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [estado, setEstado] = useState("");
   const [tipoTrabajo, setTipoTrabajo] = useState("");
   const [jornada, setJornada] = useState("");
+
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Usuario autenticado:", user);
+        setUser(user);
+      } else {
+        console.log("No hay usuario autenticado");
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!user) return;
+
+      const q = query(
+        collection(db, "mispostulaciones"),
+        where("email", "==", user.email)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const applicationsData: JobApplication[] = querySnapshot.docs.map(
+        (doc) => doc.data() as JobApplication
+      );
+
+      console.log("Aplicaciones filtradas por email:", applicationsData);
+
+      setApplications(applicationsData);
+    };
+
+    fetchApplications();
+  }, [user]);
+
+
+  const [practicasData, setPracticasData] = useState<any[]>([]);
+
+
+useEffect(() => {
+  const fetchApplications = async () => {
+    if (!user) return;
+
+    // Obtener las aplicaciones de la base de datos
+    const q = query(
+      collection(db, "mispostulaciones"),
+      where("email", "==", user.email)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const applicationsData: JobApplication[] = querySnapshot.docs.map(
+      (doc) => doc.data() as JobApplication
+    );
+
+    console.log("Aplicaciones filtradas por email:", applicationsData);
+
+    // Ahora obtenemos las prácticas y asignamos la información a las aplicaciones que coinciden por título
+    const practicasCollection = collection(db2, "practicas");
+    const querySnapshotPracticas = await getDocs(practicasCollection);
+    
+    if (!querySnapshotPracticas.empty) {
+      const practicasList = querySnapshotPracticas.docs.map((doc) => doc.data());
+      console.log("Datos obtenidos de 'practicas2':", practicasList);
+
+      // Aquí almacenamos una copia de las aplicaciones para evitar agregar datos duplicados
+      const updatedApplications = applicationsData.map((application) => {
+        // Buscar si ya existe una práctica que coincida con el título
+        const matchedPractica = practicasList.find(
+          (practica) => practica.title === application.title
+        );
+
+        // Si encontramos una práctica que coincida, agregarle la información de la práctica
+        if (matchedPractica) {
+          return {
+            ...application, // Mantener todos los datos de la aplicación original
+            company: matchedPractica.company,
+            location: matchedPractica.location,
+            salary: matchedPractica.salary,
+            description: matchedPractica.description,
+            url: matchedPractica.url,
+          };
+        }
+
+        return application; // Si no hay coincidencia, mantenemos la aplicación tal cual
+      });
+
+      // Eliminar las aplicaciones duplicadas basándonos en el título
+      const uniqueApplications = updatedApplications.filter((value, index, self) => {
+        return index === self.findIndex((t) => t.title === value.title); // Compara por título para eliminar duplicados
+      });
+
+      // Mostrar en consola las aplicaciones con los nuevos campos añadidos y sin duplicados
+      console.log("Aplicaciones con la información de prácticas añadida sin duplicados:", uniqueApplications);
+
+      // Actualizamos el estado con las aplicaciones enriquecidas
+      setApplications(uniqueApplications);
+    }
+  };
+
+  fetchApplications();
+}, [user]);
+
+
 
   const handleDragStart = useCallback((job: JobApplication) => {
     setDraggedJob(job);
@@ -217,34 +324,30 @@ export default function PostulacionesPage() {
     e.preventDefault();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, newStatus: ColumnType) => {
-    e.preventDefault();
-    if (draggedJob) {
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === draggedJob.id 
-            ? { ...app, status: newStatus }
-            : app
-        )
-      );
-      setDraggedJob(null);
-    }
-  }, [draggedJob]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent, newStatus: ColumnType) => {
+      e.preventDefault();
+      if (draggedJob) {
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === draggedJob.id ? { ...app, status: newStatus } : app
+          )
+        );
+        setDraggedJob(null);
+      }
+    },
+    [draggedJob]
+  );
 
   const getApplicationsByStatus = (status: ColumnType) => {
-    return applications.filter(app => app.status === status);
+    return applications.filter((app) => app.status === status);
   };
 
   const handleDeleteJob = (jobId: number) => {
     setApplications((prev) => prev.filter((job) => job.id !== jobId));
   };
 
-  const filterOptions = [
-    'Estado',
-    'Tipo trabajo', 
-    'Experiencia',
-    'Jornada'
-  ];
+  const filterOptions = ["Estado", "Tipo trabajo", "Experiencia", "Jornada"];
 
   return (
     <DashboardLayout>
@@ -281,9 +384,12 @@ export default function PostulacionesPage() {
               className="min-w-[220px] border border-myworkin-blue"
             />
             <div className="relative">
-              <Popover open={showFilterDropdown} onOpenChange={setShowFilterDropdown}>
+              <Popover
+                open={showFilterDropdown}
+                onOpenChange={setShowFilterDropdown}
+              >
                 <PopoverTrigger asChild>
-                  <Button variant='default' className="flex items-center gap-2">
+                  <Button variant="default" className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     Filtrar
                   </Button>
@@ -292,15 +398,25 @@ export default function PostulacionesPage() {
                   <div className="space-y-4">
                     {/* Estado */}
                     <div>
-                      <Label htmlFor="estado" className="text-gray-700 mb-1 block">Estado</Label>
+                      <Label
+                        htmlFor="estado"
+                        className="text-gray-700 mb-1 block"
+                      >
+                        Estado
+                      </Label>
                       <Select value={estado} onValueChange={setEstado}>
-                        <SelectTrigger id="estado" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                        <SelectTrigger
+                          id="estado"
+                          className="w-full h-12 rounded-xl border-gray-300 text-base"
+                        >
                           <SelectValue placeholder="Selecciona estado" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="guardados">Guardados</SelectItem>
                           <SelectItem value="postulados">Postulados</SelectItem>
-                          <SelectItem value="entrevistas">Entrevistas</SelectItem>
+                          <SelectItem value="entrevistas">
+                            Entrevistas
+                          </SelectItem>
                           <SelectItem value="rechazados">Rechazados</SelectItem>
                           <SelectItem value="aceptados">Aceptados</SelectItem>
                         </SelectContent>
@@ -308,9 +424,20 @@ export default function PostulacionesPage() {
                     </div>
                     {/* Tipo trabajo */}
                     <div>
-                      <Label htmlFor="tipo-trabajo" className="text-gray-700 mb-1 block">Tipo trabajo</Label>
-                      <Select value={tipoTrabajo} onValueChange={setTipoTrabajo}>
-                        <SelectTrigger id="tipo-trabajo" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                      <Label
+                        htmlFor="tipo-trabajo"
+                        className="text-gray-700 mb-1 block"
+                      >
+                        Tipo trabajo
+                      </Label>
+                      <Select
+                        value={tipoTrabajo}
+                        onValueChange={setTipoTrabajo}
+                      >
+                        <SelectTrigger
+                          id="tipo-trabajo"
+                          className="w-full h-12 rounded-xl border-gray-300 text-base"
+                        >
                           <SelectValue placeholder="Selecciona tipo trabajo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -322,14 +449,26 @@ export default function PostulacionesPage() {
                     </div>
                     {/* Jornada */}
                     <div>
-                      <Label htmlFor="jornada" className="text-gray-700 mb-1 block">Jornada</Label>
+                      <Label
+                        htmlFor="jornada"
+                        className="text-gray-700 mb-1 block"
+                      >
+                        Jornada
+                      </Label>
                       <Select value={jornada} onValueChange={setJornada}>
-                        <SelectTrigger id="jornada" className="w-full h-12 rounded-xl border-gray-300 text-base">
+                        <SelectTrigger
+                          id="jornada"
+                          className="w-full h-12 rounded-xl border-gray-300 text-base"
+                        >
                           <SelectValue placeholder="Selecciona jornada" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="tiempo-completo">Tiempo completo</SelectItem>
-                          <SelectItem value="medio-tiempo">Medio tiempo</SelectItem>
+                          <SelectItem value="tiempo-completo">
+                            Tiempo completo
+                          </SelectItem>
+                          <SelectItem value="medio-tiempo">
+                            Medio tiempo
+                          </SelectItem>
                           <SelectItem value="practicas">Prácticas</SelectItem>
                         </SelectContent>
                       </Select>
@@ -373,18 +512,20 @@ export default function PostulacionesPage() {
                 onDrop={(e) => handleDrop(e, column.id)}
               >
                 {/* Column Header */}
-                <div className={`rounded-t-lg px-4 py-3 mb-4 flex items-center justify-between ${column.headerColor}`}>
+                <div
+                  className={`rounded-t-lg px-4 py-3 mb-4 flex items-center justify-between ${column.headerColor}`}
+                >
                   <h3 className="font-medium text-white">{column.title}</h3>
                   <span className="bg-white text-base font-bold px-3 py-1 rounded-full">
-                    {column.count}
+                    {getApplicationsByStatus(column.id).length}
                   </span>
                 </div>
 
                 {/* Cards */}
                 <div className="space-y-3 m-4">
-                  {getApplicationsByStatus(column.id).map((job) => (
+                  {getApplicationsByStatus(column.id).map((job, index) => (
                     <JobApplicationCard
-                      key={job.id}
+                      key={job.id || index} // Usamos `job.id` si existe, si no usamos `index`
                       job={job}
                       onDragStart={handleDragStart}
                       onDelete={handleDeleteJob}
