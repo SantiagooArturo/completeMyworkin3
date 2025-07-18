@@ -150,6 +150,7 @@ function PostularContent() {
         justificacion_afinidad: selectedJob?.justificacion_afinidad || "",
         justificacion_semantica: selectedJob?.justificacion_semantica || "",
         justificacion_juicio: selectedJob?.justificacion_juicio || "",
+        toolsUsed: toolsUsed, // Agregar las herramientas utilizadas
         createdAt: new Date() // Fecha de creación
       })
         .then(() => {
@@ -204,6 +205,7 @@ function PostularContent() {
         justificacion_afinidad: selectedJob?.justificacion_afinidad || "",
         justificacion_semantica: selectedJob?.justificacion_semantica || "",
         justificacion_juicio: selectedJob?.justificacion_juicio || "",
+        toolsUsed: toolsUsed, // Agregar las herramientas utilizadas
         createdAt: new Date()
       })
         .then(() => {

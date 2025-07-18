@@ -15,6 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { PracticaToolsProps } from '@/types/practica';
+import { useToolsUsed } from '@/hooks/useToolsUsed';
 
 interface ToolCard {
   id: string;
@@ -30,9 +31,13 @@ interface ToolCard {
 export default function PracticaTools({ practica }: PracticaToolsProps) {
   const router = useRouter();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
+  const { addToolUsed } = useToolsUsed(practica.title); // Hook para registrar herramientas utilizadas
 
   // Funciones de navegación
   const handleAdaptarCV = () => {
+    // Registrar uso de la herramienta
+    addToolUsed('crear-cv');
+    
     // Navegar al CV Builder con contexto de la práctica
     const params = new URLSearchParams({
       from: 'practica-detail',
@@ -44,6 +49,9 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 
   const handleAnalizarCV = () => {
+    // Registrar uso de la herramienta
+    addToolUsed('analizar-cv');
+    
     // Navegar al análisis de CV con contexto específico
     const params = new URLSearchParams({
       puesto: `${practica.title} en ${practica.company}`,
@@ -53,6 +61,9 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 
   const handleSimularEntrevista = () => {
+    // Registrar uso de la herramienta
+    addToolUsed('interview-simulation');
+    
     // Navegar a simulación de entrevista con contexto
     const params = new URLSearchParams({
       jobTitle: practica.title,
@@ -63,6 +74,9 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 
   const handleMejorarMatch = () => {
+    // Registrar uso de la herramienta  
+    addToolUsed('match-cv');
+    
     // Navegar a sugerencias personalizadas
     router.push('/dashboard');
   };

@@ -17,6 +17,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import { cvReviewService } from "../../services/cvReviewService";
+import { useToolsUsed } from "@/hooks/useToolsUsed";
 import Link from "next/link";
 
 export default function AnalizarCVPage() {
@@ -32,6 +33,8 @@ export default function AnalizarCVPage() {
   const [longWait, setLongWait] = useState(false);
   const [veryLongWait, setVeryLongWait] = useState(false);
   const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+  
+  const { addToolUsed } = useToolsUsed(puestoPostular); // Hook para manejar herramientas utilizadas
 
   useEffect(() => {
     if (!user) {
@@ -180,6 +183,11 @@ export default function AnalizarCVPage() {
       // 5. Mostrar el resultado al usuario
       const finalResultUrl = analysisResult?.extractedData?.analysisResults?.pdf_url || cvUrl;
       setResult(finalResultUrl);
+
+      // 6. Registrar el uso de la herramienta
+      if (puestoPostular) {
+        addToolUsed('analizar-cv');
+      }
 
       // Marcar como usado solo después de un análisis exitoso para usuarios no logueados
       if (!user) {
