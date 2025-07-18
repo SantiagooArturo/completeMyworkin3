@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   Building,
@@ -11,6 +12,11 @@ import {
   ChevronDown,
   Calendar,
   DollarSign,
+  Play,
+  FileText,
+  Target,
+  Mic,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -44,7 +50,7 @@ import {
   AlertDialogDescription,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, deleteDoc, addDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { db2 } from "@/firebase/config-jobs"; // Asegúrate de importar db2 correctamente
@@ -57,8 +63,9 @@ type ColumnType =
   | "rechazados"
   | "aceptados";
 
-interface JobApplication {
+export interface JobApplication {
   id: number;
+  firestoreId?: string; // <-- Agregado para almacenar el id de Firestore
   title: string;
   company: string;
   location: string;
@@ -68,6 +75,9 @@ interface JobApplication {
   status: ColumnType;
   salary?: string;
   url: string;
+  toolsUsed: string[]; // <-- Agregado para almacenar las herramientas utilizadas
+  description?: string; // <-- Agregado para la descripción del puesto
+  requirements?: string; // <-- Agregado para los requisitos del puesto
 }
 
 // Datos de las columnas
@@ -121,6 +131,34 @@ function JobApplicationCard({
   borderColor: string;
 }) {
   const [showDialog, setShowDialog] = useState(false);
+  const router = useRouter();
+
+  // Usar directamente el array de herramientas utilizadas desde Firestore
+  const toolsUsed: string[] = job.toolsUsed || [];
+
+  // Iconos y estilos para cada herramienta
+  const getToolIcon = (tool: string) => {
+    switch (tool) {
+      case 'analizar-cv':
+        return { icon: Bot, color: 'text-green-600', bgColor: 'bg-green-100', label: 'Análisis CV' };
+      case 'interview-simulation':
+        return { icon: Mic, color: 'text-yellow-600', bgColor: 'bg-yellow-100', label: 'Simulación Entrevista' };
+      case 'crear-cv':
+        return { icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-100', label: 'Crear CV' };
+      // case 'match-cv':
+      //   return { icon: Target, color: 'text-orange-600', bgColor: 'bg-orange-100', label: 'Match CV' };
+      case 'practica-entrevistas':
+        return { icon: Mic, color: 'text-red-600', bgColor: 'bg-red-100', label: 'Práctica Entrevistas' };
+      default:
+        return { icon: FileText, color: 'text-gray-600', bgColor: 'bg-gray-100', label: tool };
+    }
+  };
+
+  const handleViewPostulacion = () => {
+    if (job.firestoreId) {
+      router.push(`/postulaciones/${job.firestoreId}`);
+    }
+  };
 
   return (
     <ContextMenu>
@@ -130,6 +168,22 @@ function JobApplicationCard({
           onDragStart={() => onDragStart(job)}
           className={`bg-white min-w-[340px] rounded-xl border-2 ${borderColor} p-4 hover:shadow-md transition-all cursor-move`}
         >
+          <div className="flex items-center gap-2 mb-2">
+            {/* Iconos de herramientas utilizadas */}
+            {toolsUsed.length > 0 &&
+              toolsUsed.map((tool, idx) => {
+                const { icon: Icon, color, bgColor, label } = getToolIcon(tool);
+                return (
+                  <div
+                    key={tool + idx}
+                    className={`w-8 h-8 ${bgColor} rounded-lg flex items-center justify-center shadow group`}
+                    title={label}
+                  >
+                    <Icon className={`h-5 w-5 ${color}`} />
+                  </div>
+                );
+              })}
+          </div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0" />
             <div>
@@ -161,6 +215,11 @@ function JobApplicationCard({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
+        <ContextMenuItem
+          onClick={handleViewPostulacion}
+        >
+          Ver postulación
+        </ContextMenuItem>
         <ContextMenuItem
           onClick={() => setShowDialog(true)}
           className="text-red-600"
@@ -233,6 +292,7 @@ function JobApplicationCardSkeleton({ borderColor }: { borderColor: string }) {
 }
 
 export default function PostulacionesPage() {
+  const router = useRouter();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<{
@@ -279,7 +339,8 @@ export default function PostulacionesPage() {
         (doc) => {
           const data = doc.data();
           return {
-            id: data.id || Math.random(), // Generar ID si no existe
+            id: data.id || Math.random(),
+            firestoreId: doc.id, // <-- Guardar el id real de Firestore
             title: data.title || "Sin título",
             company: data.company || "Sin empresa",
             location: data.location || "Sin ubicación",
@@ -288,7 +349,8 @@ export default function PostulacionesPage() {
             appliedDate: data.appliedDate || new Date().toLocaleDateString(),
             status: data.status || "guardados",
             salary: data.salary || "No disponible",
-            url: data.url || ""
+            url: data.url || "",
+            toolsUsed: data.toolsUsed ?? [], // <-- leer el array de herramientas usadas
           } as JobApplication;
         }
       );
@@ -376,8 +438,18 @@ export default function PostulacionesPage() {
     return applications.filter((app) => app.status === status);
   };
 
-  const handleDeleteJob = (jobId: number) => {
+  const handleDeleteJob = async (jobId: number) => {
+    // Buscar la aplicación por id
+    const jobToDelete = applications.find(job => job.id === jobId);
+    if (!jobToDelete?.firestoreId) return;
+
     setApplications((prev) => prev.filter((job) => job.id !== jobId));
+
+    try {
+      await deleteDoc(doc(db, "mispostulaciones", jobToDelete.firestoreId));
+    } catch (error) {
+      console.error("Error eliminando la postulación:", error);
+    }
   };
 
   const filterOptions = ["Estado", "Tipo trabajo", "Experiencia", "Jornada"];

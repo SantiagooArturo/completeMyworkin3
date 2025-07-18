@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
+import { useToolsUsed } from '@/hooks/useToolsUsed';
 import { interviewService, InterviewQuestion } from '@/services/interviewService';
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
@@ -48,7 +49,8 @@ interface InterviewSession {
     timestamp: string;
 }
 
-export default function InterviewSimulationPage() {    const { user, loading: authLoading } = useAuth();
+export default function InterviewSimulationPage() {
+    const { user, loading: authLoading } = useAuth();
     const { 
         credits, 
         loading: creditsLoading, 
@@ -61,19 +63,23 @@ export default function InterviewSimulationPage() {    const { user, loading: au
     } = useCredits(user);
 
     const [jobTitle, setJobTitle] = useState('');
+    const { addToolUsed } = useToolsUsed(jobTitle); // Hook para manejar herramientas utilizadas
     const [currentStep, setCurrentStep] = useState<'input' | 'interview' | 'completed'>('input');
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [isRecording, setIsRecording] = useState(false);    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);    const [processingAudio, setProcessingAudio] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [processingAudio, setProcessingAudio] = useState(false);
     const [processingStep, setProcessingStep] = useState<string>('');
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
     
     // Estados para el cronómetro
     const [recordingTime, setRecordingTime] = useState(0);
-    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
@@ -149,6 +155,9 @@ export default function InterviewSimulationPage() {    const { user, loading: au
             setQuestions(newQuestions);
             setCurrentStep('interview');
             setCurrentQuestionIndex(0);
+            
+            // Registrar el uso de la herramienta
+            addToolUsed('interview-simulation');
             
             // ✅ IMPORTANTE: Guardar reservationId en el estado para usarlo después
             sessionStorage.setItem('interviewReservationId', reservationId);
