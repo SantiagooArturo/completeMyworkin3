@@ -22,14 +22,14 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const puestosDisponibles = [
-  'Diseñador UI',
-  'Diseñador UX/UI', 
-  'Diseñador UX',
-  'Frontend Developer',
-  'Product Designer',
-  'Diseñador Gráfico',
-  'Web Designer',
-  'Marketing Digital'
+  'Practicante Comercial',
+  'Practicante de Marketing', 
+  'Practicante de Finanzas',
+  'Practicante de Comunicaciones',
+  'Practicante de Recursos Humanos',
+  'Practicante de Contabilidad',
+  'Practicante de Producto',
+  'Practicante de Compras'
 ];
 
 interface UserProfile {
@@ -498,19 +498,32 @@ export default function PortalTrabajoPage() {
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               Para mostrarte las mejores oportunidades que coincidan con tu perfil, necesitamos que subas tu CV.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={handleUploadCV}
-                className="px-6 py-3 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] transition-colors"
-              >
-                Subir CV
-              </button>
-              <a
-                href="/bolsa-trabajo"
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Ver Todas las Prácticas
-              </a>
+            <div className="space-y-4">
+              {/* Botón principal más destacado */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleUploadCV}
+                  className="px-8 py-4 bg-[#028bbf] text-white rounded-lg hover:bg-[#027ba8] transition-colors font-medium text-lg min-w-[200px]"
+                >
+                  Subir CV
+                </button>
+              </div>
+              
+              {/* Botones secundarios en fila */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a
+                  href="/crear-cv"
+                  className="px-6 py-3 border-2 border-[#028bbf] text-[#028bbf] rounded-lg hover:bg-[#028bbf] hover:text-white transition-colors text-center font-medium min-w-[160px]"
+                >
+                  Crear CV
+                </a>
+                <a
+                  href="/bolsa-trabajo"
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center font-medium min-w-[160px]"
+                >
+                  Ver Todas las Prácticas
+                </a>
+              </div>
             </div>
           </div>
         ) : error ? (
