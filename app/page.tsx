@@ -64,7 +64,7 @@ y consigue tu
                 className="inline-flex items-center justify-center px-8 py-4 bg-[#028bbf] text-white rounded-full font-medium hover:bg-[#027ba8] transition-colors shadow-lg hover:shadow-xl"
                 onClick={() => trackButtonClick('Registrarse Gratis')}
               >
-                Registrarse - ¡Es Gratis!
+                Registrarse  ¡Es Gratis!
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </div>
