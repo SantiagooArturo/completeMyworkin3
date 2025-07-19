@@ -55,62 +55,70 @@ export default function ToolsShowcase() {
   const activeTool = tools.find(tool => tool.id === activeTab);
 
   return (
-    <div className="py-20 bg-white">
+    <div className="py-12 md:py-20 bg-white overflow-hidden">
       <div className="container mx-auto max-w-6xl px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-2xl md:text-4xl font-bold mb-4 leading-tight">
             Tu carrera profesional completa.
             <br />
-            <span className="relative">
+            <span className="relative inline-block">
               Impulsada por IA
-              <span className="absolute -top-6 right-0">
-                <Sparkles className="w-6 h-6 text-yellow-400" />
+              <span className="absolute -top-4 md:-top-6 right-0 md:right-0">
+                <Sparkles className="w-4 h-4 md:w-6 md:h-6 text-yellow-400" />
               </span>
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto px-2">
             Obtén recomendaciones personalizadas, crea CVs optimizados y practica entrevistas.
             Todo en un solo lugar.
           </p>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-gray-100 rounded-full p-1">
-            {tools.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => setActiveTab(tool.id)}
-                className={`flex items-center px-6 py-2.5 rounded-full transition-all ${
-                  activeTab === tool.id
-                    ? 'bg-white text-[#028bbf] shadow-md'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <span className="mr-2">{tool.icon}</span>
-                {tool.name}
-              </button>
-            ))}
+        <div className="flex justify-center mb-8 md:mb-12 px-2">
+          <div className="flex bg-gray-100 rounded-full p-1 overflow-x-auto scrollbar-hide w-full max-w-full">
+            <div className="flex space-x-1 mx-auto">
+              {tools.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => setActiveTab(tool.id)}
+                  className={`flex items-center px-2 md:px-4 lg:px-6 py-2 md:py-2.5 rounded-full transition-all whitespace-nowrap flex-shrink-0 text-xs md:text-sm ${
+                    activeTab === tool.id
+                      ? 'bg-white text-[#028bbf] shadow-md'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="mr-1 md:mr-2">{tool.icon}</span>
+                  <span className="hidden sm:inline">{tool.name}</span>
+                  <span className="sm:hidden">
+                    {tool.id === 'match' && 'Match'}
+                    {tool.id === 'cv-builder' && 'CV'}
+                    {tool.id === 'interview' && 'Entrevista'}
+                    {tool.id === 'cv-analysis' && 'Análisis'}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12 items-center">
           {/* Tool Info */}
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-left"
+            className="text-center lg:text-left order-2 lg:order-1"
           >
-            <div className="inline-flex items-center bg-blue-50 rounded-full px-4 py-2 text-[#028bbf] mb-6">
-              <Bot className="w-5 h-5 mr-2" />
+            <div className="inline-flex items-center bg-blue-50 rounded-full px-3 md:px-4 py-2 text-[#028bbf] mb-4 md:mb-6 text-sm md:text-base">
+              <Bot className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Impulsado por IA
             </div>
-            <h3 className="text-3xl font-bold mb-4">{activeTool?.name}</h3>
-            <p className="text-xl text-gray-600 mb-8">{activeTool?.description}</p>
-            <button className="bg-[#028bbf] text-white px-8 py-3 rounded-full hover:bg-[#027ba8] transition-colors">
+            <h3 className="text-xl md:text-3xl font-bold mb-3 md:mb-4 px-2 lg:px-0">{activeTool?.name}</h3>
+            <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 px-2 lg:px-0">{activeTool?.description}</p>
+            <button className="bg-[#028bbf] text-white px-6 md:px-8 py-2.5 md:py-3 rounded-full hover:bg-[#027ba8] transition-colors text-sm md:text-base">
               Probar ahora
             </button>
           </motion.div>
@@ -121,10 +129,10 @@ export default function ToolsShowcase() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="relative"
+            className="relative order-1 lg:order-2"
           >
-            <div className="bg-gradient-to-r from-gray-900/5 to-gray-900/10 rounded-2xl p-4">
-              <div className="aspect-video w-full rounded-xl overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-r from-gray-900/5 to-gray-900/10 rounded-xl md:rounded-2xl p-2 md:p-4">
+              <div className="aspect-video w-full rounded-lg md:rounded-xl overflow-hidden shadow-lg md:shadow-2xl">
                 <iframe
                   src={`${activeTool?.videoUrl}?autoplay=1&mute=1`}
                   className="w-full h-full"
