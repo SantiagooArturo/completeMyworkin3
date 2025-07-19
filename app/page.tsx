@@ -129,13 +129,13 @@ y consigue tu
             <div>
               <h3 className="font-bold text-gray-900 mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li><Link href="/terminos" className="text-gray-600 hover:text-[#028bbf]">Términos y Condiciones</Link></li>
+                
                 <li><Link href="/privacidad" className="text-gray-600 hover:text-[#028bbf]">Política de Privacidad</Link></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-200 mt-8 pt-8 text-center">
-            <p className="text-gray-600">© 2024 MyWorkIn. Todos los derechos reservados.</p>
+            <p className="text-gray-600">© 2025 MyWorkIn. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>
