@@ -1,10 +1,8 @@
-'use client';
-
 import { useState, useRef } from 'react';
 import { X, Upload, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/firebase/config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 interface SimpleUploadCVModalProps {
   isOpen: boolean;
@@ -12,10 +10,10 @@ interface SimpleUploadCVModalProps {
   onUploadSuccess: (cvData: { fileName: string; fileUrl: string }) => void;
 }
 
-export default function SimpleUploadCVModal({ 
-  isOpen, 
-  onClose, 
-  onUploadSuccess 
+export default function SimpleUploadCVModal({
+  isOpen,
+  onClose,
+  onUploadSuccess
 }: SimpleUploadCVModalProps) {
   const { user } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -51,7 +49,7 @@ export default function SimpleUploadCVModal({
     try {
       setIsUploading(true);
       setError('');
-      
+
       // Subir archivo a R2
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -69,20 +67,37 @@ export default function SimpleUploadCVModal({
 
       const uploadResult = await uploadResponse.json();
       const fileUrl = uploadResult.url;
-      
+
       if (!fileUrl) {
         throw new Error('Error: No se recibió la URL del archivo subido');
       }
 
-      // Guardar en Firestore
+      // Verificar si el documento del usuario existe en Firestore
       const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        cvFileName: selectedFile.name,
-        cvFileUrl: fileUrl,
-        hasCV: true,
-        cvUploadedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // Si el usuario no existe, crear el documento
+        await setDoc(userDocRef, {
+          displayName: user.displayName,
+          email: user.email,
+          cvFileName: selectedFile.name,
+          cvFileUrl: fileUrl,
+          hasCV: true,
+          cvUploadedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Si el usuario ya existe, actualizar los campos correspondientes
+        await updateDoc(userDocRef, {
+          cvFileName: selectedFile.name,
+          cvFileUrl: fileUrl,
+          hasCV: true,
+          cvUploadedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
 
       // Notificar éxito
       onUploadSuccess({
@@ -93,7 +108,7 @@ export default function SimpleUploadCVModal({
       // Cerrar modal
       resetModal();
       onClose();
-      
+
     } catch (error: any) {
       console.error('Error subiendo CV:', error);
       setError(error.message || 'Error al subir el CV. Inténtalo de nuevo.');
