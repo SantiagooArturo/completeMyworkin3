@@ -238,7 +238,7 @@ export default function PostulacionDetallePage() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           console.log('Datos recuperados de Firestore:', data); // Debug
-          let jobData = { ...(data as JobApplication), firestoreId: id };
+          const jobData = { ...(data as JobApplication), firestoreId: id };
           
           // Si no hay descripción, intentar buscar en la colección de prácticas
           if (!jobData.description || jobData.description.trim() === '') {
