@@ -1,10 +1,14 @@
 'use client';
 
-import { MapPin, Clock, DollarSign, Heart, Building, PiggyBank } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Bookmark, Building, PiggyBank } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useJobContext } from '@/contexts/JobContext';
+import { useAuth } from '@/hooks/useAuth';
+import { db } from '@/firebase/config';
+import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
 
 interface JobCardProps {
   job: {
@@ -81,6 +85,36 @@ function getPublishedAgo(dateString: string) {
 export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   const router = useRouter();
   const { setSelectedJob } = useJobContext();
+  const { user } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Verificar si la práctica ya está guardada al cargar el componente
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!user || !user.email) return;
+
+      try {
+        const q = query(
+          collection(db, "mispostulaciones"),
+          where("email", "==", user.email),
+          where("status", "==", "guardados"),
+          where("title", "==", job.title),
+          where("company", "==", job.company)
+        );
+
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          setIsSaved(true);
+        }
+      } catch (error) {
+        console.error("Error verificando si la práctica está guardada:", error);
+      }
+    };
+
+    checkIfSaved();
+  }, [user, job.title, job.company]);
 
 
   const handleApplyClick = (e: React.MouseEvent) => {
@@ -119,6 +153,90 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
     router.push(`/postular?${params.toString()}`);
   };
 
+  const handleBookmarkClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Verificar que el usuario esté autenticado
+    if (!user || !user.email) {
+      alert('Debes iniciar sesión para guardar prácticas');
+      return;
+    }
+
+    // Si ya está guardado, no hacer nada
+    if (isSaved) {
+      return;
+    }
+
+    // Si está en proceso de guardado, no hacer nada
+    if (isSaving) return;
+
+    setIsSaving(true);
+    
+    try {
+      // Verificar nuevamente si ya existe antes de guardar (para evitar race conditions)
+      const q = query(
+        collection(db, "mispostulaciones"),
+        where("email", "==", user.email),
+        where("status", "==", "guardados"),
+        where("title", "==", job.title),
+        where("company", "==", job.company)
+      );
+
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Ya existe, solo actualizar el estado visual
+        setIsSaved(true);
+        console.log("La práctica ya estaba guardada");
+        return;
+      }
+
+      // No existe, proceder a guardar
+      const postulacionRef = collection(db, "mispostulaciones");
+
+      await addDoc(postulacionRef, {
+        id: Date.now(), // ID único basado en timestamp
+        status: "guardados",
+        email: user.email,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        type: job.type,
+        schedule: job.schedule,
+        appliedDate: new Date().toLocaleDateString(),
+        salary: job.salary,
+        url: job.applicationUrl || '',
+        description: '',
+        requirements: '',
+        publishedDate: job.publishedDate,
+        endDate: '',
+        // Agregar datos de similitud
+        requisitos_tecnicos: job.skills.technical,
+        similitud_puesto: job.skills.soft,
+        afinidad_sector: job.skills.experience,
+        similitud_semantica: job.skills.macro || 0,
+        juicio_sistema: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
+        similitud_total: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
+        justificacion_requisitos: 'Evaluación de requisitos técnicos',
+        justificacion_puesto: 'Evaluación de compatibilidad con puesto',
+        justificacion_afinidad: 'Evaluación de afinidad con el sector',
+        justificacion_semantica: 'Evaluación semántica del perfil',
+        justificacion_juicio: 'Evaluación general del sistema',
+        toolsUsed: [], // Sin herramientas usadas al guardar
+        createdAt: new Date() // Fecha de creación
+      });
+
+      setIsSaved(true);
+      console.log("Práctica guardada exitosamente");
+
+    } catch (error) {
+      console.error("Error al guardar la práctica: ", error);
+      alert("Error al guardar la práctica. Inténtalo de nuevo.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCardClick = () => {
     if (typeof index === 'number' && onCardClick) {
       onCardClick(index);
@@ -149,10 +267,22 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
                   Click para ver detalle
                 </span>
                 <button 
-                  className="text-gray-400 hover:text-red-500 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
+                  className={`transition-colors ${
+                    isSaved 
+                      ? 'text-[#028bbf] cursor-default' 
+                      : isSaving 
+                        ? 'text-gray-500 cursor-not-allowed' 
+                        : 'text-gray-400 hover:text-[#028bbf] cursor-pointer'
+                  }`}
+                  onClick={handleBookmarkClick}
+                  disabled={isSaving}
+                  title={isSaved ? 'Práctica guardada' : isSaving ? 'Guardando práctica...' : 'Guardar práctica'}
                 >
-                  <Heart className="h-5 w-5" />
+                  {isSaving ? (
+                    <div className="animate-spin h-5 w-5 border-2 border-gray-300 border-t-[#028bbf] rounded-full"></div>
+                  ) : (
+                    <Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
+                  )}
                 </button>
               </div>
             </div>

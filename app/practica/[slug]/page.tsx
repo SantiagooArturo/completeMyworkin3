@@ -100,6 +100,12 @@ export default function PracticaDetailPage() {
   const getSimilitudData = (practica: Practica): SimilitudData[] => {
     return [
       {
+        label: 'Match General',
+        value: practica.similitud_total || 0, // Usar el valor calculado del backend
+        color: '#6366F1',
+        justificacion: 'Evaluación integral de compatibilidad calculada por el sistema'
+      },
+      {
         label: 'Requisitos Técnicos',
         value: practica.requisitos_tecnicos || 0,
         color: '#10B981',
@@ -128,12 +134,6 @@ export default function PracticaDetailPage() {
         value: practica.juicio_sistema || 0,
         color: '#EF4444',
         justificacion: practica.justificacion_juicio || 'No disponible'
-      },
-      {
-        label: 'Match General',
-        value: practica.similitud_total || 0, // Usar el valor calculado del backend
-        color: '#6366F1',
-        justificacion: 'Evaluación integral de compatibilidad calculada por el sistema'
       }
     ];
   };
