@@ -50,7 +50,7 @@ import {
   AlertDialogDescription,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { collection, getDocs, query, where, doc, deleteDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, deleteDoc, addDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { db2 } from "@/firebase/config-jobs"; // Asegúrate de importar db2 correctamente
@@ -419,20 +419,39 @@ export default function PostulacionesPage() {
     e.preventDefault();
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent, newStatus: ColumnType) => {
-      e.preventDefault();
-      if (draggedJob) {
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === draggedJob.id ? { ...app, status: newStatus } : app
-          )
-        );
-        setDraggedJob(null);
+const handleDrop = useCallback(
+  (e: React.DragEvent, newStatus: ColumnType) => {
+    e.preventDefault();
+    
+    if (draggedJob) {
+      // Actualizar el estado localmente con el nuevo status
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === draggedJob.id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      // Ahora actualizamos el status en Firestore
+      if (draggedJob.firestoreId) {
+        const jobRef = doc(db, "mispostulaciones", draggedJob.firestoreId);
+        
+        updateDoc(jobRef, { status: newStatus })
+          .then(() => {
+            console.log(`Postulación movida a la columna ${newStatus}`);
+          })
+          .catch((error) => {
+            console.error("Error al actualizar el status de la postulación en Firestore:", error);
+          });
       }
-    },
-    [draggedJob]
-  );
+
+      // Limpiar el estado de la postulación que estamos arrastrando
+      setDraggedJob(null);
+    }
+  },
+  [draggedJob]
+);
+
+
 
   const getApplicationsByStatus = (status: ColumnType) => {
     return applications.filter((app) => app.status === status);
