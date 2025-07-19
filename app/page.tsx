@@ -76,11 +76,11 @@ y consigue tu
         </div>
       </section>
 
-      {/* Tools Showcase Section */}
-      <ToolsShowcase />
-
       {/* Company Carousel Section */}
       <CompanyCarousel />
+
+      {/* Tools Showcase Section */}
+      <ToolsShowcase />
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-emerald-500 via-[#028bbf] to-emerald-500">

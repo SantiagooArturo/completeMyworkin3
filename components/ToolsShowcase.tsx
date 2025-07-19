@@ -59,13 +59,10 @@ export default function ToolsShowcase() {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="text-2xl md:text-4xl font-bold mb-4 leading-tight">
-            Tu carrera profesional completa.
+          Consigue prácticas sin complicaciones.
             <br />
-            <span className="relative inline-block">
-              Impulsada por IA
-              <span className="absolute -top-4 md:-top-6 right-0 md:right-0">
-                <Sparkles className="w-4 h-4 md:w-6 md:h-6 text-yellow-400" />
-              </span>
+            <span>
+            Con IA.
             </span>
           </h2>
           <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto px-2">
