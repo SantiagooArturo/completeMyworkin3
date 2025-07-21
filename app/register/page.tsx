@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { OnboardingService } from "@/services/onboardingService";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,6 +19,15 @@ export default function RegisterPage() {
   const [university, setUniversity] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSuccess = () => {
+    // Redirigir al onboarding para que complete su información
+    router.push('/dashboard');
+  };
+
+  const handleGoogleError = (error: string) => {
+    setError(error);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,6 +242,26 @@ export default function RegisterPage() {
               {loading ? "Creando cuenta..." : "Crear cuenta"}
             </button>
           </form>
+
+          {/* Separador */}
+          <div className="mt-6 mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">O regístrate con</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Botón de Google */}
+          <GoogleAuthButton 
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+          >
+            Registrarse con Google
+          </GoogleAuthButton>
 
           <div className="mt-6 space-y-4">
             <Link 
