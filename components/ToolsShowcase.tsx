@@ -17,6 +17,7 @@ interface Tool {
   description: string;
   icon: React.ReactNode;
   videoUrl: string;
+  link: string;
 }
 
 const tools: Tool[] = [
@@ -25,34 +26,41 @@ const tools: Tool[] = [
     name: 'Match IA',
     description: 'Encuentra las prácticas que mejor se ajustan a tu perfil con IA',
     icon: <Target className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/_2GnA5RXMG0'
+    videoUrl: 'https://www.youtube.com/embed/_2GnA5RXMG0',
+    link: '/portal-trabajo',
   },
   {
     id: 'cv-builder',
     name: 'CV Builder IA',
     description: 'Crea un CV profesional optimizado para cada postulación',
     icon: <FileText className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/-m71NYbXR5M'
+    videoUrl: 'https://www.youtube.com/embed/-m71NYbXR5M',
+    link: '/crear-cv',
   },
   {
     id: 'interview',
     name: 'Simulador de Entrevistas',
     description: 'Practica entrevistas con un entrevistador virtual inteligente',
     icon: <Mic className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/6O5vFbw0T70'
+    videoUrl: 'https://www.youtube.com/embed/6O5vFbw0T70',
+    link: '/interview-simulation',
   },
   {
     id: 'cv-analysis',
     name: 'Análisis de CV',
     description: 'Recibe feedback detallado y mejora tu CV con IA',
     icon: <Search className="w-5 h-5" />,
-    videoUrl: 'https://www.youtube.com/embed/FWZenEqyH6M'
+    videoUrl: 'https://www.youtube.com/embed/FWZenEqyH6M',
+    link: '/analizar-cv',
   }
 ];
+
+import { useRouter } from 'next/navigation';
 
 export default function ToolsShowcase() {
   const [activeTab, setActiveTab] = useState(tools[0].id);
   const activeTool = tools.find(tool => tool.id === activeTab);
+  const router = useRouter();
 
   return (
     <div className="py-12 md:py-20 bg-white overflow-hidden">
@@ -115,7 +123,12 @@ export default function ToolsShowcase() {
             </div>
             <h3 className="text-xl md:text-3xl font-bold mb-3 md:mb-4 px-2 lg:px-0">{activeTool?.name}</h3>
             <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 px-2 lg:px-0">{activeTool?.description}</p>
-            <button className="bg-[#028bbf] text-white px-6 md:px-8 py-2.5 md:py-3 rounded-full hover:bg-[#027ba8] transition-colors text-sm md:text-base">
+            <button
+              className="bg-[#028bbf] text-white px-6 md:px-8 py-2.5 md:py-3 rounded-full hover:bg-[#027ba8] transition-colors text-sm md:text-base"
+              onClick={() => {
+                if (activeTool?.link) router.push(activeTool.link);
+              }}
+            >
               Probar ahora
             </button>
           </motion.div>
@@ -143,4 +156,4 @@ export default function ToolsShowcase() {
       </div>
     </div>
   );
-} 
+}
