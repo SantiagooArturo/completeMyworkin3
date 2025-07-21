@@ -55,7 +55,7 @@ y consigue tu
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Obtén recomendaciones de practicas personalizadas, crea CVs optimizados y practica entrevistas.
+              Obtén recomendaciones de prácticas personalizadas, crea CVs optimizados y practica entrevistas.
               Todo en un solo lugar.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -115,16 +115,16 @@ y consigue tu
               <ul className="space-y-2">
                 <li><Link href="/" className="text-gray-600 hover:text-[#028bbf]">Inicio</Link></li>
                 <li><Link href="/bolsa-trabajo" className="text-gray-600 hover:text-[#028bbf]">Bolsa de trabajo</Link></li>
-                <li><Link href="/agentes-ai" className="text-gray-600 hover:text-[#028bbf]">Agentes de AI</Link></li>
+                <li><Link href="/login" className="text-gray-600 hover:text-[#028bbf]">Iniciar Sesión</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold text-gray-900 mb-4">Recursos</h3>
-              <ul className="space-y-2">
+              {/* <ul className="space-y-2">
                 <li><Link href="/blog" className="text-gray-600 hover:text-[#028bbf]">Blog</Link></li>
                 <li><Link href="/guias" className="text-gray-600 hover:text-[#028bbf]">Guías</Link></li>
                 <li><Link href="/eventos" className="text-gray-600 hover:text-[#028bbf]">Eventos</Link></li>
-              </ul>
+              </ul> */}
             </div>
             <div>
               <h3 className="font-bold text-gray-900 mb-4">Legal</h3>

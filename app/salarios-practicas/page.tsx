@@ -73,8 +73,8 @@ export default function SalariosPracticasPage() {
 
             {/* Subtitle */}
             <p className="text-sm md:text-lg text-blue-100 mb-4 max-w-2xl mx-auto leading-relaxed">
-              Descubre los salarios reales de practicantes en las mejores empresas del Perú. 
-              Información transparente para que puedas negociar mejor.
+              Descubre los salarios reales de practicantes en las mejores empresas. 
+              {/* Información transparente para que puedas negociar mejor. */}
             </p>
 
 
@@ -147,7 +147,7 @@ export default function SalariosPracticasPage() {
           </div>
 
           {/* Bottom CTA */}
-                     <div className="mt-12 text-center">
+          {/* <div className="mt-12 text-center">
              <div className="bg-gradient-to-r from-[#028bbf] to-[#027ba8] rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-4">¿Tienes información adicional?</h3>
               <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
@@ -162,8 +162,7 @@ export default function SalariosPracticasPage() {
                 Contribuir con Datos
               </a>
             </div>
-          </div>
-
+          </div> */}
         </div>
       </div>
     </div>

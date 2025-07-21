@@ -24,7 +24,7 @@ const recentPostings: JobPosting[] = [
     id: '2',
     companyName: 'P&G',
     companyLogo: '/companies/klipartz.com(1).png',
-    position: 'Product Manager',
+    position: 'Practicante de Ventas',
     postedAgo: '4 hours ago'
   },
   {
@@ -38,14 +38,14 @@ const recentPostings: JobPosting[] = [
     id: '4',
     companyName: 'JPMorgan',
     companyLogo: '/companies/klipartz.com(3).png',
-    position: 'Practicante de marketing',
+    position: 'Practicante de M&A',
     postedAgo: '2 hours ago'
   },
   {
     id: '5',
     companyName: 'Aje',
     companyLogo: '/companies/klipartz.com(4).png',
-    position: 'Practicante de prospección',
+    position: 'Practicante Global de Comunicación Interna',
     postedAgo: '1 hour ago'
   }
 ];

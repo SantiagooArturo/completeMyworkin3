@@ -275,14 +275,14 @@ export default function Landing() {
                 <li><Link href="/comunidad" className="text-gray-600 hover:text-[#028bbf]">Comunidad</Link></li>
               </ul>
             </div>
-            <div>
+            {/* <div>
               <h3 className="font-bold text-gray-900 mb-4">Recursos</h3>
               <ul className="space-y-2">
                 <li><Link href="/blog" className="text-gray-600 hover:text-[#028bbf]">Blog</Link></li>
                 <li><Link href="/guias" className="text-gray-600 hover:text-[#028bbf]">Guías</Link></li>
                 <li><Link href="/eventos" className="text-gray-600 hover:text-[#028bbf]">Eventos</Link></li>
               </ul>
-            </div>
+            </div> */}
             <div>
               <h3 className="font-bold text-gray-900 mb-4">Legal</h3>
               <ul className="space-y-2">
