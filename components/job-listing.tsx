@@ -27,7 +27,16 @@ export default function JobListing({ practice }: JobListingProps) {
       salary: practice.salary || 'No especificado',
       url: practice.link || practice.url || '',
       requirements: practice.requirements,
-      publishedDate: practice.posted_date,
+      publishedDate:
+        practice.posted_date instanceof Date
+          ? practice.posted_date.toISOString()
+          : (typeof practice.posted_date === 'string'
+              ? practice.posted_date
+              : (practice.posted_date && typeof (practice.posted_date as any).toDate === 'function')
+                ? (practice.posted_date as any).toDate().toISOString()
+                : (practice.posted_date && typeof (practice.posted_date as any).seconds === 'number')
+                  ? new Date((practice.posted_date as any).seconds * 1000).toISOString()
+                  : undefined),
       endDate: practice.end_date,
       // Agregar datos de similitud con nueva estructura
       requisitos_tecnicos: (practice as any).requisitos_tecnicos,
@@ -94,7 +103,17 @@ export default function JobListing({ practice }: JobListingProps) {
               <svg className="h-4 w-4 text-[#028bbf] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span>{practice.posted_date}</span>
+                            <span>
+                {practice.posted_date instanceof Date
+                  ? practice.posted_date.toISOString()
+                  : (typeof practice.posted_date === 'string'
+                      ? practice.posted_date
+                      : (practice.posted_date && typeof (practice.posted_date as any).toDate === 'function')
+                        ? (practice.posted_date as any).toDate().toISOString()
+                        : (practice.posted_date && typeof (practice.posted_date as any).seconds === 'number')
+                          ? new Date((practice.posted_date as any).seconds * 1000).toISOString()
+                          : '')}
+              </span>
             </div>
           )}
         </div>
