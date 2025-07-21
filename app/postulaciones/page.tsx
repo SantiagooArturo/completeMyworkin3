@@ -136,6 +136,39 @@ function JobApplicationCard({
   // Usar directamente el array de herramientas utilizadas desde Firestore
   const toolsUsed: string[] = job.toolsUsed || [];
 
+  // Función para formatear la fecha de agregado
+  const formatFechaAgregado = (dateString: string) => {
+    try {
+      // Si es una fecha en formato de timestamp o string ISO
+      const date = new Date(dateString);
+      
+      // Verificar si es una fecha válida
+      if (isNaN(date.getTime())) {
+        // Si appliedDate viene en formato DD/MM/YYYY, convertir
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          const formattedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          return formattedDate.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+        }
+        return dateString; // Devolver como está si no se puede parsear
+      }
+      
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return dateString;
+    }
+  };
+
   // Iconos y estilos para cada herramienta
   const getToolIcon = (tool: string) => {
     switch (tool) {
@@ -185,8 +218,9 @@ function JobApplicationCard({
               })}
           </div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0" />
+            <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0" />
             <div>
+              <span className="text-gray-500 text-sm">Fecha agregado {formatFechaAgregado(job.appliedDate)}</span>
               <h3 className="font-bold text-gray-900 text-lg leading-tight">
                 {job.title}
               </h3>
@@ -307,6 +341,37 @@ export default function PostulacionesPage() {
 
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Función para contar filtros activos
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (dateRange.from || dateRange.to) count++;
+    if (estado) count++;
+    if (tipoTrabajo) count++;
+    if (jornada) count++;
+    return count;
+  };
+
+  // Función para limpiar todos los filtros
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setDateRange({ from: undefined, to: undefined });
+    setEstado("");
+    setTipoTrabajo("");
+    setJornada("");
+  };
+
+  // Obtener opciones únicas para los filtros dinámicamente
+  const getUniqueTypes = () => {
+    const types = [...new Set(applications.map(app => app.type).filter(Boolean))];
+    return types;
+  };
+
+  const getUniqueSchedules = () => {
+    const schedules = [...new Set(applications.map(app => app.schedule).filter(Boolean))];
+    return schedules;
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -453,8 +518,69 @@ const handleDrop = useCallback(
 
 
 
+  // Función para filtrar aplicaciones
+  const getFilteredApplications = () => {
+    let filtered = applications;
+
+    // Filtro por búsqueda de texto
+    if (searchQuery) {
+      filtered = filtered.filter(app => 
+        app.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.location.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filtro por rango de fechas
+    if (dateRange.from || dateRange.to) {
+      filtered = filtered.filter(app => {
+        const appDate = new Date(app.appliedDate);
+        
+        // Si la fecha del app no es válida, intentar parsear formato DD/MM/YYYY
+        if (isNaN(appDate.getTime())) {
+          const parts = app.appliedDate.split('/');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            if (!isNaN(parsedDate.getTime())) {
+              return (!dateRange.from || parsedDate >= dateRange.from) &&
+                     (!dateRange.to || parsedDate <= dateRange.to);
+            }
+          }
+          return false;
+        }
+        
+        return (!dateRange.from || appDate >= dateRange.from) &&
+               (!dateRange.to || appDate <= dateRange.to);
+      });
+    }
+
+    // Filtro por estado (solo si se selecciona uno específico)
+    if (estado) {
+      filtered = filtered.filter(app => app.status === estado);
+    }
+
+    // Filtro por tipo de trabajo
+    if (tipoTrabajo) {
+      filtered = filtered.filter(app => app.type === tipoTrabajo);
+    }
+
+    // Filtro por jornada
+    if (jornada) {
+      filtered = filtered.filter(app => app.schedule === jornada);
+    }
+
+    return filtered;
+  };
+
   const getApplicationsByStatus = (status: ColumnType) => {
-    return applications.filter((app) => app.status === status);
+    const filteredApps = getFilteredApplications();
+    // Si no hay filtro de estado aplicado, mostrar todos de ese status
+    // Si hay filtro de estado, solo mostrar si coincide con el status de la columna
+    if (estado && estado !== status) {
+      return [];
+    }
+    return filteredApps.filter((app) => app.status === status);
   };
 
   const handleDeleteJob = async (jobId: number) => {
@@ -478,9 +604,21 @@ const handleDrop = useCallback(
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Mis postulaciones
-          </h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Mis postulaciones
+              </h1>
+              {!isLoading && (
+                <p className="text-gray-600">
+                  {getActiveFiltersCount() > 0 
+                    ? `Mostrando ${getFilteredApplications().length} de ${applications.length} postulaciones`
+                    : `${applications.length} postulaciones en total`
+                  }
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Barra de búsqueda y filtros */}
@@ -513,9 +651,14 @@ const handleDrop = useCallback(
                 onOpenChange={setShowFilterDropdown}
               >
                 <PopoverTrigger asChild>
-                  <Button variant="default" className="flex items-center gap-2">
+                  <Button variant="default" className="flex items-center gap-2 relative">
                     <Filter className="h-4 w-4" />
                     Filtrar
+                    {getActiveFiltersCount() > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {getActiveFiltersCount()}
+                      </span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[340px] p-4" align="end">
@@ -565,9 +708,11 @@ const handleDrop = useCallback(
                           <SelectValue placeholder="Selecciona tipo trabajo" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="remoto">Remoto</SelectItem>
-                          <SelectItem value="hibrido">Híbrido</SelectItem>
-                          <SelectItem value="presencial">Presencial</SelectItem>
+                          {getUniqueTypes().map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -587,13 +732,11 @@ const handleDrop = useCallback(
                           <SelectValue placeholder="Selecciona jornada" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="tiempo-completo">
-                            Tiempo completo
-                          </SelectItem>
-                          <SelectItem value="medio-tiempo">
-                            Medio tiempo
-                          </SelectItem>
-                          <SelectItem value="practicas">Prácticas</SelectItem>
+                          {getUniqueSchedules().map((schedule) => (
+                            <SelectItem key={schedule} value={schedule}>
+                              {schedule}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -613,15 +756,26 @@ const handleDrop = useCallback(
                       </Button>
                       <Button
                         className="bg-myworkin-500 hover:bg-myworkin-600 font-bold rounded-xl px-6"
-                        onClick={() => setShowFilterDropdown(false)}
+                        onClick={() => {
+                          setShowFilterDropdown(false);
+                        }}
                       >
-                        Filtrar
+                        Aplicar
                       </Button>
                     </div>
                   </div>
                 </PopoverContent>
               </Popover>
             </div>
+            {getActiveFiltersCount() > 0 && (
+              <Button
+                variant="outline"
+                onClick={clearAllFilters}
+                className="flex items-center gap-2 border-red-500 text-red-500 hover:bg-red-50"
+              >
+                Limpiar todo
+              </Button>
+            )}
           </div>
         </div>
 
@@ -655,6 +809,14 @@ const handleDrop = useCallback(
                         borderColor={column.borderColor}
                       />
                     ))
+                  ) : getApplicationsByStatus(column.id).length === 0 ? (
+                    // Mostrar mensaje cuando no hay aplicaciones en esta columna
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-sm">No hay postulaciones aquí</p>
+                      {getActiveFiltersCount() > 0 && (
+                        <p className="text-xs mt-1">Intenta ajustar los filtros</p>
+                      )}
+                    </div>
                   ) : (
                     // Mostrar las cards reales cuando ya cargaron
                     getApplicationsByStatus(column.id).map((job, index) => (

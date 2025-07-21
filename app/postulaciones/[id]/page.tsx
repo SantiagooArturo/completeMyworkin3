@@ -275,13 +275,30 @@ export default function PostulacionDetallePage() {
   // Formatear fecha
   const formatFecha = (fechaString: string) => {
     try {
-      const fecha = new Date(fechaString);
+      // Si es una fecha en formato de timestamp o string ISO
+      let fecha = new Date(fechaString);
+      
+      // Si no es válida, intentar parseando formato DD/MM/YYYY
+      if (isNaN(fecha.getTime())) {
+        const parts = fechaString.split('/');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        }
+      }
+      
+      // Si aún no es válida, retornar valor por defecto
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha no disponible';
+      }
+      
       return fecha.toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
-    } catch {
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
       return 'Fecha no disponible';
     }
   };
