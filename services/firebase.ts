@@ -8,7 +8,8 @@ import {
   getDoc,
   where
 } from 'firebase/firestore';
-import { worksDb } from '@/firebase/works-config';
+// import { worksDb } from '@/firebase/works-config';
+import { db2 } from '@/firebase/config-jobs';
 
 // Tipos de datos para las prácticas y categorías
 export interface Practice {
@@ -20,10 +21,21 @@ export interface Practice {
   salary?: string;
   requirements?: string;
   end_date?: string;
-  posted_date?: string;
+  posted_date?: string | Date; // Puede ser un string o un objeto Date
   category: string;
   source: string;
   link: string;
+}
+
+export interface PracticeDB2 {
+  id?: string;
+  company: string;
+  title: string;
+  descripcion: string;
+  location: string;
+  fecha_agregado: string | Date; // Puede ser un string o un objeto Date
+  url: string;
+  salary: string;
 }
 
 export interface ExtractedData {
@@ -87,11 +99,29 @@ const categories = {
   ]
 };
 
-// Función para clasificar una práctica basada en su título y requisitos
-function classifyPractice(practice: Practice): string {
+// Función para convertir PracticeDB2 a Practice
+function convertPracticeDB2ToPractice(practiceDB2: PracticeDB2): Practice {
+  return {
+    id: practiceDB2.id || '',
+    title: practiceDB2.title,
+    company: practiceDB2.company,
+    url: practiceDB2.url,
+    location: practiceDB2.location,
+    salary: practiceDB2.salary,
+    requirements: practiceDB2.descripcion, // Mapear descripción a requirements
+    end_date: undefined,
+    posted_date: practiceDB2.fecha_agregado,
+    category: classifyPractice(practiceDB2),
+    source: 'jobs-update',
+    link: practiceDB2.url
+  };
+}
+
+// Función para clasificar una práctica basada en su título y descripción
+function classifyPractice(practice: PracticeDB2): string {
   const title = (practice.title || '').toLowerCase();
-  const requirements = (practice.requirements || '').toLowerCase();
-  const textToAnalyze = title + ' ' + requirements;
+  const descripcion = (practice.descripcion || '').toLowerCase();
+  const textToAnalyze = title + ' ' + descripcion;
   
   // Primero intentamos encontrar una categoría basada en palabras clave
   for (const [category, keywords] of Object.entries(categories)) {
@@ -108,37 +138,11 @@ function classifyPractice(practice: Practice): string {
   return 'Otros';
 }
 
-// Obtener la extracción más reciente
-export async function getLatestExtraction(): Promise<ExtractedData | null> {
+// Obtener todas las prácticas de la colección practicas y clasificarlas
+export async function getPracticesFromDB2(): Promise<{ [category: string]: Practice[] }> {
+  console.log('Obteniendo prácticas de la base de datos jobs-update...');
   try {
-    const extractionsRef = collection(worksDb, 'extractions');
-    const q = query(extractionsRef, orderBy('extraction_date', 'desc'), limit(1));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return null;
-    }
-    
-    const doc = querySnapshot.docs[0];
-    return {
-      id: doc.id,
-      extraction_date: doc.data().extraction_date,
-      total_practices: doc.data().total_practices,
-      source: doc.data().source,
-      max_pages: doc.data().max_pages,
-      use_selenium: doc.data().use_selenium
-    };
-  } catch (error) {
-    console.error('Error getting latest extraction:', error);
-    return null;
-  }
-}
-
-// Obtener todas las prácticas de una extracción y clasificarlas
-export async function getPractices(extractionId: string): Promise<{ [category: string]: Practice[] }> {
-  console.log('Obteniendo prácticas para extracción:', extractionId);
-  try {
-    const practicesRef = collection(worksDb, `extractions/${extractionId}/practices`);
+    const practicesRef = collection(db2, 'practicas');
     const querySnapshot = await getDocs(practicesRef);
     
     // Inicializar objeto para almacenar prácticas por categoría
@@ -152,19 +156,17 @@ export async function getPractices(extractionId: string): Promise<{ [category: s
     
     // Procesar cada práctica
     querySnapshot.forEach((doc) => {
-      const practice = {
+      const practiceDB2 = {
         id: doc.id,
-        ...doc.data(),
-        posted_date: doc.data().extraction_date || new Date().toISOString().split('T')[0] // Usar la fecha de extracción como fecha de publicación
-      } as Practice;
+        ...doc.data()
+      } as PracticeDB2;
       
-      // Asignar categoría
-      const category = classifyPractice(practice);
-      practice.category = category;
+      // Convertir a formato Practice
+      const practice = convertPracticeDB2ToPractice(practiceDB2);
       
       // Agregar a la categoría correspondiente
-      if (practicesByCategory[category]) {
-        practicesByCategory[category].push(practice);
+      if (practicesByCategory[practice.category]) {
+        practicesByCategory[practice.category].push(practice);
       } else {
         practicesByCategory['Otros'].push(practice);
       }
@@ -183,6 +185,33 @@ export async function getPractices(extractionId: string): Promise<{ [category: s
     console.error('Error al obtener prácticas:', error);
     return {};
   }
+}
+
+// Obtener la extracción más reciente
+export async function getLatestExtraction(): Promise<ExtractedData | null> {
+  try {
+    // Ya no necesitamos extracciones específicas, retornamos datos simulados
+    // basados en las prácticas actuales de la base de datos
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      id: 'jobs-update-latest',
+      extraction_date: `${today} 12:00:00`,
+      total_practices: 0, // Se calculará dinámicamente
+      source: 'jobs-update',
+      max_pages: 1,
+      use_selenium: false
+    };
+  } catch (error) {
+    console.error('Error getting latest extraction:', error);
+    return null;
+  }
+}
+
+// Obtener todas las prácticas de una extracción y clasificarlas
+export async function getPractices(extractionId: string): Promise<{ [category: string]: Practice[] }> {
+  console.log('Obteniendo prácticas para extracción:', extractionId);
+  // Ahora simplemente redirigimos a la nueva función que obtiene de db2
+  return await getPracticesFromDB2();
 }
 
 // Función para obtener los datos más recientes ya clasificados
@@ -216,36 +245,24 @@ export async function getTodayExtractions(): Promise<ExtractedData[]> {
   const startOfDay = `${year}-${month}-${day} 00:00:00`;
   const endOfDay = `${year}-${month}-${day} 23:59:59`;
 
-  console.log('Buscando extracciones entre:', {
+  console.log('Simulando extracciones para el día:', {
     startOfDay,
     endOfDay
   });
 
   try {
-    const q = query(
-      collection(worksDb, 'extractions'),
-      where('extraction_date', '>=', startOfDay),
-      where('extraction_date', '<=', endOfDay),
-      orderBy('extraction_date', 'desc')
-    );
+    // Simulamos una extracción para el día actual
+    const extraction: ExtractedData = {
+      id: 'jobs-update-today',
+      extraction_date: `${year}-${month}-${day} 12:00:00`,
+      total_practices: 0, // Se calculará dinámicamente
+      source: 'jobs-update',
+      max_pages: 1,
+      use_selenium: false
+    };
 
-    const querySnapshot = await getDocs(q);
-    const extractions = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        extraction_date: data.extraction_date,
-        total_practices: data.total_practices || 0,
-        source: data.source || '',
-        max_pages: data.max_pages || 0,
-        use_selenium: data.use_selenium || false
-      };
-    });
-
-    console.log('Extracciones encontradas:', extractions.length);
-    console.log('Datos de las extracciones:', JSON.stringify(extractions, null, 2));
-
-    return extractions;
+    console.log('Extracciones simuladas:', 1);
+    return [extraction];
   } catch (error) {
     console.error('Error al obtener extracciones:', error);
     return [];
@@ -255,120 +272,247 @@ export async function getRecentPracticesByCategory(): Promise<{
   extractionDate: string | null, 
   practices: { [category: string]: Practice[] } 
 }> {
-  const today = new Date();
-  const fiveDaysAgo = new Date(today);
-  fiveDaysAgo.setDate(today.getDate() - 5);
+  console.log('Obteniendo prácticas recientes de la base de datos jobs-update...');
+  
+  try {
+    // Filtrar prácticas de los últimos 5 días
+    const today = new Date();
+    const fiveDaysAgo = new Date(today);
+    fiveDaysAgo.setDate(today.getDate() - 5);
 
-  // Formato "YYYY-MM-DD"
-  const formatDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  const fiveDaysAgoStr = `${formatDate(fiveDaysAgo)} 00:00:00`;
-  const todayStr = `${formatDate(today)} 23:59:59`;
-
-  // 1. Extracciones manuales (use_selenium: false) últimos 5 días
-  const manualQuery = query(
-    collection(worksDb, 'extractions'),
-    where('use_selenium', '==', false),
-    where('extraction_date', '>=', fiveDaysAgoStr),
-    where('extraction_date', '<=', todayStr),
-    orderBy('extraction_date', 'desc')
-  );
-  const manualSnapshot = await getDocs(manualQuery);
-
-  // 2. Extracciones automáticas (use_selenium: true) más recientes (por ejemplo, solo 1)
-  const autoQuery = query(
-    collection(worksDb, 'extractions'),
-    where('use_selenium', '==', true),
-    orderBy('extraction_date', 'desc'),
-    limit(1)
-  );
-  const autoSnapshot = await getDocs(autoQuery);
-
-  // Combinar extracciones
-  const allExtractions: ExtractedData[] = [
-    ...manualSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExtractedData)),
-    ...autoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExtractedData)),
-  ];
-
-  // Obtener y combinar prácticas por categoría
-  let practicesByCategory: { [category: string]: Practice[] } = {};
-  let extractionDate: string | null = null;
-
-  for (const extraction of allExtractions) {
-    const practices = await getPractices(extraction.id);
-    Object.entries(practices).forEach(([category, categoryPractices]) => {
-      if (!practicesByCategory[category]) {
-        practicesByCategory[category] = [];
-      }
-      practicesByCategory[category].push(...categoryPractices);
-    });
-    // Guardar la fecha más reciente para mostrar
-    if (!extractionDate || extraction.extraction_date > extractionDate) {
-      extractionDate = extraction.extraction_date;
+    const practicesRef = collection(db2, 'practicas');
+    const querySnapshot = await getDocs(practicesRef);
+    
+    let practicesByCategory: { [category: string]: Practice[] } = {};
+    let extractionDate: string | null = null;
+    for (const category of Object.keys(categories)) {
+      practicesByCategory[category] = [];
     }
-  }
+    practicesByCategory['Otros'] = [];
+    querySnapshot.forEach((doc) => {
+      const practiceDB2 = {
+        id: doc.id,
+        ...doc.data()
+      } as PracticeDB2;
+      // Parsear fecha_agregado y filtrar por los últimos 5 días
+      let fechaPractica = null;
+      if (practiceDB2.fecha_agregado) {
+        try {
+          let fechaRaw = practiceDB2.fecha_agregado;
+          if (typeof fechaRaw === 'object' && fechaRaw !== null) {
+            if (typeof (fechaRaw as any).toDate === 'function') {
+              fechaRaw = (fechaRaw as any).toDate();
+            } else if ('seconds' in fechaRaw && typeof (fechaRaw as any).seconds === 'number') {
+              fechaRaw = new Date((fechaRaw as any).seconds * 1000);
+            }
+          }
+          if (fechaRaw instanceof Date) {
+            fechaPractica = fechaRaw;
+          } else if (typeof fechaRaw === 'string') {
+            // Soporta formato: '14 de julio de 2025, 11:11:12 a.m. UTC-5'
+            const match = fechaRaw.match(/(\d{1,2}) de (\w+) de (\d{4})/);
+            if (match) {
+              const dia = parseInt(match[1], 10);
+              const mesNombre = match[2].toLowerCase();
+              const anio = parseInt(match[3], 10);
+              const meses: { [key: string]: number } = {
+                'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+                'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+              };
+              const mes = meses[mesNombre] ?? 0;
+              fechaPractica = new Date(anio, mes, dia);
+            } else {
+              // Si no matchea, intentar parsear como Date estándar
+              const parsed = new Date(fechaRaw);
+              if (!isNaN(parsed.getTime())) {
+                fechaPractica = parsed;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error parsing date:', practiceDB2.fecha_agregado);
+        }
+      }
+      if (!fechaPractica || (fechaPractica >= fiveDaysAgo && fechaPractica <= today)) {
+        const practice = convertPracticeDB2ToPractice(practiceDB2);
+        if (practice.posted_date && typeof practice.posted_date === 'object') {
+          // Type guard para Firestore Timestamp
+          if (
+            typeof (practice.posted_date as any).toDate === 'function'
+          ) {
+            practice.posted_date = (practice.posted_date as any).toDate().toISOString();
+          } else if (
+            'seconds' in (practice.posted_date as any) &&
+            typeof (practice.posted_date as any).seconds === 'number'
+          ) {
+            const date = new Date((practice.posted_date as any).seconds * 1000);
+            practice.posted_date = date.toISOString();
+          }
+        }
+        if (practicesByCategory[practice.category]) {
+          practicesByCategory[practice.category].push(practice);
+        } else {
+          practicesByCategory['Otros'].push(practice);
+        }
+        if (!extractionDate || practiceDB2.fecha_agregado > extractionDate) {
+          let fechaRaw = practiceDB2.fecha_agregado;
+          if (fechaRaw instanceof Date) {
+            extractionDate = fechaRaw.toISOString();
+          } else {
+            extractionDate = String(fechaRaw);
+          }
+        }
+      }
+    });
 
-  return {
-    extractionDate,
-    practices: practicesByCategory
-  };
+    // Eliminar categorías vacías
+    Object.keys(practicesByCategory).forEach(category => {
+      if (practicesByCategory[category].length === 0) {
+        delete practicesByCategory[category];
+      }
+    });
+
+    return {
+      extractionDate: extractionDate || new Date().toISOString().split('T')[0],
+      practices: practicesByCategory
+    };
+  } catch (error) {
+    console.error('Error al obtener prácticas recientes:', error);
+    return { extractionDate: null, practices: {} };
+  }
 }
 // Función para obtener los datos del día actual ya clasificados
 export async function getTodayPracticesByCategory(): Promise<{ 
   extractionDate: string | null, 
   practices: { [category: string]: Practice[] } 
 }> {
-  const extractions = await getTodayExtractions();
-  console.log('Total de extracciones encontradas:', extractions.length);
+  console.log('Obteniendo prácticas del día de la base de datos jobs-update...');
 
-  let practicesByCategory: { [category: string]: Practice[] } = {};
-  let extractionDate: string | null = null;
+  try {
+    // Obtener todas las prácticas y filtrar por fecha del día actual
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-  if (extractions.length === 0) {
-    console.log('No se encontraron extracciones recientes');
-    // Si no hay extracciones recientes, obtener la última extracción disponible
-    const lastExtractionQuery = query(
-      collection(worksDb, 'extractions'),
-      orderBy('extraction_date', 'desc'),
-      limit(1)
-    );
+    const practicesRef = collection(db2, 'practicas');
+    const querySnapshot = await getDocs(practicesRef);
     
-    const lastExtractionSnapshot = await getDocs(lastExtractionQuery);
-    if (!lastExtractionSnapshot.empty) {
-      const lastExtraction = lastExtractionSnapshot.docs[0];
-      const lastExtractionData = lastExtraction.data();
-      console.log('Usando última extracción disponible:', lastExtractionData.extraction_date);
-      
-      const practices = await getPractices(lastExtraction.id);
-      practicesByCategory = practices;
-      extractionDate = lastExtractionData.extraction_date;
+    let practicesByCategory: { [category: string]: Practice[] } = {};
+    let extractionDate: string | null = null;
+
+    // Inicializar categorías
+    for (const category of Object.keys(categories)) {
+      practicesByCategory[category] = [];
     }
-  } else {
-    // Si hay extracciones recientes, combinar todas las prácticas
-    console.log('Procesando extracciones encontradas:', extractions.length);
-    for (const extraction of extractions) {
-      console.log('Procesando extracción:', extraction.id, 'de fuente:', extraction.source);
-      const practices = await getPractices(extraction.id);
-      
-      // Combinar las prácticas con las existentes
-      Object.entries(practices).forEach(([category, categoryPractices]) => {
-        if (!practicesByCategory[category]) {
-          practicesByCategory[category] = [];
+    practicesByCategory['Otros'] = [];
+
+    let totalPractices = 0;
+    let todayPractices = 0;
+
+    querySnapshot.forEach((doc) => {
+      const practiceDB2 = {
+        id: doc.id,
+        ...doc.data()
+      } as PracticeDB2;
+
+      totalPractices++;
+
+      // Parsear fecha_agregado para filtrar por día actual
+      let fechaPractica = null;
+      let isToday = false;
+
+      if (practiceDB2.fecha_agregado) {
+        try {
+          let fechaRaw = practiceDB2.fecha_agregado;
+          if (typeof fechaRaw === 'object' && fechaRaw !== null) {
+            if (typeof (fechaRaw as any).toDate === 'function') {
+              fechaRaw = (fechaRaw as any).toDate();
+            } else if ('seconds' in fechaRaw && typeof (fechaRaw as any).seconds === 'number') {
+              fechaRaw = new Date((fechaRaw as any).seconds * 1000);
+            }
+          }
+          if (fechaRaw instanceof Date) {
+            fechaPractica = fechaRaw;
+            isToday = fechaPractica >= startOfDay && fechaPractica < endOfDay;
+          } else if (typeof fechaRaw === 'string') {
+            const match = fechaRaw.match(/(\d{1,2}) de (\w+) de (\d{4})/);
+            if (match) {
+              const dia = parseInt(match[1], 10);
+              const mesNombre = match[2].toLowerCase();
+              const anio = parseInt(match[3], 10);
+              const meses: { [key: string]: number } = {
+                'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+                'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+              };
+              const mes = meses[mesNombre] ?? 0;
+              fechaPractica = new Date(anio, mes, dia);
+              isToday = fechaPractica >= startOfDay && fechaPractica < endOfDay;
+            } else {
+              // Si no matchea, intentar parsear como Date estándar
+              const parsed = new Date(fechaRaw);
+              if (!isNaN(parsed.getTime())) {
+                fechaPractica = parsed;
+                isToday = fechaPractica >= startOfDay && fechaPractica < endOfDay;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error parsing date:', practiceDB2.fecha_agregado);
         }
-        practicesByCategory[category].push(...categoryPractices);
-      });
+      }
+
+      // Si no podemos determinar la fecha, incluir todas las prácticas
+      // Si es del día actual o no hay prácticas del día, incluir
+      if (!fechaPractica || isToday || todayPractices === 0) {
+        const practice = convertPracticeDB2ToPractice(practiceDB2);
+        
+        if (practicesByCategory[practice.category]) {
+          practicesByCategory[practice.category].push(practice);
+        } else {
+          practicesByCategory['Otros'].push(practice);
+        }
+
+        if (isToday) todayPractices++;
+
+        // Guardar la fecha más reciente
+        if (!extractionDate || practiceDB2.fecha_agregado > extractionDate) {
+          let fechaRaw = practiceDB2.fecha_agregado;
+          if (fechaRaw instanceof Date) {
+            extractionDate = fechaRaw.toISOString();
+          } else {
+            extractionDate = String(fechaRaw);
+          }
+        }
+      }
+    });
+
+    console.log(`Total de prácticas: ${totalPractices}, Prácticas del día: ${todayPractices}`);
+
+    // Si no hay prácticas del día actual, incluir todas las prácticas recientes
+    if (todayPractices === 0) {
+      console.log('No se encontraron prácticas del día actual, incluyendo todas las prácticas');
+      return await getRecentPracticesByCategory();
     }
-    extractionDate = extractions[0].extraction_date;
+
+    // Eliminar categorías vacías
+    Object.keys(practicesByCategory).forEach(category => {
+      if (practicesByCategory[category].length === 0) {
+        delete practicesByCategory[category];
+      }
+    });
+
+    // Imprimir resumen de prácticas por categoría
+    Object.entries(practicesByCategory).forEach(([category, practices]) => {
+      console.log(`Categoría ${category}: ${practices.length} prácticas`);
+    });
+
+    return {
+      extractionDate: extractionDate || new Date().toISOString().split('T')[0],
+      practices: practicesByCategory
+    };
+  } catch (error) {
+    console.error('Error al obtener prácticas del día:', error);
+    // En caso de error, intentar obtener prácticas recientes
+    return await getRecentPracticesByCategory();
   }
-
-  // Imprimir resumen de prácticas por categoría
-  Object.entries(practicesByCategory).forEach(([category, practices]) => {
-    console.log(`Categoría ${category}: ${practices.length} prácticas`);
-  });
-
-  return {
-    extractionDate,
-    practices: practicesByCategory
-  };
-} 
+}

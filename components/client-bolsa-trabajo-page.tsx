@@ -49,13 +49,11 @@ export default function ClientBolsaTrabajoPage() {
     loadPractices();
   }, []);
 
-  const formattedDate = extractionDate 
-    ? new Date(extractionDate).toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      })
-    : 'No disponible';
+  const formattedDate = new Date(extractionDate || '').toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   // Preparar las categorías para el menú de navegación
   const navigationCategories = Object.entries(practicesByCategory)
