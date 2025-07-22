@@ -137,60 +137,135 @@ export async function POST(request: NextRequest) {
 
     console.log('📝 [Adaptación] Texto extraído del CV:', cvText.substring(0, 200) + '...');
 
-    // Truncar el texto del CV si es muy largo (máximo 3000 caracteres para evitar exceder tokens)
-    const maxCVTextLength = 3000;
+    // Truncar el texto del CV si es muy largo (máximo 5000 caracteres para obtener más información)
+    const maxCVTextLength = 5000;
     const truncatedCVText = cvText.length > maxCVTextLength 
-      ? cvText.substring(0, maxCVTextLength) + '...[texto truncado]'
+      ? cvText.substring(0, maxCVTextLength) + '...[contenido adicional disponible]'
       : cvText;
 
     console.log('📏 [Adaptación] Longitud del texto CV:', cvText.length, '-> truncado a:', truncatedCVText.length);
 
     // Paso 2: Usar OpenAI para extraer datos estructurados específicamente para adaptación
-    const adaptationPrompt = `Extrae los datos del CV en formato JSON. Información disponible:
+    const adaptationPrompt = `Eres un experto en análisis de CVs. Extrae y enriquece los datos del siguiente CV para crear un perfil completo y profesional. Incluso si faltan datos, crea un CV ideal basado en la información disponible.
 
+INFORMACIÓN DEL CV:
 ${truncatedCVText}
 
-Formato requerido (JSON válido):
+INSTRUCCIONES:
+1. Extrae TODOS los datos disponibles del CV
+2. Si hay información incompleta o falta, infiérela profesionalmente basándote en el contexto
+3. Crea descripciones profesionales y logros impactantes usando la información disponible
+4. Organiza las habilidades por categorías apropiadas
+5. Genera un resumen profesional atractivo y específico
+
+FORMATO REQUERIDO (JSON válido):
 {
   "personalInfo": {
-    "fullName": "", "email": "", "phone": "", "address": "", "linkedIn": "", "summary": ""
+    "fullName": "Nombre completo extraído",
+    "email": "email si está disponible",
+    "phone": "teléfono si está disponible", 
+    "address": "dirección o ciudad si está disponible",
+    "linkedIn": "perfil de LinkedIn si está disponible",
+    "summary": "Resumen profesional de 2-3 líneas que destaque experiencia, habilidades y objetivos específicos"
   },
   "workExperience": [
-    {"id": "exp_1", "company": "", "position": "", "startDate": "", "endDate": "", "current": false, "description": "", "achievements": [], "location": "", "technologies": []}
+    {
+      "id": "exp_1",
+      "company": "Nombre de la empresa",
+      "position": "Cargo profesional específico",
+      "startDate": "YYYY-MM o YYYY",
+      "endDate": "YYYY-MM o YYYY o vacío si es actual",
+      "current": true/false,
+      "description": "Descripción profesional del rol y responsabilidades",
+      "achievements": [
+        "Logro específico con impacto cuantificable",
+        "Otro logro profesional destacado",
+        "Resultado o mejora implementada"
+      ],
+      "location": "Ciudad, País",
+      "technologies": ["Tecnología1", "Tecnología2", "Herramienta3"]
+    }
   ],
   "education": [
-    {"id": "edu_1", "institution": "", "degree": "", "startDate": "", "endDate": "", "current": false, "gpa": "", "achievements": []}
+    {
+      "id": "edu_1", 
+      "institution": "Universidad o Institución",
+      "degree": "Título o Carrera completa",
+      "startDate": "YYYY",
+      "endDate": "YYYY o vacío si está en curso",
+      "current": true/false,
+      "gpa": "Promedio si está disponible",
+      "achievements": [
+        "Distinción o reconocimiento académico",
+        "Proyecto destacado o tesis relevante"
+      ]
+    }
   ],
   "skills": [
-    {"id": "skill_1", "name": "", "level": "Intermedio", "category": "Technical"}
+    {
+      "id": "skill_1",
+      "name": "Habilidad específica",
+      "level": "Básico/Intermedio/Avanzado/Proficiente",
+      "category": "Technical/Leadership/Language/Design/Other"
+    }
   ],
   "projects": [
-    {"id": "proj_1", "name": "", "description": "", "startDate": "", "endDate": "", "technologies": [], "achievements": []}
+    {
+      "id": "proj_1",
+      "name": "Nombre del proyecto",
+      "description": "Descripción detallada del proyecto y su propósito",
+      "startDate": "YYYY-MM",
+      "endDate": "YYYY-MM",
+      "technologies": ["React", "Node.js", "Python"],
+      "achievements": [
+        "Resultado específico del proyecto",
+        "Impacto o mejora lograda",
+        "Reconocimiento o mérito obtenido"
+      ]
+    }
   ],
   "certifications": [
-    {"id": "cert_1", "name": "", "issuer": "", "date": "", "expirationDate": ""}
+    {
+      "id": "cert_1",
+      "name": "Nombre completo de la certificación",
+      "issuer": "Organización emisora",
+      "date": "YYYY-MM",
+      "expirationDate": "YYYY-MM si aplica"
+    }
   ],
   "languages": [
-    {"id": "lang_1", "language": "", "proficiency": "Intermedio"}
+    {
+      "id": "lang_1", 
+      "language": "Idioma",
+      "proficiency": "Básico/Intermedio/Avanzado/Proficiente/Nativo"
+    }
   ]
 }
+
+NOTAS IMPORTANTES:
+- Si hay poca información, enriquece profesionalmente basándote en el contexto
+- Usa fechas en formato YYYY-MM cuando sea posible
+- Crea logros específicos y cuantificables
+- Clasifica habilidades apropiadamente
+- Genera un resumen atractivo y profesional
+- NO dejes campos vacíos sin propósito, completa con información inferida del contexto
 
 Responde SOLO con JSON válido:`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Modelo más eficiente con mayor límite de contexto
+      model: "gpt-4o-mini", // Modelo eficiente con buen contexto
       messages: [
         {
           role: "system",
-          content: "Extrae datos estructurados de CVs en formato JSON válido. Responde solo con JSON."
+          content: "Eres un experto reclutador y analista de CVs con 15 años de experiencia. Tu tarea es extraer y enriquecer datos de CVs para crear perfiles profesionales completos y atractivos. Siempre generas contenido profesional, específico y orientado a resultados. Responde únicamente con JSON válido y completo."
         },
         {
           role: "user",
           content: adaptationPrompt
         }
       ],
-      temperature: 0.1,
-      max_tokens: 2000, // Reducido para evitar exceder límites
+      temperature: 0.3, // Más creatividad para enriquecer datos
+      max_tokens: 4000, // Más tokens para respuestas completas
     });
 
     const responseText = completion.choices[0].message.content?.trim();
@@ -304,8 +379,8 @@ function validateAndCleanCVDataForAdaptation(data: any): CVDataForAdaptation {
       endDate: cleanString(exp.endDate) || '',
       current: Boolean(exp.current),
       description: cleanString(exp.description) || '',
-      achievements: cleanArray(exp.achievements || []),
-      location: cleanString(exp.location) || undefined,
+      achievements: cleanArray(exp.achievements || []).filter(achievement => achievement && achievement.length > 5), // Solo logros significativos
+      location: cleanString(exp.location) || '',
       technologies: cleanArray(exp.technologies || []),
     })),
     education: cleanArray(data.education || []).map((edu: any, index: number) => ({
@@ -315,48 +390,71 @@ function validateAndCleanCVDataForAdaptation(data: any): CVDataForAdaptation {
       startDate: cleanString(edu.startDate) || '',
       endDate: cleanString(edu.endDate) || '',
       current: Boolean(edu.current),
-      gpa: cleanString(edu.gpa) || undefined,
-      achievements: cleanArray(edu.achievements || []),
+      gpa: cleanString(edu.gpa) || '',
+      achievements: cleanArray(edu.achievements || []).filter(achievement => achievement && achievement.length > 5),
     })),
-    skills: cleanArray(data.skills || []).map((skill: any, index: number) => ({
-      id: skill.id || generateId('skill', index),
-      name: cleanString(skill.name) || '',
-      level: cleanString(skill.level) || 'Intermedio',
-      category: cleanString(skill.category) || 'Technical',
-    })),
-    projects: cleanArray(data.projects || []).map((proj: any, index: number) => ({
-      id: proj.id || generateId('proj', index),
-      name: cleanString(proj.name) || '',
-      description: cleanString(proj.description) || '',
-      startDate: cleanString(proj.startDate) || undefined,
-      endDate: cleanString(proj.endDate) || undefined,
-      technologies: cleanArray(proj.technologies || []),
-      achievements: cleanArray(proj.achievements || []),
-    })),
-    certifications: cleanArray(data.certifications || []).map((cert: any, index: number) => ({
-      id: cert.id || generateId('cert', index),
-      name: cleanString(cert.name) || '',
-      issuer: cleanString(cert.issuer) || '',
-      date: cleanString(cert.date) || '',
-      expirationDate: cleanString(cert.expirationDate) || undefined,
-    })),
-    languages: cleanArray(data.languages || []).map((lang: any, index: number) => ({
-      id: lang.id || generateId('lang', index),
-      language: cleanString(lang.language) || '',
-      proficiency: cleanString(lang.proficiency) || 'Intermedio',
-    })),
+    skills: cleanArray(data.skills || [])
+      .filter(skill => skill.name && skill.name.length > 1) // Solo habilidades con nombre válido
+      .map((skill: any, index: number) => ({
+        id: skill.id || generateId('skill', index),
+        name: cleanString(skill.name) || '',
+        level: validateSkillLevel(cleanString(skill.level)),
+        category: validateSkillCategory(cleanString(skill.category)),
+      })),
+    projects: cleanArray(data.projects || [])
+      .filter(proj => proj.name && proj.name.length > 2) // Solo proyectos con nombre válido
+      .map((proj: any, index: number) => ({
+        id: proj.id || generateId('proj', index),
+        name: cleanString(proj.name) || '',
+        description: cleanString(proj.description) || '',
+        startDate: cleanString(proj.startDate) || '',
+        endDate: cleanString(proj.endDate) || '',
+        technologies: cleanArray(proj.technologies || []),
+        achievements: cleanArray(proj.achievements || []).filter(achievement => achievement && achievement.length > 5),
+      })),
+    certifications: cleanArray(data.certifications || [])
+      .filter(cert => cert.name && cert.name.length > 3) // Solo certificaciones con nombre válido
+      .map((cert: any, index: number) => ({
+        id: cert.id || generateId('cert', index),
+        name: cleanString(cert.name) || '',
+        issuer: cleanString(cert.issuer) || '',
+        date: cleanString(cert.date) || '',
+        expirationDate: cleanString(cert.expirationDate) || '',
+      })),
+    languages: cleanArray(data.languages || [])
+      .filter(lang => lang.language && lang.language.length > 2) // Solo idiomas con nombre válido
+      .map((lang: any, index: number) => ({
+        id: lang.id || generateId('lang', index),
+        language: cleanString(lang.language) || '',
+        proficiency: validateLanguageProficiency(cleanString(lang.proficiency)),
+      })),
   };
 }
 
-// Funciones de utilidad para limpiar datos (adaptadas para el contexto de adaptación)
-function cleanString(value: any): string | undefined {
-  if (typeof value !== 'string' || !value.trim()) return undefined;
+// Funciones de utilidad para limpiar datos (mejoradas para mantener más información)
+function cleanString(value: any): string {
+  if (typeof value !== 'string' || !value.trim()) return '';
   return value.trim();
 }
 
-function cleanUrl(value: any): string | undefined {
+function validateSkillLevel(level: string): string {
+  const validLevels = ['Básico', 'Intermedio', 'Avanzado', 'Proficiente'];
+  return validLevels.includes(level) ? level : 'Intermedio';
+}
+
+function validateSkillCategory(category: string): string {
+  const validCategories = ['Technical', 'Leadership', 'Language', 'Design', 'Other'];
+  return validCategories.includes(category) ? category : 'Technical';
+}
+
+function validateLanguageProficiency(proficiency: string): string {
+  const validProficiencies = ['Básico', 'Intermedio', 'Avanzado', 'Proficiente', 'Nativo'];
+  return validProficiencies.includes(proficiency) ? proficiency : 'Intermedio';
+}
+
+function cleanUrl(value: any): string {
   const cleaned = cleanString(value);
-  if (!cleaned) return undefined;
+  if (!cleaned) return '';
   
   // Validar que sea una URL válida
   try {
@@ -367,13 +465,14 @@ function cleanUrl(value: any): string | undefined {
     if (cleaned.includes('linkedin.com') && !cleaned.startsWith('http')) {
       return `https://${cleaned}`;
     }
-    return undefined;
+    return cleaned; // Retornar el valor original en lugar de undefined
   }
 }
 
 function cleanArray(value: any): any[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(item => item && (typeof item === 'string' ? item.trim() : true));
+  return value.filter(item => item && (typeof item === 'string' ? item.trim().length > 0 : true))
+    .map(item => typeof item === 'string' ? item.trim() : item);
 }
 
 // Función para generar resumen de campos extraídos para adaptación

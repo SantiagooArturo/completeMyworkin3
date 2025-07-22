@@ -274,7 +274,7 @@ function CrearCVContent() {
           
           {/* Banner de información de adaptación */}
           {(adaptationInfo || (isFromAdaptation && company && position)) && (
-            <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+            <div className="mb-6 bg-blue-100 rounded-xl p-6">
               <div className="flex items-start gap-4">
                 <div className="bg-green-100 rounded-full p-2">
                   <FileText className="h-6 w-6 text-green-600" />
