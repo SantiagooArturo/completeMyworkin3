@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {item.badge && (
                   <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {item.badge}
-                  </span>
+                  </span> 
                 )}
               </Link>
             );
@@ -131,7 +131,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className='p-4 mt-60'>
+        <div className='p-4 mt-96'>
         <AutoCarousel size='sm'/>
         </div>
       </div>
