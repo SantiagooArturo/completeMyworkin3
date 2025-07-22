@@ -9,6 +9,22 @@ import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/firebase/config';
 import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+
+// Función para detectar la bolsa según la URL
+const getBolsaLogo = (url?: string): { logo: string; alt: string } | null => {
+  if (!url) return null;
+  
+  if (url.includes('bumeran.com')) {
+    return { logo: '/bolsas/bumeran-logo.png', alt: 'Bumeran' };
+  }
+  
+  if (url.includes('linkedin.com')) {
+    return { logo: '/bolsas/linkedin-logo.png', alt: 'LinkedIn' };
+  }
+  
+  return null;
+};
 
 interface JobCardProps {
   job: {
@@ -289,9 +305,19 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
             <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#028bbf] transition-colors">
               {job.title}
             </h3>
-            <p className="text-gray-600 font-medium">
+            <p className="text-gray-600 font-medium mb-2">
               {job.company}
             </p>
+            {getBolsaLogo(job.applicationUrl) && (
+              <div className="w-20 h-20 relative flex-shrink-0" title={`Publicado en ${getBolsaLogo(job.applicationUrl)?.alt}`}>
+                <Image
+                  src={getBolsaLogo(job.applicationUrl)!.logo}
+                  alt={getBolsaLogo(job.applicationUrl)!.alt}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            )}
           </div>
         </div>
 
