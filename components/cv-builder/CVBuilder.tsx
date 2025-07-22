@@ -18,7 +18,8 @@ import PageWarningModal from './PageWarningModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TabsContent } from '@/components/ui/tabs';
-import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Save, Download, Eye, EyeOff, FileText, CheckCircle, AlertCircle, Info, Monitor, Layout, PanelLeft, PanelRight } from 'lucide-react';
 import CVBuilderTabs from './CVBuilderTabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CreditService } from '@/services/creditService';
@@ -60,6 +61,7 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
   const [cvData, setCVData] = useState<CVData>(initialCVData);
   const [activeTab, setActiveTab] = useState('personal');
   const [showPreview, setShowPreview] = useState(true);
+  const [viewMode, setViewMode] = useState<'both' | 'form-only' | 'preview-only'>('both'); // Nuevo estado para tipo de vista
   const [showGuide, setShowGuide] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,12 +95,28 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
       }
     };
 
+    // Atajo de teclado para cambiar vistas (Ctrl+Shift+V o Cmd+Shift+V)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'V') {
+        e.preventDefault();
+        if (viewMode === 'both') {
+          handleViewModeChange('form-only');
+        } else if (viewMode === 'form-only') {
+          handleViewModeChange('preview-only');
+        } else {
+          handleViewModeChange('both');
+        }
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, viewMode]);
 
   const loadExistingCV = async () => {
     try {
@@ -118,6 +136,24 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Funciones para manejar cambios de vista
+  const handleViewModeChange = (mode: 'both' | 'form-only' | 'preview-only') => {
+    setViewMode(mode);
+    // Actualizar showPreview para compatibilidad con código existente
+    setShowPreview(mode === 'both' || mode === 'preview-only');
+  };
+
+  // Función legacy para compatibilidad
+  const togglePreview = () => {
+    if (viewMode === 'both') {
+      handleViewModeChange('form-only');
+    } else if (viewMode === 'form-only') {
+      handleViewModeChange('preview-only');
+    } else {
+      handleViewModeChange('both');
     }
   };
 
@@ -416,15 +452,60 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
-          <Button
-            variant="outline"
-            onClick={() => setShowPreview(!showPreview)}
-            className="flex items-center gap-2 bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 shadow-sm"
-          >
-            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span className="hidden sm:inline">{showPreview ? 'Ocultar Vista Previa' : 'Ver Vista Previa'}</span>
-            <span className="sm:hidden">{showPreview ? 'Ocultar' : 'Ver'}</span>
-          </Button>
+          {/* Dropdown para seleccionar vista */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 shadow-sm"
+              >
+                {viewMode === 'both' ? <Layout className="h-4 w-4" /> : 
+                 viewMode === 'form-only' ? <PanelLeft className="h-4 w-4" /> : 
+                 <PanelRight className="h-4 w-4" />}
+                <span className="hidden sm:inline">
+                  {viewMode === 'both' ? 'Vista Dividida' : 
+                   viewMode === 'form-only' ? 'Solo Formulario' : 
+                   'Solo Vista Previa'}
+                </span>
+                <span className="sm:hidden">Vista</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1 text-xs text-gray-500 border-b mb-1">
+                💡 Atajo: Ctrl+Shift+V (Cmd+Shift+V en Mac)
+              </div>
+              <DropdownMenuItem 
+                onClick={() => handleViewModeChange('both')}
+                className={`${viewMode === 'both' ? 'bg-blue-50 text-blue-700' : ''}`}
+              >
+                <Layout className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span>Vista Dividida</span>
+                  <span className="text-xs text-gray-500">Formulario y vista previa</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleViewModeChange('form-only')}
+                className={`${viewMode === 'form-only' ? 'bg-blue-50 text-blue-700' : ''}`}
+              >
+                <PanelLeft className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span>Solo Formulario</span>
+                  <span className="text-xs text-gray-500">Ocultar vista previa</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleViewModeChange('preview-only')}
+                className={`${viewMode === 'preview-only' ? 'bg-blue-50 text-blue-700' : ''}`}
+              >
+                <PanelRight className="h-4 w-4 mr-2" />
+                <div className="flex flex-col">
+                  <span>Solo Vista Previa</span>
+                  <span className="text-xs text-gray-500">Ocultar formulario</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             variant="outline"
@@ -480,12 +561,37 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
       {/* Panel de Guía Modal */}
       {showGuide && <GuidePanel onClose={() => setShowGuide(false)} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Formularios */}
-        <div className="space-y-6">
-          <Card className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <div className={`grid gap-6 ${
+        viewMode === 'both' ? 'grid-cols-1 lg:grid-cols-2' : 
+        viewMode === 'form-only' ? 'grid-cols-1 max-w-5xl mx-auto' :
+        viewMode === 'preview-only' ? 'grid-cols-1 max-w-5xl mx-auto' :
+        'grid-cols-1'
+      }`}>
+        {/* Formularios - Ocupa todo el ancho cuando preview-only está oculto */}
+        {(viewMode === 'both' || viewMode === 'form-only') && (
+          <div className={`space-y-6 ${
+            viewMode === 'form-only' ? 'w-full max-w-none' : ''
+          }`}>
+          <Card className={`${
+            viewMode === 'form-only' 
+              ? 'w-full shadow-lg border-gray-200' 
+              : 'lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto'
+          }`}>
             <CardHeader>
-              <CardTitle>Información del CV</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                {viewMode === 'form-only' && <PanelLeft className="h-5 w-5 text-blue-600" />}
+                Información del CV
+                {viewMode === 'form-only' && (
+                  <span className="text-sm font-normal text-blue-600 ml-2">
+                    (Vista Ampliada)
+                  </span>
+                )}
+              </CardTitle>
+              {viewMode === 'form-only' && (
+                <p className="text-sm text-gray-600 mt-1">
+                  📝 Completa tu información profesional en esta vista ampliada
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               <CVBuilderTabs
@@ -555,15 +661,44 @@ export default function CVBuilder({ cvId, onSave, showBackButton = true, autoRed
               </CVBuilderTabs>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        )}
 
-        {/* Vista Previa */}
-        {showPreview && (
-          <div className="lg:sticky lg:top-6">
-            <CVPreview 
-              cvData={cvData}
-              onPageCalculated={handlePageCalculated}
-            />
+        {/* Vista Previa - Ocupa todo el ancho cuando form-only está oculto */}
+        {(viewMode === 'both' || viewMode === 'preview-only') && (
+          <div className={`${
+            viewMode === 'preview-only' ? 'w-full flex justify-center' : 'lg:sticky lg:top-6'
+          }`}>
+            <div className={`${
+              viewMode === 'preview-only' ? 'w-full' : 'w-full'
+            }`}>
+              <Card className={`${
+                viewMode === 'preview-only' ? 'shadow-lg border-gray-200' : ''
+              }`}>
+                {viewMode === 'preview-only' && (
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                    <CardTitle className="flex items-center gap-2 text-blue-900">
+                      <PanelRight className="h-5 w-5 text-blue-600" />
+                      Vista Previa del CV
+                      <span className="text-sm font-normal text-blue-600 ml-2">
+                        (Vista Ampliada)
+                      </span>
+                    </CardTitle>
+                    <p className="text-sm text-blue-700 mt-1">
+                      👁️ Revisa cómo se verá tu CV final antes de descargarlo
+                    </p>
+                  </CardHeader>
+                )}
+                <CardContent className={`${
+                  viewMode === 'preview-only' ? 'p-6' : 'p-0'
+                }`}>
+                  <CVPreview 
+                    cvData={cvData}
+                    onPageCalculated={handlePageCalculated}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>
