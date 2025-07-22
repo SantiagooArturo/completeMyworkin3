@@ -16,23 +16,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = `Como experto en reclutamiento y redacción de CVs para LATAM, genera 3 logros cuantificables y de alto impacto para un CV, basados en la siguiente descripción de un puesto de trabajo.
+  const prompt = `Como experto en reclutamiento y redacción de CVs para LATAM, genera 3 logros cuantificables y de alto impacto para un CV, basados en la siguiente descripción de un puesto de trabajo.
 
-    **Contexto:**
-    - **Puesto:** ${position}
-    - **Empresa:** ${company || 'No especificada'}
-    - **Industria:** ${industry || 'No especificada'}
-    - **Descripción del puesto:** "${description}"
+  **Contexto:**
+  - **Puesto:** ${position}
+  - **Empresa:** ${company || 'No especificada'}
+  - **Industria:** ${industry || 'No especificada'}
+  - **Descripción del puesto:** "${description}"
 
-    **Instrucciones:**
-    1.  Crea 3 logros específicos y creíbles.
-    2.  Usa verbos de acción fuertes en tiempo pasado (ej: "Lideré", "Desarrollé", "Incrementé").
-    3.  Cuantifica el impacto con métricas realistas (ej: %, $, número de proyectos, reducción de tiempo).
-    4.  Cada logro debe ser una sola frase, concisa y directa.
-    5.  Responde únicamente con un JSON válido en este formato: 
-        { "achievements": ["Logro 1", "Logro 2", "Logro 3"] }
-    
-    No incluyas explicaciones adicionales, solo el JSON.`;
+  **Instrucciones:**
+  1. Crea 3 logros específicos y creíbles.
+  2. Usa verbos de acción fuertes en tiempo pasado (ej: "Lideré", "Desarrollé", "Incrementé").
+  3. Cuantifica el impacto con métricas realistas (ej: %, $, número de proyectos, reducción de tiempo).
+  4. Cada logro debe ser una sola frase, concisa y directa.
+  5. Cada logro debe incluir un logro profesional, un elemento de la descripción del trabajo, cómo contribuyó a la empresa y un porcentaje o cifra específica.
+  6. Responde únicamente con un JSON válido en este formato: 
+      { "achievements": ["Logro 1", "Logro 2", "Logro 3"] }
+
+  No incluyas explicaciones adicionales, solo el JSON.`;
+
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // ✅ Cambiado de gpt-4 a gpt-3.5-turbo
