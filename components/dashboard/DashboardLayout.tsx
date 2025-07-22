@@ -131,7 +131,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className='p-4 mt-96'>
+        <div className='p-4 mt-64'>
         <AutoCarousel size='sm'/>
         </div>
       </div>
