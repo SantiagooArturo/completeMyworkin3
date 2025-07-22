@@ -1,8 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 // import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
@@ -20,8 +20,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig, 'countdown-app');
 // const analytics = getAnalytics(app); // Comentado para evitar errores en SSR
 
-// Initialize Firestore
+// Initialize services
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+// Configure Auth persistence settings for better session management
+if (typeof window !== 'undefined') {
+  // Only run on client side
+  auth.useDeviceLanguage();
+  
+  // Set additional auth settings for better persistence
+  auth.tenantId = null; // Ensure no tenant conflicts
+  
+  console.log('🔧 Firebase Auth configurado para persistencia local');
+}
+
 export default app;

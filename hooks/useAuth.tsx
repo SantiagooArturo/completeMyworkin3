@@ -1,6 +1,15 @@
 "use client";
 import { useEffect, useState, createContext, useContext } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  User, 
+  GoogleAuthProvider, 
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence
+} from "firebase/auth";
 import { auth } from "../firebase/config";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
@@ -24,14 +33,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
+    // Configurar persistencia de Firebase Auth
+    const initAuth = async () => {
+      try {
+        // Configurar persistencia local explícitamente
+        await setPersistence(auth, browserLocalPersistence);
+        console.log('✅ Persistencia de Firebase Auth configurada');
+      } catch (error) {
+        console.warn('⚠️ No se pudo configurar la persistencia de Firebase:', error);
+      }
+    };
+
+    initAuth();
     setMounted(true);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-      // Limpiar errores cuando el estado de auth cambia
-      setError(null);
+      if (isMounted) {
+        console.log('🔄 Estado de autenticación cambió:', user ? `Usuario: ${user.email}` : 'Sin usuario');
+        setUser(user);
+        setLoading(false);
+        // Limpiar errores cuando el estado de auth cambia
+        setError(null);
+      }
+    }, (error) => {
+      console.error('❌ Error en onAuthStateChanged:', error);
+      if (isMounted) {
+        setLoading(false);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Prevenir hidratación mismatch
@@ -54,18 +90,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
+      setLoading(true);
+      
+      // Asegurar que la persistencia esté configurada antes del login
+      await setPersistence(auth, browserLocalPersistence);
+      
       const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Login exitoso:', result.user.email);
       return result;
     } catch (error: any) {
-      console.error('Error en login:', error);
+      console.error('❌ Error en login:', error);
       setError(error.message || 'Error al iniciar sesión');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const loginWithGoogle = async () => {
     try {
       setError(null);
+      setLoading(true);
+      
+      // Asegurar que la persistencia esté configurada
+      await setPersistence(auth, browserLocalPersistence);
+      
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
@@ -96,11 +145,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
+      console.log('✅ Login con Google exitoso:', result.user.email);
       return result;
     } catch (error: any) {
-      console.error('Error en login con Google:', error);
+      console.error('❌ Error en login con Google:', error);
       setError(error.message || 'Error al iniciar sesión con Google');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

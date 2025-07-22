@@ -20,6 +20,14 @@ function CrearCVContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isFromOnboarding = searchParams.get('from') === 'onboarding';
+  const fromSource = searchParams.get('from');
+  const isFromAdaptation = searchParams.get('target') === 'adapt-cv';
+  const isFromPractica = fromSource === 'practica-detail' || fromSource === 'postulacion-detail';
+  const adaptedCVId = searchParams.get('adaptedCVId');
+  const adaptationId = searchParams.get('adaptationId');
+  const totalChanges = searchParams.get('totalChanges');
+  const company = searchParams.get('company');
+  const position = searchParams.get('position');
   
   // TODOS LOS HOOKS AL INICIO - ANTES DE CUALQUIER RETURN CONDICIONAL
   const [showBuilder, setShowBuilder] = useState(false);
@@ -27,6 +35,12 @@ function CrearCVContent() {
   const [userCVs, setUserCVs] = useState<UnifiedCV[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [adaptationInfo, setAdaptationInfo] = useState<{
+    company: string;
+    position: string;
+    totalChanges: number;
+    adaptationId: string;
+  } | null>(null);
 
   // useEffect también debe ir al inicio
   useEffect(() => {
@@ -38,7 +52,23 @@ function CrearCVContent() {
     if (isFromOnboarding) {
       setShowBuilder(true);
     }
-  }, [user, isFromOnboarding]);
+    
+    // Si viene de una adaptación de CV, configurar la información y mostrar el builder
+    if (isFromAdaptation && company && position) {
+      setShowBuilder(true);
+      
+      // Si tiene adaptedCVId, usar ese CV
+      if (adaptedCVId) {
+        setEditingCVId(adaptedCVId);
+        setAdaptationInfo({
+          company,
+          position,
+          totalChanges: parseInt(totalChanges || '0'),
+          adaptationId: adaptationId || ''
+        });
+      }
+    }
+  }, [user, isFromOnboarding, isFromAdaptation, adaptedCVId, company, position, totalChanges, adaptationId]);
 
   // Funciones auxiliares
   const loadUserCVs = async () => {
@@ -87,6 +117,9 @@ function CrearCVContent() {
     if (isFromOnboarding) {
       // Si viene del onboarding, regresar al onboarding
       router.push('/onboarding?step=4');
+    } else if (isFromAdaptation || isFromPractica) {
+      // Si viene de una adaptación o de una práctica, regresar a la página anterior
+      router.back();
     } else {
       // Flujo normal
       setShowBuilder(false);
@@ -229,11 +262,55 @@ function CrearCVContent() {
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">
-                {isFromOnboarding ? 'Volver al onboarding' : 'Volver a mis CVs'}
+                {isFromOnboarding 
+                  ? 'Volver al onboarding' 
+                  : (isFromAdaptation || isFromPractica)
+                    ? 'Volver a postulación' 
+                    : 'Volver a mis CVs'}
               </span>
               <span className="sm:hidden">Volver</span>
             </Button>
           </div>
+          
+          {/* Banner de información de adaptación */}
+          {(adaptationInfo || (isFromAdaptation && company && position)) && (
+            <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="bg-green-100 rounded-full p-2">
+                  <FileText className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-green-900 mb-2">
+                    {adaptationInfo ? '¡CV Adaptado Exitosamente! 🎯' : '¡Adaptando tu CV! 🎯'}
+                  </h3>
+                  <p className="text-green-800 mb-3">
+                    Tu CV {adaptationInfo ? 'ha sido personalizado' : 'se está personalizando'} específicamente para el puesto de{' '}
+                    <span className="font-semibold">{adaptationInfo?.position || position}</span> en{' '}
+                    <span className="font-semibold">{adaptationInfo?.company || company}</span>.
+                  </p>
+                  {adaptationInfo && (
+                    <div className="flex flex-wrap gap-4 text-sm text-green-700">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>{adaptationInfo.totalChanges} adaptaciones realizadas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>Habilidades reorganizadas por relevancia</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>Resumen personalizado</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-4 text-sm text-green-600">
+                    💡 <strong>Tip:</strong> Revisa los cambios, edita si es necesario y descarga tu CV optimizado para esta postulación.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           <CVBuilder 
             cvId={editingCVId}

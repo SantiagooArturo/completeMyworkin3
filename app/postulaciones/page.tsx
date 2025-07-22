@@ -51,9 +51,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { collection, getDocs, query, where, doc, deleteDoc, addDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
+import { db } from "@/firebase/config";
 import { db2 } from "@/firebase/config-jobs"; // Asegúrate de importar db2 correctamente
+import { useAuth } from "@/hooks/useAuth";
 
 // Tipos para las columnas
 type ColumnType =
@@ -326,6 +326,7 @@ function JobApplicationCardSkeleton({ borderColor }: { borderColor: string }) {
 }
 
 export default function PostulacionesPage() {
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -339,8 +340,18 @@ export default function PostulacionesPage() {
   const [tipoTrabajo, setTipoTrabajo] = useState("");
   const [jornada, setJornada] = useState("");
 
-  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    // Solo redirigir si ya terminó de cargar el estado de auth y no hay usuario
+    if (!authLoading && !user) {
+      console.log('🔄 Redirigiendo a login desde postulaciones - usuario no autenticado');
+      router.push('/login');
+    } else if (!authLoading && user) {
+      console.log('✅ Usuario autenticado en postulaciones:', user.email);
+    }
+  }, [user, authLoading, router]);
 
   // Función para contar filtros activos
   const getActiveFiltersCount = () => {
@@ -374,32 +385,30 @@ export default function PostulacionesPage() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log("Usuario autenticado:", user);
-        setUser(user);
-      } else {
-        console.log("No hay usuario autenticado");
-        setUser(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
     const fetchApplications = async () => {
-      if (!user) return;
+      // No hacer nada si aún está cargando el auth o no hay usuario
+      if (authLoading) {
+        console.log('⏳ Esperando estado de autenticación...');
+        return;
+      }
 
+      if (!user) {
+        console.log('❌ No hay usuario autenticado');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('📊 Cargando postulaciones para:', user.email);
       setIsLoading(true);
       
-      // Obtener las aplicaciones de la base de datos
-      const q = query(
-        collection(db, "mispostulaciones"),
-        where("email", "==", user.email)
-      );
-      
-      const querySnapshot = await getDocs(q);
+      try {
+        // Obtener las aplicaciones de la base de datos
+        const q = query(
+          collection(db, "mispostulaciones"),
+          where("email", "==", user.email)
+        );
+        
+        const querySnapshot = await getDocs(q);
       const applicationsData: JobApplication[] = querySnapshot.docs.map(
         (doc) => {
           const data = doc.data();
@@ -468,11 +477,16 @@ export default function PostulacionesPage() {
         setApplications(applicationsData);
       }
       
-      setIsLoading(false);
+      } catch (error) {
+        console.error('❌ Error cargando postulaciones:', error);
+        setApplications([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchApplications();
-  }, [user]);
+  }, [user, authLoading]);
 
 
 
@@ -598,6 +612,30 @@ const handleDrop = useCallback(
   };
 
   const filterOptions = ["Estado", "Tipo trabajo", "Experiencia", "Jornada"];
+
+  // Show loading screen while auth is loading
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-12 bg-gray-200 rounded"></div>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Redirect if not authenticated (this will be handled by useEffect)
+  if (!user) {
+    return null;
+  }
 
   return (
     <DashboardLayout>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
   Search, 
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 import { PracticaToolsProps } from '@/types/practica';
 import { useToolsUsed } from '@/hooks/useToolsUsed';
+import AdaptationLoadingScreen from './AdaptationLoadingScreen';
 
 interface ToolCard {
   id: string;
@@ -30,23 +33,145 @@ interface ToolCard {
 
 export default function PracticaTools({ practica }: PracticaToolsProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
+    // Estados para la adaptación de CV
+  const [isAdaptingCV, setIsAdaptingCV] = useState(false);
+  const [adaptationStep, setAdaptationStep] = useState<'extracting' | 'analyzing' | 'adapting' | 'saving' | 'complete' | 'error'>('extracting');
+  const [adaptationError, setAdaptationError] = useState<string | null>(null);
   const { addToolUsed } = useToolsUsed(practica.title); // Hook para registrar herramientas utilizadas
 
   // Funciones de navegación
-  const handleAdaptarCV = () => {
+  const handleAdaptarCV = async () => {
+    if (isAdaptingCV) return; // Prevenir múltiples clics
+    
     // Registrar uso de la herramienta
     addToolUsed('crear-cv');
     
-    // Navegar al CV Builder con contexto de la práctica
-    const params = new URLSearchParams({
-      from: 'practica-detail',
-      company: practica.company,
-      position: practica.title,
-      target: 'adapt-cv'
-    });
-    router.push(`/crear-cv?${params.toString()}`);
+    try {
+      setIsAdaptingCV(true);
+      setAdaptationStep('extracting');
+      setAdaptationError(null);
+      
+      // Importar dinámicamente el servicio de adaptación
+      const { CVAdaptationService } = await import('@/services/cvAdaptationService');
+      
+      if (!user) {
+        setAdaptationError("Debes iniciar sesión para adaptar tu CV");
+        setAdaptationStep('error');
+        return;
+      }
+
+      // 1. Obtener CV actual del usuario
+      setAdaptationStep('extracting');
+      const currentCV = await CVAdaptationService.getUserCurrentCV(user);
+      
+      if (!currentCV) {
+        // Si no tiene CV, redirigir a crear uno nuevo
+        setAdaptationStep('error');
+        setAdaptationError("Primero necesitas tener un CV creado. Te llevaremos a crear uno.");
+        
+        // Esperar un poco para mostrar el error y luego redirigir
+        setTimeout(() => {
+          const params = new URLSearchParams({
+            from: 'practica-detail',
+            company: practica.company,
+            position: practica.title,
+            target: 'create-new'
+          });
+          router.push(`/crear-cv?${params.toString()}`);
+        }, 3000);
+        return;
+      }
+
+      // 2. Preparar contexto del trabajo para adaptación
+      setAdaptationStep('analyzing');
+      const jobContext = {
+        jobTitle: practica.title,
+        company: practica.company,
+        location: practica.location,
+        requirements: practica.descripcion || '',
+        description: practica.descripcion || '',
+        industry: '',
+        skills: []
+      };
+
+      // 3. Adaptar el CV
+      setAdaptationStep('adapting');
+      const adaptationResult = await CVAdaptationService.adaptCVForJob(
+        currentCV,
+        jobContext,
+        user
+      );
+
+      // 4. Guardar CV adaptado temporalmente
+      setAdaptationStep('saving');
+      const tempCVId = await CVAdaptationService.saveTemporaryAdaptedCV(
+        user,
+        adaptationResult.adaptedCV,
+        jobContext
+      );
+
+      // 5. Completar proceso
+      setAdaptationStep('complete');
+      
+      // Esperar un poco para mostrar el éxito y luego redirigir
+      setTimeout(() => {
+        // 6. Redirigir al editor con el CV adaptado
+        const params = new URLSearchParams({
+          from: 'practica-detail',
+          company: practica.company,
+          position: practica.title,
+          target: 'adapt-cv',
+          adaptedCVId: tempCVId,
+          adaptationId: adaptationResult.adaptationId,
+          totalChanges: adaptationResult.adaptationSummary.totalChanges.toString()
+        });
+        
+        router.push(`/crear-cv?${params.toString()}`);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error adaptando CV:', error);
+      setAdaptationStep('error');
+      
+      let errorMessage = "Hubo un problema adaptando tu CV. Inténtalo de nuevo.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('aborted')) {
+          errorMessage = "El proceso está tardando más de lo esperado. Esto puede deberse a un CV complejo o alta demanda del servicio. Por favor, inténtalo de nuevo.";
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorMessage = "Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setAdaptationError(errorMessage);
+    }
   };
+
+  const handleRetryAdaptation = () => {
+    setIsAdaptingCV(false);
+    setAdaptationError(null);
+    setAdaptationStep('extracting');
+    // Reiniciar el proceso
+    setTimeout(() => {
+      handleAdaptarCV();
+    }, 500);
+  };
+
+  // Si está adaptando CV, mostrar solo la pantalla de carga
+  if (isAdaptingCV) {
+    return (
+      <AdaptationLoadingScreen
+        currentStep={adaptationStep}
+        errorMessage={adaptationError || undefined}
+        onRetry={adaptationStep === 'error' ? handleRetryAdaptation : undefined}
+      />
+    );
+  }
 
   const handleAnalizarCV = () => {
     // Registrar uso de la herramienta

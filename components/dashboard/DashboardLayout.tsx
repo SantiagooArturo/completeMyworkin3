@@ -60,7 +60,7 @@ const sidebarItems = [
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { credits } = useCredits(user);
   const router = useRouter();
   const pathname = usePathname();
@@ -69,22 +69,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!user) {
+    // Solo redirigir si ya terminó de cargar y no hay usuario
+    if (!loading && !user) {
+      console.log('🔄 Redirigiendo a login - no hay usuario autenticado');
       router.push('/login');
+    } else if (!loading && user) {
+      console.log('✅ Usuario autenticado:', user.email);
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     await logout();
     router.push('/');
   };
 
-  if (!user) {
+  // Show loading while auth state is being determined
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#028bbf]"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#028bbf] mx-auto mb-4"></div>
+          <p className="text-gray-600 text-sm">Verificando sesión...</p>
+        </div>
       </div>
     );
+  }
+
+  // Don't render anything while redirecting
+  if (!user) {
+    return null; // This will be handled by the redirect useEffect
   }
 
   return (

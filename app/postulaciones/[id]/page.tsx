@@ -25,6 +25,8 @@ import { db } from "@/firebase/config";
 import { db2 } from "@/firebase/config-jobs";
 import PracticaTools from "@/components/PracticaTools";
 import { JobApplication } from "../page";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 // Componente wrapper que intercepta el uso de herramientas
 function PracticaToolsWithTracking({ 
@@ -35,18 +37,107 @@ function PracticaToolsWithTracking({
   onToolUsed: (tool: string) => void; 
 }) {
   const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
   // Funciones de navegación con tracking
-  const handleAdaptarCV = () => {
+  const handleAdaptarCV = async () => {
     onToolUsed('crear-cv');
-    const params = new URLSearchParams({
-      from: 'postulacion-detail',
-      company: practica.company,
-      position: practica.title,
-      target: 'adapt-cv'
-    });
-    router.push(`/crear-cv?${params.toString()}`);
+    
+    try {
+      // Mostrar loading
+      toast({
+        title: "Adaptando tu CV...",
+        description: "Estamos personalizando tu CV para este puesto específico",
+      });
+
+      // Importar dinámicamente el servicio de adaptación
+      const { CVAdaptationService } = await import('@/services/cvAdaptationService');
+      
+      if (!user) {
+        toast({
+          title: "Error de autenticación",
+          description: "Debes iniciar sesión para adaptar tu CV",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // 1. Obtener CV actual del usuario
+      const currentCV = await CVAdaptationService.getUserCurrentCV(user);
+      
+      if (!currentCV) {
+        // Si no tiene CV, redirigir a crear uno nuevo
+        toast({
+          title: "CV no encontrado",
+          description: "Primero necesitas tener un CV creado. Te llevamos a crear uno.",
+          variant: "destructive"
+        });
+        
+        const params = new URLSearchParams({
+          from: 'practica-detail',
+          company: practica.company,
+          position: practica.title,
+          target: 'create-new'
+        });
+        router.push(`/crear-cv?${params.toString()}`);
+        return;
+      }
+
+      // 2. Preparar contexto del trabajo para adaptación
+      const jobContext = {
+        jobTitle: practica.title,
+        company: practica.company,
+        location: practica.location,
+        requirements: practica.requirements || practica.description || '',
+        description: practica.description || '',
+        industry: practica.category || '',
+        skills: []
+      };
+
+      // 3. Adaptar el CV
+      const adaptationResult = await CVAdaptationService.adaptCVForJob(
+        currentCV,
+        jobContext,
+        user
+      );
+
+      // 4. Guardar CV adaptado temporalmente
+      const tempCVId = await CVAdaptationService.saveTemporaryAdaptedCV(
+        user,
+        adaptationResult.adaptedCV,
+        jobContext
+      );
+
+      // 5. Mostrar resumen de cambios
+      toast({
+        title: "¡CV adaptado exitosamente!",
+        description: `Se realizaron ${adaptationResult.adaptationSummary.totalChanges} adaptaciones para ${practica.title}`,
+        className: "border-green-200 bg-green-50"
+      });
+
+      // 6. Redirigir al editor con el CV adaptado
+      const params = new URLSearchParams({
+        from: 'practica-detail',
+        company: practica.company,
+        position: practica.title,
+        target: 'adapt-cv',
+        adaptedCVId: tempCVId,
+        adaptationId: adaptationResult.adaptationId,
+        totalChanges: adaptationResult.adaptationSummary.totalChanges.toString()
+      });
+      
+      router.push(`/crear-cv?${params.toString()}`);
+
+    } catch (error) {
+      console.error('Error adaptando CV:', error);
+      toast({
+        title: "Error al adaptar CV",
+        description: "Hubo un problema adaptando tu CV. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAnalizarCV = () => {
@@ -194,6 +285,8 @@ function PracticaToolsWithTracking({
 export default function PostulacionDetallePage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
   // id puede ser string o string[]
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [job, setJob] = useState<JobApplication | null>(null);
