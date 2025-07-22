@@ -4,6 +4,7 @@ import './globals.css'
 import Script from 'next/script'
 import { AuthProvider } from "../hooks/useAuth"
 import { JobProvider } from "../contexts/JobContext"
+import { Toaster } from "@/components/ui/toaster"
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -46,6 +47,7 @@ export default function RootLayout({
             {children}
           </JobProvider>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   )

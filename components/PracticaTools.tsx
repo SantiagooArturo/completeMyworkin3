@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import {
   FileText,
   Search,
@@ -21,6 +23,7 @@ import { auth, db } from "@/firebase/config"; // Ajusta la ruta si es necesario
 import { onAuthStateChanged } from "firebase/auth";
 import { User } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import AdaptationLoadingScreen from './AdaptationLoadingScreen';
 
 interface ToolCard {
   id: string;
@@ -41,20 +44,26 @@ interface ElementoEvaluacion {
 
 export default function PracticaTools({ practica }: PracticaToolsProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
+    // Estados para la adaptación de CV
+  const [isAdaptingCV, setIsAdaptingCV] = useState(false);
+  const [adaptationStep, setAdaptationStep] = useState<'extracting' | 'analyzing' | 'adapting' | 'saving' | 'complete' | 'error'>('extracting');
+  const [adaptationError, setAdaptationError] = useState<string | null>(null);
   const { addToolUsed } = useToolsUsed(practica.title); // Hook para registrar herramientas utilizadas
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<any | null>(null); // Asegúrate de que 'userInfo' esté correctamente definido
   const [loading, setLoading] = useState(false); // Estado de carga para el loader
   const [apiResult, setApiResult] = useState<any | null>(null);
 
-  const [user, setUser] = useState<User | null>(null); // Actualiza el tipo para aceptar User o null
+  const [usuario, setUser] = useState<User | null>(null); // Actualiza el tipo para aceptar User o null
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user); // Almacena el usuario en el estado
-        if (user.email) {
-          fetchUserInfo(user.email); // Llama a la función solo si user.email es un string
+    const unsubscribe = onAuthStateChanged(auth, (usuario) => {
+      if (usuario) {
+        setUser(usuario); // Almacena el usuario en el estado
+        if (usuario.email) {
+          fetchUserInfo(usuario.email); // Llama a la función solo si user.email es un string
         }
       } else {
         setUser(null); // Si no hay usuario autenticado
@@ -89,23 +98,6 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
     }
   };
 
-  const fetchUserInfoByEmail = async (email: string) => {
-    try {
-      const usersRef = collection(db, "users"); // Accede a la colección 'users'
-      const q = query(usersRef, where("email", "==", email)); // Consulta para buscar por email
-
-      const querySnapshot = await getDocs(q); // Ejecuta la consulta
-
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0].data(); // Toma el primer documento (asumiendo que es único)
-        setUserInfo(userDoc); // Almacena la información del usuario
-      } else {
-        console.log("Usuario no encontrado");
-      }
-    } catch (error) {
-      console.error("Error al obtener la información del usuario:", error);
-    }
-  };
 
   const Modal = ({ onClose }: { onClose: () => void }) => (
     <div className="fixed inset-0 bg-white bg-opacity-20 flex justify-center items-center z-50">
@@ -272,19 +264,135 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   );
 
   // Funciones de navegación
-  const handleAdaptarCV = () => {
+  const handleAdaptarCV = async () => {
+    if (isAdaptingCV) return; // Prevenir múltiples clics
+    
     // Registrar uso de la herramienta
     addToolUsed("crear-cv");
 
-    // Navegar al CV Builder con contexto de la práctica
-    const params = new URLSearchParams({
-      from: "practica-detail",
-      company: practica.company,
-      position: practica.title,
-      target: "adapt-cv",
-    });
-    router.push(`/crear-cv?${params.toString()}`);
+    try {
+      setIsAdaptingCV(true);
+      setAdaptationStep('extracting');
+      setAdaptationError(null);
+      
+      // Importar dinámicamente el servicio de adaptación
+      const { CVAdaptationService } = await import('@/services/cvAdaptationService');
+      
+      if (!user) {
+        setAdaptationError("Debes iniciar sesión para adaptar tu CV");
+        setAdaptationStep('error');
+        return;
+      }
+
+      // 1. Obtener CV actual del usuario
+      setAdaptationStep('extracting');
+      const currentCV = await CVAdaptationService.getUserCurrentCV(user);
+      
+      if (!currentCV) {
+        // Si no tiene CV, redirigir a crear uno nuevo
+        setAdaptationStep('error');
+        setAdaptationError("Primero necesitas tener un CV creado. Te llevaremos a crear uno.");
+        
+        // Esperar un poco para mostrar el error y luego redirigir
+        setTimeout(() => {
+          const params = new URLSearchParams({
+            from: "practica-detail",
+            company: practica.company,
+            position: practica.title,
+            target: "create-new",
+          });
+          router.push(`/crear-cv?${params.toString()}`);
+        }, 3000);
+        return;
+      }
+
+      // 2. Preparar contexto del trabajo para adaptación
+      setAdaptationStep('analyzing');
+      const jobContext = {
+        jobTitle: practica.title,
+        company: practica.company,
+        location: practica.location,
+        requirements: practica.descripcion || '',
+        description: practica.descripcion || '',
+        industry: '',
+        skills: []
+      };
+
+      // 3. Adaptar el CV
+      setAdaptationStep('adapting');
+      const adaptationResult = await CVAdaptationService.adaptCVForJob(
+        currentCV,
+        jobContext,
+        user
+      );
+
+      // 4. Guardar CV adaptado temporalmente
+      setAdaptationStep('saving');
+      const tempCVId = await CVAdaptationService.saveTemporaryAdaptedCV(
+        user,
+        adaptationResult.adaptedCV,
+        jobContext
+      );
+
+      // 5. Completar proceso
+      setAdaptationStep('complete');
+      
+      // Esperar un poco para mostrar el éxito y luego redirigir
+      setTimeout(() => {
+        // 6. Redirigir al editor con el CV adaptado
+        const params = new URLSearchParams({
+          from: 'practica-detail',
+          company: practica.company,
+          position: practica.title,
+          target: 'adapt-cv',
+          adaptedCVId: tempCVId,
+          adaptationId: adaptationResult.adaptationId,
+          totalChanges: adaptationResult.adaptationSummary.totalChanges.toString()
+        });
+        
+        router.push(`/crear-cv?${params.toString()}`);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error adaptando CV:', error);
+      setAdaptationStep('error');
+      
+      let errorMessage = "Hubo un problema adaptando tu CV. Inténtalo de nuevo.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('aborted')) {
+          errorMessage = "El proceso está tardando más de lo esperado. Esto puede deberse a un CV complejo o alta demanda del servicio. Por favor, inténtalo de nuevo.";
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorMessage = "Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setAdaptationError(errorMessage);
+    }
   };
+
+  const handleRetryAdaptation = () => {
+    setIsAdaptingCV(false);
+    setAdaptationError(null);
+    setAdaptationStep('extracting');
+    // Reiniciar el proceso
+    setTimeout(() => {
+      handleAdaptarCV();
+    }, 500);
+  };
+
+  // Si está adaptando CV, mostrar solo la pantalla de carga
+  if (isAdaptingCV) {
+    return (
+      <AdaptationLoadingScreen
+        currentStep={adaptationStep}
+        errorMessage={adaptationError || undefined}
+        onRetry={adaptationStep === 'error' ? handleRetryAdaptation : undefined}
+      />
+    );
+  }
 
   /*
   const handleAnalizarCV = () => {
