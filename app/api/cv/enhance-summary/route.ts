@@ -4,7 +4,7 @@ import { AI_TASK_CONFIGS, buildPrompt, createErrorResponse } from '@/lib/ai-conf
 
 export async function POST(request: NextRequest) {
   try {
-    const { currentSummary, personalInfo, experience } = await request.json();
+    const { currentSummary, personalInfo, experience, cycleNumber, career, universityName } = await request.json();
 
     if (!currentSummary && !personalInfo && !experience) {
       return NextResponse.json(
@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       {
         'Resumen actual': currentSummary || 'No proporcionado',
         'Información personal': personalInfo ? JSON.stringify(personalInfo, null, 2) : 'No proporcionada',
-        'Experiencia profesional': experience && experience.length > 0 ? JSON.stringify(experience, null, 2) : 'No proporcionada'
+        'Experiencia profesional': experience && experience.length > 0 ? JSON.stringify(experience, null, 2) : 'No proporcionada',
+        'Formación académica': `Estudiante de ${cycleNumber} ciclo de ${career} en la/el ${universityName}. En esta sección, tienes la oportunidad de describir tu identidad profesional de una manera integral. Combina elementos personales, como tu mentalidad y trayectoria, con tus intereses profesionales para ofrecer una visión completa de quién eres y qué persigues en tu carrera. Puedes destacar tus fortalezas, experiencias relevantes y áreas de interés específicas para transmitir una imagen clara y auténtica de ti mismo/a.`
       },
       [
         'Mantén un tono profesional y conciso',
