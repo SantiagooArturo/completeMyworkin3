@@ -108,7 +108,7 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 
   const Modal = ({ onClose }: { onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-white bg-opacity-20 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-[50%] transform transition-all duration-500 max-h-[80vh] overflow-y-auto">
      <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold">Análisis de CV</h3>
