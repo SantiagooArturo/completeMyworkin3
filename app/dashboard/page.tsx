@@ -304,7 +304,7 @@ export default function DashboardPage() {
                         </div>
                       </Link>
 
-                      <Link
+                      {/* <Link
                         href="/bolsa-trabajo"
                         className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-[#028bbf] hover:shadow-md transition group"
                       >
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                           <h4 className="font-medium text-gray-900">Bolsa de Trabajo</h4>
                           <p className="text-sm text-gray-600">Encuentra oportunidades</p>
                         </div>
-                      </Link>
+                      </Link> */}
 
                       <Link
                         href="/interview-simulation"
