@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import { TrendingUp, Building2, Users, DollarSign, BarChart3, Filter, Search, Sparkles, ArrowRight, ExternalLink, Info } from 'lucide-react';
 import Navbar from '@/components/navbar';
+import SalarioContributionModal from '@/components/SalarioContributionModal';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SalariosPracticasPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [showContributionModal, setShowContributionModal] = useState(false);
+  const { user } = useAuth();
 
   // Estadísticas destacadas
   const stats = [
@@ -147,24 +151,31 @@ export default function SalariosPracticasPage() {
           </div>
 
           {/* Bottom CTA */}
-          {/* <div className="mt-12 text-center">
+          <div className="mt-12 text-center">
              <div className="bg-gradient-to-r from-[#028bbf] to-[#027ba8] rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-4">¿Tienes información adicional?</h3>
               <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
                 Ayúdanos a mantener esta base de datos actualizada. Si tienes información sobre salarios 
                 de prácticas, compártela con la comunidad.
               </p>
-              <a 
-                href="mailto:contacto@myworkin.com?subject=Información de Salarios de Prácticas"
+              <button 
+                onClick={() => setShowContributionModal(true)}
                 className="inline-flex items-center bg-white text-[#028bbf] px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 Contribuir con Datos
-              </a>
+              </button>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
+
+      {/* Modal de Contribución de Salarios */}
+      <SalarioContributionModal
+        isOpen={showContributionModal}
+        onClose={() => setShowContributionModal(false)}
+        user={user}
+      />
     </div>
   );
 } 
