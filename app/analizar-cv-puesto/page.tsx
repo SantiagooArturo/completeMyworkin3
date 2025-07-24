@@ -27,12 +27,11 @@ export default function AnalizarCVPuesto() {
     const userInfoParam = searchParams.get("userInfo");
     if (userInfoParam) {
       try {
-        // Decodifica y parsea el JSON
-        const parsedUserInfo = JSON.parse(decodeURIComponent(userInfoParam));
-        console.log(parsedUserInfo, "DASDg");
-        setUserInfo(parsedUserInfo); // Asigna el valor al estado
+        const decodedParam = decodeURIComponent(userInfoParam);
+        const parsedUserInfo = JSON.parse(decodedParam);
+        setUserInfo(parsedUserInfo);
       } catch (error) {
-        console.error("Error al parsear los datos:", error);
+        console.error("Error al decodificar el parámetro:", error);
       }
     } else {
       console.log("No se encontraron datos en la URL");
@@ -85,25 +84,29 @@ export default function AnalizarCVPuesto() {
   if (loading) {
     return (
       <DashboardLayout>
-     <div className="flex justify-center items-center min-h-screen"> {/* Contenedor centrado */}
-    <div className="text-center"> {/* Contenedor interno con texto centrado */}
-      <LoadingScreen
-        variant="analysis"
-        message="Analizando tu CV con IA avanzada..."
-        subtitle={`Estamos evaluando tu perfil para maximizar tus posibilidades de éxito en: ${userInfo?.puesto_postular}`}
-        fullScreen={false}
-        className="bg-transparent"
-      />
-      <div className="mt-6">
-        <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
-          💡 <span className="font-medium">¿Sabías que?</span> Un CV
-          optimizado puede aumentar hasta un{" "}
-          <span className="font-bold text-blue-600">40%</span> tus
-          posibilidades de ser seleccionado para una entrevista.
-        </p>
-      </div>
-    </div>
-  </div>
+        <div className="flex justify-center items-center min-h-screen">
+          {" "}
+          {/* Contenedor centrado */}
+          <div className="text-center">
+            {" "}
+            {/* Contenedor interno con texto centrado */}
+            <LoadingScreen
+              variant="analysis"
+              message="Analizando tu CV con IA avanzada..."
+              subtitle={`Estamos evaluando tu perfil para maximizar tus posibilidades de éxito en: ${userInfo?.puesto_postular}`}
+              fullScreen={false}
+              className="bg-transparent"
+            />
+            <div className="mt-6">
+              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                💡 <span className="font-medium">¿Sabías que?</span> Un CV
+                optimizado puede aumentar hasta un{" "}
+                <span className="font-bold text-blue-600">40%</span> tus
+                posibilidades de ser seleccionado para una entrevista.
+              </p>
+            </div>
+          </div>
+        </div>
       </DashboardLayout>
     );
   }

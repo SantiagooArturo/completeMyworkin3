@@ -718,6 +718,9 @@ const handleAnalizarCV = async () => {
     // Abrir una nueva pestaña y pasar los datos como URL o a través de localStorage
     const newTab = window.open(`/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`, '_blank');
     newTab?.focus();
+
+    // Recargar la ruta actual
+    window.location.reload();  // Esto recargará la página actual
   } else {
     console.log("No se pudo obtener la información del usuario");
     setLoading(false);
