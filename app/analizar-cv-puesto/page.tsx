@@ -143,7 +143,7 @@ export default function AnalizarCVPuesto() {
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold">
-                    {Math.round(apiResult.mainly_analysis.porcentaje / 10 || 0)}
+                    {Math.round(apiResult.mainly_analysis.porcentaje || 0)}
                     %
                   </div>
                   <div className="text-sm text-emerald-100">
