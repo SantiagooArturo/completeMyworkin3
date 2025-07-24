@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation"; // Para acceder a los parámetros de la URL
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import LoadingScreen from "@/components/LoadingScreens"; // Si necesitas un loader mientras obtienes los datos
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
@@ -20,11 +20,16 @@ export default function AnalizarCVPuesto() {
   const [loading, setLoading] = useState(true); // Inicializamos el estado de loading como verdadero
   const [apiResult, setApiResult] = useState<any>(null); // Para almacenar el resultado de la API
 
-  const searchParams = useSearchParams();
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null);
+
+  useEffect(() => {
+    // Esto se ejecuta solo en el cliente
+    setSearchParams(new URLSearchParams(window.location.search));
+  }, []);
 
   useEffect(() => {
     // Obtén el parámetro userInfo de la URL
-    const userInfoParam = searchParams.get("userInfo");
+    const userInfoParam = searchParams?.get("userInfo");
     if (userInfoParam) {
       try {
         const decodedParam = decodeURIComponent(userInfoParam);
@@ -83,6 +88,7 @@ export default function AnalizarCVPuesto() {
 
   if (loading) {
     return (
+          <Suspense fallback={<div>Cargando...</div>}>
       <DashboardLayout>
         <div className="flex justify-center items-center min-h-screen">
           {" "}
@@ -107,7 +113,7 @@ export default function AnalizarCVPuesto() {
             </div>
           </div>
         </div>
-      </DashboardLayout>
+      </DashboardLayout></Suspense>
     );
   }
 
