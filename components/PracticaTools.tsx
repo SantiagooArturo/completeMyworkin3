@@ -660,6 +660,7 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
     router.push(`/analizar-cv?${params.toString()}`);
   };*/
 
+  /*
   const handleAnalizarCV = async () => {
     addToolUsed("analizar-cv");
 
@@ -699,6 +700,33 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       setLoading(false);
     }
   };
+*/
+
+const handleAnalizarCV = async () => {
+  addToolUsed("analizar-cv");
+
+  setLoading(true);  // Muestra el loader
+
+  if (userInfo) {
+    const payload = {
+      pdf_url: userInfo.cvFileUrl,
+      puesto_postular: practica.title,
+      original_name: userInfo.cvFileName,
+      descripcion_puesto: practica.descripcion,
+    };
+
+    // Abrir una nueva pestaña y pasar los datos como URL o a través de localStorage
+    const newTab = window.open(`/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`, '_blank');
+    newTab?.focus();
+
+    // Recargar la ruta actual
+    window.location.reload();  // Esto recargará la página actual
+  } else {
+    console.log("No se pudo obtener la información del usuario");
+    setLoading(false);
+  }
+};
+
 
   const handleSimularEntrevista = () => {
     // Registrar uso de la herramienta
