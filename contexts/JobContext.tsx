@@ -16,6 +16,7 @@ interface JobData {
   requirements?: string;
   publishedDate?: string;
   endDate?: string;
+  logo?:string;
   // Campos adicionales que podrían venir de las prácticas
   requisitos_tecnicos?: number;
   similitud_puesto?: number;

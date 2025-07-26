@@ -924,6 +924,7 @@ export default function PortalTrabajoPage() {
                   title: practice.title,
                   company: practice.company,
                   location: practice.location,
+                  logo: practice.logo,
                   type: "Práctica",
                   schedule: practice.schedule || "Tiempo completo",
                   salary: practice.salary,
