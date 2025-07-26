@@ -1,28 +1,35 @@
-'use client';
+"use client";
 
-import { MapPin, Clock, DollarSign, Bookmark, Building, PiggyBank } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useJobContext } from '@/contexts/JobContext';
-import { useAuth } from '@/hooks/useAuth';
-import { db } from '@/firebase/config';
-import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import {
+  MapPin,
+  Clock,
+  DollarSign,
+  Bookmark,
+  Building,
+  PiggyBank,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { useJobContext } from "@/contexts/JobContext";
+import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/firebase/config";
+import { addDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 
 // Función para detectar la bolsa según la URL
 const getBolsaLogo = (url?: string): { logo: string; alt: string } | null => {
   if (!url) return null;
-  
-  if (url.includes('bumeran.com')) {
-    return { logo: '/bolsas/bumeran-logo.png', alt: 'Bumeran' };
+
+  if (url.includes("bumeran.com")) {
+    return { logo: "/bolsas/bumeran-logo.png", alt: "Bumeran" };
   }
-  
-  if (url.includes('linkedin.com')) {
-    return { logo: '/bolsas/linkedin-logo.png', alt: 'LinkedIn' };
+
+  if (url.includes("linkedin.com")) {
+    return { logo: "/bolsas/linkedin-logo.png", alt: "LinkedIn" };
   }
-  
+
   return null;
 };
 
@@ -31,6 +38,7 @@ interface JobCardProps {
     id: number;
     title: string;
     company: string;
+    logo: string;
     location: string;
     type: string;
     schedule: string;
@@ -49,7 +57,15 @@ interface JobCardProps {
   onCardClick?: (index: number) => void; // Callback para click en el card
 }
 
-function CircularProgress({ percentage, label, color }: { percentage: number; label: string; color: string }) {
+function CircularProgress({
+  percentage,
+  label,
+  color,
+}: {
+  percentage: number;
+  label: string;
+  color: string;
+}) {
   const circumference = 2 * Math.PI * 40;
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -57,7 +73,10 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-20 h-20 mb-2">
-        <svg className={`w-20 h-20 transform -rotate-90 ${color}`} viewBox="0 0 100 100">
+        <svg
+          className={`w-20 h-20 transform -rotate-90 ${color}`}
+          viewBox="0 0 100 100"
+        >
           <circle
             cx="50"
             cy="50"
@@ -89,12 +108,12 @@ function CircularProgress({ percentage, label, color }: { percentage: number; la
 }
 
 function getPublishedAgo(dateString: string) {
-  if (!dateString) return '';
+  if (!dateString) return "";
   try {
     const date = new Date(dateString);
     return formatDistanceToNow(date, { addSuffix: true, locale: es });
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -120,7 +139,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
         );
 
         const querySnapshot = await getDocs(q);
-        
+
         if (!querySnapshot.empty) {
           setIsSaved(true);
         }
@@ -132,10 +151,9 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
     checkIfSaved();
   }, [user, job.title, job.company]);
 
-
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     // Guardar los datos completos del trabajo en el contexto
     setSelectedJob({
       id: job.id.toString(),
@@ -145,36 +163,47 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       type: job.type,
       schedule: job.schedule,
       salary: job.salary,
-      url: job.applicationUrl || '',
+      url: job.applicationUrl || "",
       publishedDate: job.publishedDate,
+      logo: job.logo,
       // Agregar datos de similitud con nueva estructura
       requisitos_tecnicos: job.skills.technical,
       similitud_puesto: job.skills.soft,
       afinidad_sector: job.skills.experience,
       similitud_semantica: job.skills.macro || 0,
-      juicio_sistema: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
-      similitud_total: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
-      justificacion_requisitos: 'Evaluación de requisitos técnicos',
-      justificacion_puesto: 'Evaluación de compatibilidad con puesto',
-      justificacion_afinidad: 'Evaluación de afinidad con el sector',
-      justificacion_semantica: 'Evaluación semántica del perfil',
-      justificacion_juicio: 'Evaluación general del sistema',
+      juicio_sistema:
+        (job.skills.technical +
+          job.skills.soft +
+          job.skills.experience +
+          (job.skills.macro || 0)) /
+        4,
+      similitud_total:
+        (job.skills.technical +
+          job.skills.soft +
+          job.skills.experience +
+          (job.skills.macro || 0)) /
+        4,
+      justificacion_requisitos: "Evaluación de requisitos técnicos",
+      justificacion_puesto: "Evaluación de compatibilidad con puesto",
+      justificacion_afinidad: "Evaluación de afinidad con el sector",
+      justificacion_semantica: "Evaluación semántica del perfil",
+      justificacion_juicio: "Evaluación general del sistema",
     });
-    
+
     const params = new URLSearchParams({
       title: job.title,
-      url: job.applicationUrl || '',
-      worky: 'https://mc.ht/s/SH1lIgc'
+      url: job.applicationUrl || "",
+      worky: "https://mc.ht/s/SH1lIgc",
     });
     router.push(`/postular?${params.toString()}`);
   };
 
   const handleBookmarkClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     // Verificar que el usuario esté autenticado
     if (!user || !user.email) {
-      alert('Debes iniciar sesión para guardar prácticas');
+      alert("Debes iniciar sesión para guardar prácticas");
       return;
     }
 
@@ -187,7 +216,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
     if (isSaving) return;
 
     setIsSaving(true);
-    
+
     try {
       // Verificar nuevamente si ya existe antes de guardar (para evitar race conditions)
       const q = query(
@@ -199,7 +228,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       );
 
       const querySnapshot = await getDocs(q);
-      
+
       if (!querySnapshot.empty) {
         // Ya existe, solo actualizar el estado visual
         setIsSaved(true);
@@ -215,36 +244,46 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
         status: "guardados",
         email: user.email,
         title: job.title,
+        logo: job.logo,
         company: job.company,
         location: job.location,
         type: job.type,
         schedule: job.schedule,
         appliedDate: new Date().toLocaleDateString(),
         salary: job.salary,
-        url: job.applicationUrl || '',
-        description: '',
-        requirements: '',
+        url: job.applicationUrl || "",
+        description: "",
+        requirements: "",
         publishedDate: job.publishedDate,
-        endDate: '',
+        endDate: "",
         // Agregar datos de similitud
         requisitos_tecnicos: job.skills.technical,
         similitud_puesto: job.skills.soft,
         afinidad_sector: job.skills.experience,
         similitud_semantica: job.skills.macro || 0,
-        juicio_sistema: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
-        similitud_total: (job.skills.technical + job.skills.soft + job.skills.experience + (job.skills.macro || 0)) / 4,
-        justificacion_requisitos: 'Evaluación de requisitos técnicos',
-        justificacion_puesto: 'Evaluación de compatibilidad con puesto',
-        justificacion_afinidad: 'Evaluación de afinidad con el sector',
-        justificacion_semantica: 'Evaluación semántica del perfil',
-        justificacion_juicio: 'Evaluación general del sistema',
+        juicio_sistema:
+          (job.skills.technical +
+            job.skills.soft +
+            job.skills.experience +
+            (job.skills.macro || 0)) /
+          4,
+        similitud_total:
+          (job.skills.technical +
+            job.skills.soft +
+            job.skills.experience +
+            (job.skills.macro || 0)) /
+          4,
+        justificacion_requisitos: "Evaluación de requisitos técnicos",
+        justificacion_puesto: "Evaluación de compatibilidad con puesto",
+        justificacion_afinidad: "Evaluación de afinidad con el sector",
+        justificacion_semantica: "Evaluación semántica del perfil",
+        justificacion_juicio: "Evaluación general del sistema",
         toolsUsed: [], // Sin herramientas usadas al guardar
-        createdAt: new Date() // Fecha de creación
+        createdAt: new Date(), // Fecha de creación
       });
 
       setIsSaved(true);
       console.log("Práctica guardada exitosamente");
-
     } catch (error) {
       console.error("Error al guardar la práctica: ", error);
       alert("Error al guardar la práctica. Inténtalo de nuevo.");
@@ -254,13 +293,13 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
   };
 
   const handleCardClick = () => {
-    if (typeof index === 'number' && onCardClick) {
+    if (typeof index === "number" && onCardClick) {
       onCardClick(index);
     }
   };
 
   return (
-    <div 
+    <div
       className="bg-white rounded-xl border-gray-200 p-1 hover:shadow-md transition-shadow min-h-[200px] flex cursor-pointer group"
       onClick={handleCardClick}
     >
@@ -269,7 +308,17 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
         <div className="flex items-start space-x-4 mb-4">
           {/* Company Logo */}
           <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building className="h-8 w-8 text-gray-400" />
+            {job.logo ? (
+              <Image
+                src={job.logo}
+                alt={job.company}
+                width={64}
+                height={64}
+                className="object-cover rounded-lg"
+              />
+            ) : (
+              <Building className="h-8 w-8 text-gray-400" />
+            )}
           </div>
 
           {/* Job Details */}
@@ -282,22 +331,30 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
                 <span className="text-xs text-gray-400 group-hover:text-[#028bbf] transition-colors opacity-0 group-hover:opacity-100">
                   Click para ver detalle
                 </span>
-                <button 
+                <button
                   className={`transition-colors ${
-                    isSaved 
-                      ? 'text-[#028bbf] cursor-default' 
-                      : isSaving 
-                        ? 'text-gray-500 cursor-not-allowed' 
-                        : 'text-gray-400 hover:text-[#028bbf] cursor-pointer'
+                    isSaved
+                      ? "text-[#028bbf] cursor-default"
+                      : isSaving
+                        ? "text-gray-500 cursor-not-allowed"
+                        : "text-gray-400 hover:text-[#028bbf] cursor-pointer"
                   }`}
                   onClick={handleBookmarkClick}
                   disabled={isSaving}
-                  title={isSaved ? 'Práctica guardada' : isSaving ? 'Guardando práctica...' : 'Guardar práctica'}
+                  title={
+                    isSaved
+                      ? "Práctica guardada"
+                      : isSaving
+                        ? "Guardando práctica..."
+                        : "Guardar práctica"
+                  }
                 >
                   {isSaving ? (
                     <div className="animate-spin h-5 w-5 border-2 border-gray-300 border-t-[#028bbf] rounded-full"></div>
                   ) : (
-                    <Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
+                    <Bookmark
+                      className={`h-5 w-5 ${isSaved ? "fill-current" : ""}`}
+                    />
                   )}
                 </button>
               </div>
@@ -305,11 +362,12 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
             <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#028bbf] transition-colors">
               {job.title}
             </h3>
-            <p className="text-gray-600 font-medium mb-2">
-              {job.company}
-            </p>
+            <p className="text-gray-600 font-medium mb-2">{job.company}</p>
             {getBolsaLogo(job.applicationUrl) && (
-              <div className="w-20 h-20 relative flex-shrink-0" title={`Publicado en ${getBolsaLogo(job.applicationUrl)?.alt}`}>
+              <div
+                className="w-20 h-20 relative flex-shrink-0"
+                title={`Publicado en ${getBolsaLogo(job.applicationUrl)?.alt}`}
+              >
                 <Image
                   src={getBolsaLogo(job.applicationUrl)!.logo}
                   alt={getBolsaLogo(job.applicationUrl)!.alt}
@@ -348,7 +406,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
           </div>
 
           {/* Botón de aplicar ACTUALIZADO */}
-          <button 
+          <button
             onClick={handleApplyClick}
             className="bg-myworkin-blue hover:bg-myworkin-600 text-white px-8 py-3 rounded-xl font-medium transition-colors whitespace-nowrap z-10 relative"
           >
