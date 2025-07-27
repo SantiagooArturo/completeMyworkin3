@@ -9,7 +9,7 @@ export interface Practica {
   descripcion: string;
   location: string;
   
-  logo:string;
+  logo?:string;
   // Datos de similitud/match (nueva estructura)
   requisitos_tecnicos: number;
   similitud_puesto: number;
