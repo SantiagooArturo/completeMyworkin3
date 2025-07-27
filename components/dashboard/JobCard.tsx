@@ -38,7 +38,7 @@ interface JobCardProps {
     id: number;
     title: string;
     company: string;
-    logo: string;
+    logo?: string;
     location: string;
     type: string;
     schedule: string;

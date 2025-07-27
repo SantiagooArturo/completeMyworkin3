@@ -10,7 +10,7 @@ export interface Practica {
   location: string;
   salary: string;
   url: string;
-  logo:string;
+  logo?:string;
   fecha_agregado: string;
   requisitos_tecnicos: number;
   similitud_puesto: number;
