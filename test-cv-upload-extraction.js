@@ -142,7 +142,7 @@ const testExtractionLogic = () => {
 };
 
 // 4. Simular flujo de adaptación
-const testAdaptationFlow = (extractedCVData) => {
+const testAdaptationFlow = async (extractedCVData) => {
   console.log('\n🎯 === FLUJO DE ADAPTACIÓN ===');
   
   if (!extractedCVData) {
@@ -161,9 +161,10 @@ const testAdaptationFlow = (extractedCVData) => {
   // Simular adaptaciones
   const adaptations = [];
   
+
   // 1. Adaptar summary
   const originalSummary = extractedCVData.personalInfo.summary;
-  const adaptedSummary = originalSummary + ` Especialmente interesado en oportunidades como ${jobContext.jobTitle} en ${jobContext.company} donde pueda aplicar mi experiencia y continuar desarrollando mis competencias profesionales.`;
+  const adaptedSummary = originalSummary + ` Especialmente interesado en oportunidades como gg ${jobContext.jobTitle} en ${jobContext.company} donde pueda aplicar mi experiencia y continuar desarrollando mis competencias profesionales.`;
   
   if (adaptedSummary !== originalSummary) {
     adaptations.push('Summary adaptado para mencionar el puesto específico');

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import {
   FileText,
   Search,
@@ -15,6 +15,8 @@ import {
   Brain,
   ChevronRight,
   Sparkles,
+  AlertCircle,
+  Coins,
 } from "lucide-react";
 import { PracticaToolsProps } from "@/types/practica";
 import { useToolsUsed } from "@/hooks/useToolsUsed";
@@ -23,8 +25,13 @@ import { auth, db } from "@/firebase/config"; // Ajusta la ruta si es necesario
 import { onAuthStateChanged } from "firebase/auth";
 import { User } from "firebase/auth";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import AdaptationLoadingScreen from './AdaptationLoadingScreen';
-import LoadingScreen from './LoadingScreens';
+import AdaptationLoadingScreen from "./AdaptationLoadingScreen";
+import LoadingScreen from "./LoadingScreens";
+import { useCredits } from "@/hooks/useCredits";
+import InsufficientCreditsModal from "./InsufficientCreditsModal";
+import { Badge } from "./ui/badge";
+import { Button } from "@/components/ui/button";
+import CreditPurchaseModal from "./CreditPurchaseModal";
 
 interface ToolCard {
   id: string;
@@ -48,9 +55,11 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
-    // Estados para la adaptación de CV
+  // Estados para la adaptación de CV
   const [isAdaptingCV, setIsAdaptingCV] = useState(false);
-  const [adaptationStep, setAdaptationStep] = useState<'extracting' | 'analyzing' | 'adapting' | 'saving' | 'complete' | 'error'>('extracting');
+  const [adaptationStep, setAdaptationStep] = useState<
+    "extracting" | "analyzing" | "adapting" | "saving" | "complete" | "error"
+  >("extracting");
   const [adaptationError, setAdaptationError] = useState<string | null>(null);
   const { addToolUsed } = useToolsUsed(practica.title); // Hook para registrar herramientas utilizadas
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,6 +68,16 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   const [apiResult, setApiResult] = useState<any | null>(null);
 
   const [usuario, setUser] = useState<User | null>(null); // Actualiza el tipo para aceptar User o null
+
+  const { credits, hasEnoughCredits, refreshCredits } = useCredits(user); // Hook para manejar créditos
+  const [toolName, setToolName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      const used = localStorage.getItem("cv_analysis_used");
+    }
+  }, [user]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (usuario) => {
       if (usuario) {
@@ -75,8 +94,13 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   }, []);
 
   const handleCloseModal = () => {
-  setIsModalOpen(false); // Cierra solo el modal, no redirige
-};
+    //setIsModalOpen(false); // Cierra solo el modal, no redirige
+      window.location.reload(); // Recarga la página
+
+  };
+  const handlePurchaseClick = () => {
+    setShowPurchaseModal(true);
+  };
 
   const fetchUserInfo = async (email: string) => {
     try {
@@ -98,456 +122,201 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       console.error("Error al obtener la información del usuario:", error);
     }
   };
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const handlePurchaseSuccess = () => {
+    setShowPurchaseModal(false);
+  };
+  const Modal = ({
+    onClose,
+    toolName,
+  }: {
+    onClose: () => void;
+    toolName: string;
+  }) => (
+    <div className="fixed inset-0 bg-white bg-opacity-20 flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-6 rounded-xl shadow-2xl sm:max-w-md  transform transition-all duration-500">
+        <div className="justify-between items-center mb-4">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="p-2 bg-red-100 rounded-full">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold">Créditos Insuficientes</h3>
+            <button
+              onClick={onClose}
+    className="text-gray-600 hover:text-gray-900 focus:outline-none px-12"
+            >
+              <span className="text-2xl justify-end">×</span>
+            </button>
+          </div>
+          <br />
+          <div>
+            <h2>No tienes suficientes créditos para usar esta herramienta.</h2>
+          </div>
 
+          <div className="space-y-4">
+            {/* Información de la herramienta */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <FileText className="h-5 w-5 text-gray-600" />
+                <div>
+                  <p className="font-medium text-gray-800">{toolName}</p>
+                  <p className="text-sm text-gray-600">
+                    Herramienta solicitada
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="flex items-center space-x-1">
+                <Coins className="h-3 w-3" />
+                <span>1 crédito </span>
+              </Badge>
+            </div>
 
-  const Modal = ({ onClose }: { onClose: () => void }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div className="bg-white p-6 rounded-xl shadow-2xl w-[85%] max-w-6xl transform transition-all duration-500 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Análisis de CV</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-600 hover:text-gray-900 focus:outline-none"
-          >
-            <span className="text-2xl">×</span>
-          </button>
-        </div>
-        
-        {/* Mostrar loader mientras estamos cargando */}
-        {loading ? (
-          <div className="py-12">
-            <LoadingScreen 
-              variant="analysis"
-              message="Analizando tu CV con IA avanzada..."
-              subtitle={`Estamos evaluando tu perfil para maximizar tus posibilidades de éxito en: ${practica.title}`}
-              fullScreen={false}
-              className="bg-transparent"
-            />
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
-                💡 <span className="font-medium">¿Sabías que?</span> Un CV optimizado puede aumentar hasta un <span className="font-bold text-blue-600">40%</span> tus posibilidades de ser seleccionado para una entrevista.
-              </p>
+            {/* Balance actual vs requerido */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 border rounded-lg">
+                <p className="text-sm text-gray-600">Tienes</p>
+                <p className="text-2xl font-bold text-red-500">{credits}</p>
+                <p className="text-xs text-gray-500">
+                  crédito{credits !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="text-center p-3 border rounded-lg">
+                <p className="text-sm text-gray-600">Necesitas</p>
+                <p className="text-2xl font-bold text-green-500">1</p>
+                <p className="text-xs text-gray-500">crédito</p>
+              </div>
+            </div>
+
+            {/* Mensaje motivacional */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <Zap className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-900">
+                    ¡Solo necesitas 1 crédito más!
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Recarga tu cuenta y sigue aprovechando nuestras herramientas
+                    de IA.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ventajas de recargar */}
+            <div className="space-y-2">
+              <p className="font-medium text-sm">¿Por qué recargar créditos?</p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  <span>Acceso inmediato a todas las herramientas</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  <span>Créditos bonus con paquetes más grandes</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  <span>Los créditos nunca caducan</span>
+                </li>
+              </ul>
             </div>
           </div>
-        ) : (
-          <>
-            {/* Mostrar el resultado de la API */}
-            {apiResult && (
-              <div className="space-y-6">
-                {/* Header del análisis mejorado */}
-                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 rounded-xl shadow-lg text-white">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-xl font-bold">
-                        {apiResult.nombre.nombre || "Análisis de CV"}
-                      </h4>
-                      <p className="text-emerald-100 text-sm">
-                        Puesto: {apiResult.puesto_postular || "No especificado"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-4xl font-bold">
-                        {Math.round((apiResult.mainly_analysis.porcentaje / 10) || 0)}%
-                      </div>
-                      <div className="text-sm text-emerald-100">Puntaje General</div>
-                    </div>
-                  </div>
 
-                  {/* Barra de progreso visual */}
-                  <div className="w-full bg-emerald-400 rounded-full h-3 mb-4">
-                    <div 
-                      className="bg-white h-3 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${Math.round((apiResult.mainly_analysis.porcentaje / 10) || 0)}%` }}
-                    ></div>
-                  </div>
+          <div className="justify-end mt-3 flex space-x-2">
+            <Button
+              variant="outline"
+              className="text-gray-800"
+              onClick={onClose}
+            >
+              Cancelar
+            </Button>
+          
 
-                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-lg">
-                    <div className="text-center mb-2">
-                      <span className="text-lg font-semibold">
-                        Estado: {apiResult.mainly_analysis.estado || "No evaluado"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-emerald-50 leading-relaxed">
-                      {apiResult.mainly_analysis.analisis || "Se recomienda mejorar ciertos aspectos de tu CV."}
-                    </p>
-                  </div>
-                </div>
+            <Button
+              className="flex items-center space-x-2"
+              onClick={() => window.location.href = '/credits'}
+            >
+              <Coins className="h-4 w-4" />
+              <span>Comprar Créditos</span>
+            </Button>
 
-                {/* Indispensables - Detalles del análisis */}
-                <div className="bg-white p-6 border rounded-xl shadow-md">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="text-lg font-semibold">Elementos Indispensables</div>
-                  </div>
-                  <table className="min-w-full text-sm text-gray-700">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-4 py-2 text-left">Elemento</th>
-                        <th className="px-4 py-2 text-center">¿Existe?</th>
-                        <th className="px-4 py-2 text-center">¿Bien Posicionado?</th>
-                        <th className="px-4 py-2 text-center">¿Fácil de distinguir?</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {apiResult.indispensable &&
-                        apiResult.indispensable.indispensable.evaluacion.map((element: ElementoEvaluacion) => (
-                          <tr className="border-t" key={element.elemento}>
-                            <td className="px-4 py-2">{element.elemento}</td>
-                            <td className="px-4 py-2 text-center">
-                              {element.existe ? "✔️" : "❌"}
-                            </td>
-                            <td className="px-4 py-2 text-center">
-                              {element.bien_posicionado ? "✔️" : "❌"}
-                            </td>
-                            <td className="px-4 py-2 text-center">
-                              {element.facil_de_distinguir ? "✔️" : "❌"}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
 
-                {/* Ajuste de Puesto */}
-                <div className="bg-white p-6 border rounded-xl shadow-md">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="text-lg font-semibold">Ajuste para el Puesto</div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Tarjeta de "Herramientas de análisis" */}
-                    <div className="bg-gradient-to-b from-emerald-400 to-emerald-600 p-4 rounded-lg shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 ease-in-out transform">
-                      <div className="text-xl font-semibold text-white">Herramientas de análisis</div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Estado:</strong>{" "}
-                        <span className="text-green-100">{apiResult.ajuste_puesto.habilidades_de_analisis.nivel}</span>
-                      </div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Acción recomendada:</strong> {apiResult.ajuste_puesto.habilidades_de_analisis.accion}
-                      </div>
-                    </div>
-
-                    {/* Tarjeta de "Resultados cuantificables" */}
-                    <div className="bg-gradient-to-b from-teal-400 to-teal-600 p-4 rounded-lg shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 ease-in-out transform">
-                      <div className="text-xl font-semibold text-white">Resultados cuantificables</div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Estado:</strong>{" "}
-                        <span className="text-green-100">{apiResult.ajuste_puesto.resultados_cuantificables.nivel}</span>
-                      </div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Acción recomendada:</strong> {apiResult.ajuste_puesto.resultados_cuantificables.accion}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    {/* Tarjeta de "Habilidades blandas" */}
-                    <div className="bg-gradient-to-b from-yellow-400 to-yellow-600 p-4 rounded-lg shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 ease-in-out transform">
-                      <div className="text-xl font-semibold text-white">Habilidades blandas</div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Estado:</strong>{" "}
-                        <span className="text-yellow-100">{apiResult.ajuste_puesto.habilidades_blandas.nivel}</span>
-                      </div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Acción recomendada:</strong> {apiResult.ajuste_puesto.habilidades_blandas.accion}
-                      </div>
-                    </div>
-
-                    {/* Tarjeta de "Lenguaje técnico" */}
-                    <div className="bg-gradient-to-b from-indigo-400 to-indigo-600 p-4 rounded-lg shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 ease-in-out transform">
-                      <div className="text-xl font-semibold text-white">Lenguaje técnico</div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Estado:</strong>{" "}
-                        <span className="text-indigo-100">{apiResult.ajuste_puesto.lenguaje_tecnico.nivel}</span>
-                      </div>
-                      <div className="mt-2 text-gray-100">
-                        <strong>Acción recomendada:</strong> {apiResult.ajuste_puesto.lenguaje_tecnico.accion}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ATS & Optimización */}
-                {apiResult.extractedData?.analysisResults?.atsCompliance && (
-                  <div className="bg-white p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">🤖</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Compatibilidad ATS</h4>
-                        <p className="text-sm text-gray-600">Análisis de compatibilidad con sistemas de seguimiento</p>
-                      </div>
-                      <div className="ml-auto">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {apiResult.extractedData.analysisResults.atsCompliance.score}%
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-red-50 p-4 rounded-lg">
-                        <h5 className="font-semibold text-red-800 mb-2">🚨 Problemas detectados</h5>
-                        <ul className="text-sm text-red-700 space-y-1">
-                          {apiResult.extractedData.analysisResults.atsCompliance.issues?.map((issue: string, index: number) => (
-                            <li key={index}>• {issue}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <h5 className="font-semibold text-green-800 mb-2">✅ Recomendaciones</h5>
-                        <ul className="text-sm text-green-700 space-y-1">
-                          {apiResult.extractedData.analysisResults.atsCompliance.recommendations?.map((rec: string, index: number) => (
-                            <li key={index}>• {rec}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Errores Ortográficos y Mejoras */}
-                {apiResult.spelling && (
-                  <div className="bg-white p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-orange-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">📝</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Correcciones y Mejoras</h4>
-                        <p className="text-sm text-gray-600">{apiResult.spelling.comentario}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Errores ortográficos */}
-                      <div className="bg-orange-50 p-4 rounded-lg">
-                        <h5 className="font-semibold text-orange-800 mb-3">
-                          🔍 Errores ortográficos ({apiResult.spelling.errores})
-                        </h5>
-                        <div className="space-y-2">
-                          {apiResult.spelling.detalle_errores?.map((error: any, index: number) => (
-                            <div key={index} className="bg-white p-2 rounded border">
-                              <span className="text-red-600 line-through">{error.original}</span>
-                              {" → "}
-                              <span className="text-green-600 font-semibold">{error.sugerencia}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Verbos de impacto */}
-                      {apiResult.verbos_impact && (
-                        <div className="bg-purple-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-purple-800 mb-3">
-                            💪 Verbos de Impacto (Nivel {apiResult.verbos_impact.nivel}/10)
-                          </h5>
-                          <p className="text-sm text-purple-700 mb-3">{apiResult.verbos_impact.comentario}</p>
-                          <div className="space-y-2">
-                            {apiResult.verbos_impact.sugerencias?.map((sugerencia: string, index: number) => (
-                              <div key={index} className="bg-white p-2 rounded border text-sm">
-                                • {sugerencia}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Palabras Clave y Repetidas */}
-                {(apiResult.extractedData?.analysisResults?.keywordAnalysis || apiResult.repeat_words) && (
-                  <div className="bg-white p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-indigo-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">🔑</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Análisis de Palabras Clave</h4>
-                        <p className="text-sm text-gray-600">Optimización para el puesto específico</p>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                      {/* Palabras clave encontradas */}
-                      {apiResult.extractedData?.analysisResults?.keywordAnalysis && (
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-green-800 mb-3">✅ Palabras clave presentes</h5>
-                          <div className="flex flex-wrap gap-1">
-                            {apiResult.extractedData.analysisResults.keywordAnalysis.jobKeywordsFound?.map((keyword: string, index: number) => (
-                              <span key={index} className="bg-green-200 text-green-800 px-2 py-1 rounded text-xs">
-                                {keyword}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Palabras clave faltantes */}
-                      {apiResult.extractedData?.analysisResults?.keywordAnalysis && (
-                        <div className="bg-red-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-red-800 mb-3">❌ Palabras clave faltantes</h5>
-                          <div className="flex flex-wrap gap-1">
-                            {apiResult.extractedData.analysisResults.keywordAnalysis.jobKeywordsMissing?.map((keyword: string, index: number) => (
-                              <span key={index} className="bg-red-200 text-red-800 px-2 py-1 rounded text-xs">
-                                {keyword}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Palabras repetidas */}
-                      {apiResult.repeat_words && (
-                        <div className="bg-yellow-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-yellow-800 mb-3">⚠️ Palabras repetidas</h5>
-                          <div className="space-y-1">
-                            {apiResult.repeat_words.palabras_repetidas?.slice(0, 5).map((palabra: any, index: number) => (
-                              <div key={index} className="flex justify-between text-sm">
-                                <span className="text-yellow-700">{palabra.palabra}</span>
-                                <span className="font-semibold text-yellow-800">{palabra.veces}x</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Perfil Profesional Optimizado */}
-                {apiResult.perfil_profesional && (
-                  <div className="bg-white p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-cyan-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">👤</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Perfil Profesional Optimizado</h4>
-                        <p className="text-sm text-gray-600">Comparación y sugerencias de mejora</p>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h5 className="font-semibold text-gray-800 mb-2">📄 Perfil Actual</h5>
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {apiResult.perfil_profesional.actual}
-                        </p>
-                      </div>
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h5 className="font-semibold text-blue-800 mb-2">⭐ Perfil Recomendado</h5>
-                        <p className="text-sm text-blue-700 leading-relaxed">
-                          {apiResult.perfil_profesional.recomendado}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Resumen Ejecutivo */}
-                {(apiResult.relevance || apiResult.extractedData?.analysisResults?.feedbackSummary) && (
-                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-slate-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">📋</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Resumen Ejecutivo</h4>
-                        <p className="text-sm text-gray-600">Análisis integral de tu candidatura</p>
-                      </div>
-                    </div>
-
-                    {apiResult.relevance && (
-                      <div className="bg-white p-4 rounded-lg mb-4">
-                        <h5 className="font-semibold text-gray-800 mb-2">🎯 Relevancia para el puesto</h5>
-                        <p className="text-sm text-gray-700 leading-relaxed">{apiResult.relevance}</p>
-                      </div>
-                    )}
-
-                    {apiResult.extractedData?.analysisResults?.feedbackSummary && (
-                      <div className="bg-white p-4 rounded-lg">
-                        <h5 className="font-semibold text-gray-800 mb-2">📝 Resumen de Evaluación</h5>
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {apiResult.extractedData.analysisResults.feedbackSummary}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Información adicional del archivo */}
-                {(apiResult.pagination || apiResult.filename) && (
-                  <div className="bg-white p-6 border rounded-xl shadow-md">
-                    <div className="flex items-center mb-4">
-                      <div className="bg-gray-100 p-2 rounded-lg mr-3">
-                        <span className="text-2xl">📄</span>
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold">Información del Documento</h4>
-                        <p className="text-sm text-gray-600">Análisis técnico del CV</p>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {apiResult.pagination && (
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-green-800 mb-2">
-                            📏 Extensión ({apiResult.pagination.paginas} página{apiResult.pagination.paginas > 1 ? 's' : ''})
-                          </h5>
-                          <p className="text-sm text-green-700">{apiResult.pagination.comentario}</p>
-                        </div>
-                      )}
-
-                      {apiResult.filename && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <h5 className="font-semibold text-blue-800 mb-2">
-                            📁 Nombre del archivo
-                          </h5>
-                          <p className="text-sm text-blue-700">{apiResult.filename.comentario}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
+
+      {showPurchaseModal && (
+        <div style={{ zIndex: 9999, position: "relative" }}>
+          <CreditPurchaseModal
+            isOpen={showPurchaseModal}
+            onClose={() => setShowPurchaseModal(false)}
+            onSuccess={handlePurchaseSuccess}
+            user={user}
+          />
+        </div>
+      )}
     </div>
   );
+
+  /**  <Button
+              onClick={handlePurchaseClick}
+              className="flex items-center space-x-2"
+            >
+              <Coins className="h-4 w-4" />
+              <span>Comprar Créditos</span>
+            </Button> */
 
   // Funciones de navegación
   const handleAdaptarCV = async () => {
     if (isAdaptingCV) return; // Prevenir múltiples clics
-    
+
+    /*
+  if (!hasEnoughCredits("cv-review")) {
+    setShowInsufficientCreditsModal(true);  
+    return;
+  }*/
+
     // Registrar uso de la herramienta
     addToolUsed("crear-cv");
 
+
+    if (!hasEnoughCredits("cv-review")) {
+      console.log("No tienes suficientes créditos.");
+      setToolName("Adaptar mi CV"); // Establecer el nombre correspondiente
+
+      setIsModalOpen(true);
+
+      return;
+    }
+
     try {
       setIsAdaptingCV(true);
-      setAdaptationStep('extracting');
+      setAdaptationStep("extracting");
       setAdaptationError(null);
-      
+
       // Importar dinámicamente el servicio de adaptación
-      const { CVAdaptationService } = await import('@/services/cvAdaptationService');
-      
+      const { CVAdaptationService } = await import(
+        "@/services/cvAdaptationService"
+      );
+
       if (!user) {
         setAdaptationError("Debes iniciar sesión para adaptar tu CV");
-        setAdaptationStep('error');
+        setAdaptationStep("error");
         return;
       }
 
       // 1. Obtener CV actual del usuario
-      setAdaptationStep('extracting');
+      setAdaptationStep("extracting");
       const currentCV = await CVAdaptationService.getUserCurrentCV(user);
-      
+
       if (!currentCV) {
         // Si no tiene CV, redirigir a crear uno nuevo
-        setAdaptationStep('error');
-        setAdaptationError("Primero necesitas tener un CV creado. Te llevaremos a crear uno.");
-        
+        setAdaptationStep("error");
+        setAdaptationError(
+          "Primero necesitas tener un CV creado. Te llevaremos a crear uno."
+        );
+
         // Esperar un poco para mostrar el error y luego redirigir
         setTimeout(() => {
           const params = new URLSearchParams({
@@ -562,19 +331,19 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       }
 
       // 2. Preparar contexto del trabajo para adaptación
-      setAdaptationStep('analyzing');
+      setAdaptationStep("analyzing");
       const jobContext = {
         jobTitle: practica.title,
         company: practica.company,
         location: practica.location,
-        requirements: practica.descripcion || '',
-        description: practica.descripcion || '',
-        industry: '',
-        skills: []
+        requirements: practica.descripcion || "",
+        description: practica.descripcion || "",
+        industry: "",
+        skills: [],
       };
 
       // 3. Adaptar el CV
-      setAdaptationStep('adapting');
+      setAdaptationStep("adapting");
       const adaptationResult = await CVAdaptationService.adaptCVForJob(
         currentCV,
         jobContext,
@@ -582,7 +351,7 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       );
 
       // 4. Guardar CV adaptado temporalmente
-      setAdaptationStep('saving');
+      setAdaptationStep("saving");
       const tempCVId = await CVAdaptationService.saveTemporaryAdaptedCV(
         user,
         adaptationResult.adaptedCV,
@@ -590,40 +359,49 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       );
 
       // 5. Completar proceso
-      setAdaptationStep('complete');
-      
+      setAdaptationStep("complete");
+
       // Esperar un poco para mostrar el éxito y luego redirigir
       setTimeout(() => {
         // 6. Redirigir al editor con el CV adaptado
         const params = new URLSearchParams({
-          from: 'practica-detail',
+          from: "practica-detail",
           company: practica.company,
           position: practica.title,
-          target: 'adapt-cv',
+          target: "adapt-cv",
           adaptedCVId: tempCVId,
           adaptationId: adaptationResult.adaptationId,
-          totalChanges: adaptationResult.adaptationSummary.totalChanges.toString()
+          totalChanges:
+            adaptationResult.adaptationSummary.totalChanges.toString(),
         });
-        
+
         router.push(`/crear-cv?${params.toString()}`);
       }, 2000);
-
     } catch (error) {
-      console.error('Error adaptando CV:', error);
-      setAdaptationStep('error');
-      
-      let errorMessage = "Hubo un problema adaptando tu CV. Inténtalo de nuevo.";
-      
+      console.error("Error adaptando CV:", error);
+      setAdaptationStep("error");
+
+      let errorMessage =
+        "Hubo un problema adaptando tu CV. Inténtalo de nuevo.";
+
       if (error instanceof Error) {
-        if (error.message.includes('timeout') || error.message.includes('aborted')) {
-          errorMessage = "El proceso está tardando más de lo esperado. Esto puede deberse a un CV complejo o alta demanda del servicio. Por favor, inténtalo de nuevo.";
-        } else if (error.message.includes('fetch') || error.message.includes('network')) {
-          errorMessage = "Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.";
+        if (
+          error.message.includes("timeout") ||
+          error.message.includes("aborted")
+        ) {
+          errorMessage =
+            "El proceso está tardando más de lo esperado. Esto puede deberse a un CV complejo o alta demanda del servicio. Por favor, inténtalo de nuevo.";
+        } else if (
+          error.message.includes("fetch") ||
+          error.message.includes("network")
+        ) {
+          errorMessage =
+            "Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.";
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       setAdaptationError(errorMessage);
     }
   };
@@ -631,7 +409,7 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   const handleRetryAdaptation = () => {
     setIsAdaptingCV(false);
     setAdaptationError(null);
-    setAdaptationStep('extracting');
+    setAdaptationStep("extracting");
     // Reiniciar el proceso
     setTimeout(() => {
       handleAdaptarCV();
@@ -644,7 +422,7 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
       <AdaptationLoadingScreen
         currentStep={adaptationStep}
         errorMessage={adaptationError || undefined}
-        onRetry={adaptationStep === 'error' ? handleRetryAdaptation : undefined}
+        onRetry={adaptationStep === "error" ? handleRetryAdaptation : undefined}
       />
     );
   }
@@ -702,31 +480,44 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 */
 
-const handleAnalizarCV = async () => {
-  addToolUsed("analizar-cv");
+  const handleAnalizarCV = async () => {
+    addToolUsed("analizar-cv");
+    console.log("Revisando créditos:", credits); // Verificación de créditos antes de proceder
 
-  setLoading(true);  // Muestra el loader
+    // Verificar si el usuario tiene suficientes créditos
+    if (!hasEnoughCredits("cv-review")) {
+      console.log("No tienes suficientes créditos.");
+      setToolName("Analizar mi CV"); // Establecer el nombre correspondiente
 
-  if (userInfo) {
-    const payload = {
-      pdf_url: userInfo.cvFileUrl,
-      puesto_postular: practica.title,
-      original_name: userInfo.cvFileName,
-      descripcion_puesto: practica.descripcion,
-    };
+      setIsModalOpen(true);
 
-    // Abrir una nueva pestaña y pasar los datos como URL o a través de localStorage
-    const newTab = window.open(`/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`, '_blank');
-    newTab?.focus();
+      return;
+    }
 
-    // Recargar la ruta actual
-    window.location.reload();  // Esto recargará la página actual
-  } else {
-    console.log("No se pudo obtener la información del usuario");
-    setLoading(false);
-  }
-};
+    setLoading(true); // Muestra el loader
 
+    if (userInfo) {
+      const payload = {
+        pdf_url: userInfo.cvFileUrl,
+        puesto_postular: practica.title,
+        original_name: userInfo.cvFileName,
+        descripcion_puesto: practica.descripcion,
+      };
+
+      // Abrir una nueva pestaña y pasar los datos como URL o a través de localStorage
+      const newTab = window.open(
+        `/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`,
+        "_blank"
+      );
+      newTab?.focus();
+
+      // Recargar la ruta actual
+      window.location.reload(); // Esto recargará la página actual
+    } else {
+      console.log("No se pudo obtener la información del usuario");
+      setLoading(false);
+    }
+  };
 
   const handleSimularEntrevista = () => {
     // Registrar uso de la herramienta
@@ -863,11 +654,13 @@ const handleAnalizarCV = async () => {
               />
             </div>
             {isModalOpen &&
-        ReactDOM.createPortal(
-          <Modal onClose={handleCloseModal} />,
-          document.body
-        )}
-
+              ReactDOM.createPortal(
+                <Modal
+                  onClose={handleCloseModal}
+                  toolName={toolName ?? "Herramienta no especificada"}
+                />,
+                document.body
+              )}
             {/* Efecto hover */}
             <div
               className={`absolute inset-0 bg-white/10 rounded-lg opacity-0 transition-opacity duration-300 ${

@@ -33,12 +33,53 @@ export interface AdaptedCVResult {
   };
 }
 
+async function analyzeJobAreaWithOpenAI(jobMention: string): Promise<string> {
+const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+
+console.log(jobMention,"TRABAJO");
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',  // O usa el modelo 'gpt-4' si lo tienes disponible
+        messages: [
+          {
+            role: 'user',
+            content: `¿A qué área laboral pertenece ${jobMention}?, Solo dime el Area, no menciones nada del trabajo solo el area`
+          }
+        ],
+        max_tokens: 50,  // Limitar la respuesta a una longitud adecuada
+      })
+    });
+
+    const data = await response.json();
+console.log(data,"TRABAJO");
+
+    // Extraer y retornar el área que el modelo genere
+    if (data && data.choices && data.choices[0].message) {
+      return data.choices[0].message.content.trim();
+    } else {
+      throw new Error('No se pudo obtener el área del trabajo');
+    }
+
+  } catch (error) {
+    console.error('Error al analizar el área del trabajo:', error);
+    return 'desconocida';  // Valor por defecto si ocurre un error
+  }
+}
+
 export class CVAdaptationService {
   
   /**
    * Obtiene el CV más reciente del usuario para adaptación
    * PRIORIDAD: 1) CV vinculado al perfil, 2) CVs creados, 3) CVs subidos, 4) CVs analizados
    */
+
+  
   static async getUserCurrentCV(user: User): Promise<CVData | null> {
     try {
       // 🎯 PRIORIDAD MÁXIMA: Buscar CV vinculado al perfil del usuario
@@ -164,7 +205,7 @@ export class CVAdaptationService {
       const suggestedImprovements: string[] = [];
 
       // 1. Adaptar información personal (objetivo profesional en el summary)
-      const adaptedSummary = this.adaptSummary(originalCV.personalInfo.summary, jobContext);
+      const adaptedSummary = await  this.adaptSummary(originalCV.personalInfo.summary, jobContext);
       if (adaptedSummary !== originalCV.personalInfo.summary) {
         adaptedCV.personalInfo.summary = adaptedSummary;
         changesById.summary++;
@@ -227,7 +268,7 @@ export class CVAdaptationService {
   /**
    * Adapta el summary/objetivo profesional para el puesto
    */
-  private static adaptSummary(originalSummary: string, jobContext: JobAdaptationContext): string {
+  private static async adaptSummary(originalSummary: string, jobContext: JobAdaptationContext): Promise<string> {
     if (!originalSummary) {
       return `Profesional motivado buscando oportunidades como ${jobContext.jobTitle} en ${jobContext.company}. Enfocado en contribuir al crecimiento de la organización mediante mis habilidades y experiencia.`;
     }
@@ -239,8 +280,10 @@ export class CVAdaptationService {
     const jobMention = `${jobContext.jobTitle} en ${jobContext.company}`;
     if (!adaptedSummary.toLowerCase().includes(jobContext.jobTitle.toLowerCase()) ||
         !adaptedSummary.toLowerCase().includes(jobContext.company.toLowerCase())) {
-      
-      adaptedSummary += ` Especialmente interesado en oportunidades como ${jobMention} donde pueda aplicar mi experiencia y continuar desarrollando mis competencias profesionales.`;
+          
+          const jobArea = await analyzeJobAreaWithOpenAI(jobMention);
+
+      adaptedSummary += ` Especialmente interesado en empresas del area de ${jobArea}, donde pueda aplicar mi experiencia y continuar desarrollando mis competencias profesionales.`;
     }
 
     return adaptedSummary;

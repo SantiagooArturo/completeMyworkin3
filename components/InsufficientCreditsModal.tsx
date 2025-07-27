@@ -155,14 +155,17 @@ export default function InsufficientCreditsModal({
         </DialogContent>
       </Dialog>
 
-      {showPurchaseModal && (
-        <CreditPurchaseModal
-          isOpen={showPurchaseModal}
-          onClose={() => setShowPurchaseModal(false)}
-          onSuccess={handlePurchaseSuccess}
-          user={user}
-        />
-      )}
+     {showPurchaseModal && (
+  <div style={{ zIndex: 9999, position: 'relative' }}>
+    <CreditPurchaseModal
+      isOpen={showPurchaseModal}
+      onClose={() => setShowPurchaseModal(false)}
+      onSuccess={handlePurchaseSuccess}
+      user={user}
+    />
+  </div>
+)}
+
     </>
   );
 }
