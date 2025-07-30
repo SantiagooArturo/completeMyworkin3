@@ -85,10 +85,10 @@ export default function CreditPurchaseModal({
       const script = document.createElement('script');
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.onload = () => {
-        const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, {
-          locale: 'es-PE'
-        });
-        setMpInstance(mp);
+          const mp = new window.MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, {
+            locale: 'es-PE'
+          });
+          setMpInstance(mp);
         console.log('✅ MercadoPago SDK inicializado para créditos');
       };
       document.head.appendChild(script);
@@ -166,7 +166,21 @@ export default function CreditPurchaseModal({
       const token = await mpInstance.createCardToken(cardForm);
       console.log('✅ Token de créditos creado:', token.id);
 
+      // Detectar el tipo de tarjeta del token
+      const paymentMethodId = token.payment_method_id || 'visa'; // Fallback a visa si no se detecta
+      console.log('💳 Método de pago detectado:', paymentMethodId);
+
       // Enviar compra a la nueva API de créditos
+      console.log('📦 Enviando datos de compra:', {
+        packageId: selectedPackage.id,
+        userId: user.uid,
+        paymentData: {
+          token: token.id,
+          installments: 1,
+          payment_method_id: paymentMethodId
+        }
+      });
+
       const response = await fetch('/api/credits/purchase', {
         method: 'POST',
         headers: {
@@ -201,7 +215,7 @@ export default function CreditPurchaseModal({
       
       if (result.status === 'approved') {
         // Actualizar créditos en el hook
-        await refreshCredits();
+          await refreshCredits();
         
         alert(`¡Compra exitosa! Se han agregado ${result.credits_added} créditos a tu cuenta.`);
         onClose();
@@ -223,6 +237,18 @@ export default function CreditPurchaseModal({
   const handleBackToPackages = () => {
     setShowCardForm(false);
     setSelectedPackage(null);
+  };
+
+  const fillTestCard = () => {
+    setCardData(prev => ({
+      ...prev,
+      cardNumber: '4509 9535 6623 3704',
+      expiryDate: '11/25',
+      cvv: '123',
+      cardholderName: 'APRO',
+      docType: 'DNI',
+      docNumber: '12345678'
+    }));
   };
 
   const getPackageIcon = (packageId: string) => {
@@ -520,6 +546,7 @@ export default function CreditPurchaseModal({
                       <option value="DNI">DNI</option>
                       <option value="CE">CE</option>
                       <option value="RUC">RUC</option>
+                      <option value="PAS">Pasaporte</option>
                     </select>
                   </div>
                   <div className="col-span-2">
@@ -549,6 +576,26 @@ export default function CreditPurchaseModal({
                   )}
                   {isLoading ? 'Procesando pago...' : `Pagar S/ ${selectedPackage?.price}`}
                 </button>
+
+                {/* Tarjetas de prueba */}
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-yellow-800">🧪 Tarjetas de prueba:</h4>
+                    <button
+                      type="button"
+                      onClick={fillTestCard}
+                      className="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 text-xs font-medium rounded-md transition-colors"
+                    >
+                      Usar datos de prueba
+                    </button>
+                  </div>
+                  <div className="text-xs text-yellow-700 space-y-1">
+                    <div><strong>Visa (Aprobada):</strong> 4509 9535 6623 3704</div>
+                    <div><strong>Mastercard (Aprobada):</strong> 5031 7557 3453 0604</div>
+                    <div><strong>CVV:</strong> 123 | <strong>Fecha:</strong> 11/25 | <strong>Nombre:</strong> APRO</div>
+                    <div><strong>DNI:</strong> 12345678</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
