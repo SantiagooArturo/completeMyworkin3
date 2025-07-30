@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
         'Cada logro debe ser específico, medible y relevante',
         'Usa métricas cuando sea posible (ej: "Mejoré el rendimiento en 30%", "Reduje el tiempo de carga en 2 segundos")',
         'Enfócate en resultados e impacto técnico y de negocio',
+        'Analiza el puesto al que se postula y relaciona con el logro',
+
         'Usa verbos de acción en pasado (desarrollé, implementé, optimicé)',
         'Hazlos atractivos para reclutadores técnicos',
         'Devuelve solo los logros, uno por línea, sin numeración ni puntos'

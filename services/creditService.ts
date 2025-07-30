@@ -300,6 +300,8 @@ export class CreditService {
       );
       
       const querySnapshot = await getDocs(q);      const stats: Record<ToolType, number> = {
+        'cv-adapt': 0,
+
         'cv-review': 0,
         'cv-creation': 0,
         'job-match': 0,
@@ -316,6 +318,8 @@ export class CreditService {
       return stats;
     } catch (error) {
       console.error('Error obteniendo estadísticas:', error);      return {
+        'cv-adapt': 0,
+
         'cv-review': 0,
         'cv-creation': 0,
         'job-match': 0,

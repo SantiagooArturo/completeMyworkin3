@@ -38,6 +38,7 @@ export interface CreditPackage {
 }
 
 export interface ToolCost {
+  'cv-adapt': number;
   'cv-review': number;
   'cv-creation': number;
   'job-match': number;
@@ -47,6 +48,7 @@ export interface ToolCost {
 // Configuración de costos y paquetes
 export const CREDIT_CONFIG = {  // Costo por herramienta (en créditos)
   TOOL_COSTS: {
+    'cv-adapt': 1,
     'cv-review': 1,
     'cv-creation': 1,
     'job-match': 1,

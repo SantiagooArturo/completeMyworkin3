@@ -33,6 +33,8 @@ export default function CreditRequiredWrapper({
   const [hasConsumedCredits, setHasConsumedCredits] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toolNames = {
+        'cv-adapt': 'Adaptación de CV',
+
     'cv-review': 'Análisis de CV',
     'job-match': 'Match de CV con empleos',
     'cv-creation': 'Creación de CV',
@@ -40,6 +42,8 @@ export default function CreditRequiredWrapper({
   };
 
   const toolIcons = {
+    'cv-adapt': '📄',
+
     'cv-review': '📄',
     'job-match': '🎯',
     'cv-creation': '✨',
