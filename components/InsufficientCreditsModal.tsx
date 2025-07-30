@@ -27,6 +27,8 @@ interface InsufficientCreditsModalProps {
 
 const TOOL_LABELS = {
   'cv-review': 'Análisis de CV',
+  'cv-adapt': 'Adaptación de CV',
+
   'cv-creation': 'Creación de CV',
   'job-match': 'Búsqueda de Trabajos',
   'interview-simulation': 'Simulación de Entrevistas'
@@ -34,6 +36,8 @@ const TOOL_LABELS = {
 
 const TOOL_ICONS = {
   'cv-review': FileText,
+  'cv-adapt': FileText,
+
   'cv-creation': FileText,
   'job-match': Search,
   'interview-simulation': Target

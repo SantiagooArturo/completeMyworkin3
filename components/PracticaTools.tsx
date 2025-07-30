@@ -32,6 +32,7 @@ import InsufficientCreditsModal from "./InsufficientCreditsModal";
 import { Badge } from "./ui/badge";
 import { Button } from "@/components/ui/button";
 import CreditPurchaseModal from "./CreditPurchaseModal";
+import { ToolCost } from "@/types/credits";
 
 interface ToolCard {
   id: string;
@@ -71,6 +72,10 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
 
   const { credits, hasEnoughCredits, refreshCredits } = useCredits(user); // Hook para manejar créditos
   const [toolName, setToolName] = useState<string | null>(null);
+
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false); // Agregar el estado para el modal de créditos insuficientes
+const [toolType, setToolType] = useState<keyof ToolCost>("cv-review");
+
 
   useEffect(() => {
     if (!user) {
@@ -126,138 +131,8 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   const handlePurchaseSuccess = () => {
     setShowPurchaseModal(false);
   };
-  const Modal = ({
-    onClose,
-    toolName,
-  }: {
-    onClose: () => void;
-    toolName: string;
-  }) => (
-    <div className="fixed inset-0 bg-white bg-opacity-20 flex justify-center items-center z-50 p-4">
-      <div className="bg-white p-6 rounded-xl shadow-2xl sm:max-w-md  transform transition-all duration-500">
-        <div className="justify-between items-center mb-4">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="p-2 bg-red-100 rounded-full">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold">Créditos Insuficientes</h3>
-            <button
-              onClick={onClose}
-    className="text-gray-600 hover:text-gray-900 focus:outline-none px-12"
-            >
-              <span className="text-2xl justify-end">×</span>
-            </button>
-          </div>
-          <br />
-          <div>
-            <h2>No tienes suficientes créditos para usar esta herramienta.</h2>
-          </div>
 
-          <div className="space-y-4">
-            {/* Información de la herramienta */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <FileText className="h-5 w-5 text-gray-600" />
-                <div>
-                  <p className="font-medium text-gray-800">{toolName}</p>
-                  <p className="text-sm text-gray-600">
-                    Herramienta solicitada
-                  </p>
-                </div>
-              </div>
-              <Badge variant="outline" className="flex items-center space-x-1">
-                <Coins className="h-3 w-3" />
-                <span>1 crédito </span>
-              </Badge>
-            </div>
-
-            {/* Balance actual vs requerido */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 border rounded-lg">
-                <p className="text-sm text-gray-600">Tienes</p>
-                <p className="text-2xl font-bold text-red-500">{credits}</p>
-                <p className="text-xs text-gray-500">
-                  crédito{credits !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <div className="text-center p-3 border rounded-lg">
-                <p className="text-sm text-gray-600">Necesitas</p>
-                <p className="text-2xl font-bold text-green-500">1</p>
-                <p className="text-xs text-gray-500">crédito</p>
-              </div>
-            </div>
-
-            {/* Mensaje motivacional */}
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <Zap className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-blue-900">
-                    ¡Solo necesitas 1 crédito más!
-                  </p>
-                  <p className="text-sm text-blue-700">
-                    Recarga tu cuenta y sigue aprovechando nuestras herramientas
-                    de IA.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Ventajas de recargar */}
-            <div className="space-y-2">
-              <p className="font-medium text-sm">¿Por qué recargar créditos?</p>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Acceso inmediato a todas las herramientas</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Créditos bonus con paquetes más grandes</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span>Los créditos nunca caducan</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="justify-end mt-3 flex space-x-2">
-            <Button
-              variant="outline"
-              className="text-gray-800"
-              onClick={onClose}
-            >
-              Cancelar
-            </Button>
-          
-
-            <Button
-              className="flex items-center space-x-2"
-              onClick={() => window.location.href = '/credits'}
-            >
-              <Coins className="h-4 w-4" />
-              <span>Comprar Créditos</span>
-            </Button>
-
-
-          </div>
-        </div>
-      </div>
-
-      {showPurchaseModal && (
-        <div style={{ zIndex: 9999, position: "relative" }}>
-          <CreditPurchaseModal
-            isOpen={showPurchaseModal}
-            onClose={() => setShowPurchaseModal(false)}
-            onSuccess={handlePurchaseSuccess}
-            user={user}
-          />
-        </div>
-      )}
-    </div>
-  );
+  
 
   /**  <Button
               onClick={handlePurchaseClick}
@@ -271,21 +146,14 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   const handleAdaptarCV = async () => {
     if (isAdaptingCV) return; // Prevenir múltiples clics
 
-    /*
-  if (!hasEnoughCredits("cv-review")) {
-    setShowInsufficientCreditsModal(true);  
-    return;
-  }*/
-
-    // Registrar uso de la herramienta
     addToolUsed("crear-cv");
+    setToolType("cv-adapt");
 
-
-    if (!hasEnoughCredits("cv-review")) {
+    if (!hasEnoughCredits("cv-adapt")) {
       console.log("No tienes suficientes créditos.");
       setToolName("Adaptar mi CV"); // Establecer el nombre correspondiente
 
-      setIsModalOpen(true);
+      setShowInsufficientCreditsModal(true);  
 
       return;
     }
@@ -480,21 +348,17 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
   };
 */
 
-  const handleAnalizarCV = async () => {
+ const handleAnalizarCV = async () => {
     addToolUsed("analizar-cv");
-    console.log("Revisando créditos:", credits); // Verificación de créditos antes de proceder
+    setToolType("cv-review");
 
-    // Verificar si el usuario tiene suficientes créditos
     if (!hasEnoughCredits("cv-review")) {
-      console.log("No tienes suficientes créditos.");
-      setToolName("Analizar mi CV"); // Establecer el nombre correspondiente
-
-      setIsModalOpen(true);
-
+      setToolName("Analizar mi CV");
+      setShowInsufficientCreditsModal(true);  
       return;
     }
 
-    setLoading(true); // Muestra el loader
+    setLoading(true);
 
     if (userInfo) {
       const payload = {
@@ -504,21 +368,14 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
         descripcion_puesto: practica.descripcion,
       };
 
-      // Abrir una nueva pestaña y pasar los datos como URL o a través de localStorage
-      const newTab = window.open(
-        `/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`,
-        "_blank"
-      );
+      const newTab = window.open(`/analizar-cv-puesto?userInfo=${encodeURIComponent(JSON.stringify(payload))}`, "_blank");
       newTab?.focus();
 
-      // Recargar la ruta actual
-      window.location.reload(); // Esto recargará la página actual
+      window.location.reload(); 
     } else {
-      console.log("No se pudo obtener la información del usuario");
       setLoading(false);
     }
   };
-
   const handleSimularEntrevista = () => {
     // Registrar uso de la herramienta
     addToolUsed("interview-simulation");
@@ -653,14 +510,23 @@ export default function PracticaTools({ practica }: PracticaToolsProps) {
                 }`}
               />
             </div>
-            {isModalOpen &&
-              ReactDOM.createPortal(
-                <Modal
-                  onClose={handleCloseModal}
-                  toolName={toolName ?? "Herramienta no especificada"}
-                />,
-                document.body
-              )}
+    {user && showInsufficientCreditsModal &&
+  ReactDOM.createPortal(
+    <div onClick={() => setShowInsufficientCreditsModal(false)}>
+      <div onClick={(e) => e.stopPropagation()}>
+        <InsufficientCreditsModal
+          isOpen={showInsufficientCreditsModal}
+          onClose={() => setShowInsufficientCreditsModal(false)}
+          user={user}  // Pasamos solo el usuario si no es null
+          toolType={toolType} 
+          requiredCredits={1}
+          currentCredits={credits}
+        />
+      </div>
+    </div>,
+    document.body // El modal se renderiza en el body, fuera del componente
+  )}
+
             {/* Efecto hover */}
             <div
               className={`absolute inset-0 bg-white/10 rounded-lg opacity-0 transition-opacity duration-300 ${

@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       [
         'Sugiere 3 logros cuantificables que podrían añadirse al CV en formato Harvard',
         'Cada logro debe ser específico, medible y relevante para el puesto',
+        'Analiza el puesto al que se postula y relaciona con el logro',
         'Usa métricas cuando sea posible (porcentajes, números, tiempos)',
         'Enfócate en resultados e impacto, no solo en responsabilidades',
         'Devuelve solo los logros, uno por línea, sin numeración ni puntos'
