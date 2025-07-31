@@ -50,6 +50,18 @@ export default function ProfilePage() {
     projects: any[];
   }>({ experience: [], education: [], projects: [] });
 
+  const [showProfileIncompleteModal, setShowProfileIncompleteModal] = useState(false);
+
+  // useEffect para mostrar el modal si el perfil está incompleto
+  useEffect(() => {
+    if (calculateProfileCompletion() < 100) {
+      setShowProfileIncompleteModal(true);
+    }
+  }, []); // El efecto se ejecuta solo una vez cuando se monta el componente
+
+  const handleCloseModal = () => {
+    setShowProfileIncompleteModal(false);
+  };
   // Cargar datos del perfil desde Firestore
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -142,6 +154,25 @@ export default function ProfilePage() {
     });
     setIsEditing(false);
   };
+
+
+  const calculateProfileCompletion = () => {
+  const fields = [
+    profileData.displayName,
+    profileData.email,
+    profileData.phone,
+    profileData.location,
+    profileData.university,
+    profileData.bio,
+    profileData.position,
+  ];
+
+  const filledFields = fields.filter(field => field && field.trim() !== '').length;
+  const totalFields = fields.length;
+
+  return (filledFields / totalFields) * 100;
+};
+
 
   const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string }) => {
     // Actualizar estado local inmediatamente
@@ -285,6 +316,61 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
+
+{showProfileIncompleteModal && (
+  <div className="fixed inset-0 flex justify-center items-center z-50 bg-black bg-opacity-70">
+    <div className="bg-gradient-to-r from-[#f3f4f6] to-[#e5e7eb] rounded-2xl p-10 max-w-lg w-full shadow-2xl transform transition-all duration-500 ease-in-out scale-105">
+      {/* Icono de alerta */}
+      <div className="flex items-center space-x-4 mb-8">
+        <div className="bg-yellow-400 p-4 rounded-full shadow-xl">
+          <AlertCircle className="h-10 w-10 text-white" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-800">¡Tu perfil está incompleto!</h2>
+      </div>
+
+      {/* Mensaje motivacional */}
+      <p className="text-gray-700 mb-6 text-lg leading-relaxed text-justify">
+        Estás a un paso de aprovechar al máximo nuestra plataforma. Completa tu perfil para mejorar tu visibilidad y
+        abrir nuevas oportunidades laborales.
+      </p>
+
+      {/* Barra de progreso */}
+      <div className="mb-6">
+        <p className="text-gray-600 text-sm mb-2">Progreso del perfil</p>
+        <div className="relative pt-1">
+          <div className="flex mb-2 items-center justify-between">
+            <div
+              className="w-full bg-gray-200 rounded-full h-2.5"
+              style={{
+                backgroundColor: 'gray', // Color de fondo
+              }}
+            >
+              <div
+                className="h-2.5 rounded-full"
+                style={{
+                  width: `${calculateProfileCompletion()}%`, // Ancho de la barra
+                  backgroundColor: '#028bbf', // Color de la barra
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Botón de acción */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleCloseModal}
+          className="bg-[#028bbf] hover:bg-[#027ba8] text-white px-8 py-4 rounded-full font-semibold transition duration-300 ease-in-out flex items-center space-x-3 shadow-2xl transform hover:scale-110"
+        >
+          <Sparkles className="h-6 w-6" />
+          <span className="text-lg">¡Entendido!</span>
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="mb-8">
@@ -507,7 +593,45 @@ export default function ProfilePage() {
 
           {/* Columna derecha - CV y acciones rápidas */}
           <div className="space-y-6">
-            
+            {/* Barra de Progreso */}
+<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <div className="p-6">
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+        <FileText className="h-5 w-5 mr-2 text-[#028bbf]" />
+        {/* Cambia el texto según el porcentaje de completitud */}
+        {calculateProfileCompletion() === 100 ? 'Perfil Completo' : 'Perfil Incompleto'}
+      </h3>
+     
+    </div>
+
+    {/* Barra de progreso */}
+    <div className="relative pt-1">
+      <div className="flex mb-2 items-center justify-between">
+        <span className="text-sm font-semibold text-gray-600">Completitud del perfil</span>
+        <span className="text-xs font-semibold text-gray-600">{Math.round(calculateProfileCompletion())}%</span>
+      </div>
+      <div className="flex mb-2">
+        <div
+          className="w-full bg-gray-200 rounded-full h-2.5"
+          style={{
+            backgroundColor: '#E5E7EB', // Color de fondo
+          }}
+        >
+          <div
+            className="h-2.5 rounded-full"
+            style={{
+              width: `${calculateProfileCompletion()}%`, // Ancho de la barra
+              backgroundColor: '#028bbf', // Color de la barra
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
             {/* Tarjeta de CV - Prominente */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6">
