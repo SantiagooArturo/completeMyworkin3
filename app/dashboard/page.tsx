@@ -24,8 +24,11 @@ import {
   Calendar,
   User,
   Target,
-  Settings
+  Settings,
+  AlertCircle
 } from 'lucide-react';
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/config";
 
 export default function DashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -41,7 +44,35 @@ export default function DashboardPage() {
     lastReviewDate: undefined as Date | undefined
   });
   const [statsLoading, setStatsLoading] = useState(true);
+ const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
+
+    useEffect(() => {
+    const checkProfileCompleteness = async () => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          
+          // Verificamos si el perfil está completo comparando campos esenciales
+          const isComplete = userData.displayName && userData.email && userData.phone && userData.location && userData.university && userData.bio && userData.position;
+          setIsProfileComplete(isComplete);
+          
+          // Si el perfil no está completo, mostramos el modal
+          if (!isComplete) {
+            setShowProfileModal(true);
+          }
+        }
+      }
+    };
+
+    checkProfileCompleteness();
+  }, [user]);
+
+    const handleCloseModal = () => {
+    setShowProfileModal(false);
+  };
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -51,6 +82,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadCVStats = async () => {
       if (user) {
+        console.log("Cargando estadísticas de CV para el usuario:", user);
         try {
           // Obtener las revisiones directamente para contar los análisis reales
           const reviews = await cvReviewService.getUserReviews(user.uid);
@@ -128,6 +160,69 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
+{showProfileModal && !isProfileComplete && (
+  <div className="fixed inset-0 flex justify-center items-center z-50 bg-black bg-opacity-50">
+    <div className="bg-gradient-to-r from-[#f3f4f6] to-[#e5e7eb] rounded-2xl p-8 max-w-lg w-full shadow-xl transform transition-all duration-300 ease-in-out scale-105">
+      {/* Icono de alerta */}
+      <div className="flex items-center space-x-4 mb-6">
+        <div className="bg-yellow-400 p-3 rounded-full shadow-lg">
+          <AlertCircle className="h-10 w-10 text-white" />
+        </div>
+        <h2 className="text-3xl font-semibold text-gray-800">¡Tu perfil está incompleto!</h2>
+      </div>
+
+      {/* Mensaje motivacional */}
+      <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+        Estás casi listo para aprovechar todas las funcionalidades de nuestra plataforma. Completa tu perfil con más
+        información para mejorar tu visibilidad y aumentar tus oportunidades laborales.
+      </p>
+
+      {/* Barra de progreso */}
+      <div className="mb-6">
+        <p className="text-gray-600 text-sm mb-2">Progreso del perfil</p>
+        <div className="relative pt-1">
+          <div className="flex mb-2 items-center justify-between">
+            <div
+              className="w-full bg-gray-200 rounded-full h-2.5"
+              style={{
+                backgroundColor: '#E5E7EB', // Color de fondo
+              }}
+            >
+              <div
+                className="h-2.5 rounded-full"
+                style={{
+                  width: `${(isProfileComplete ? 100 : 50)}%`, // Si está completo es 100%, si no es 50% por defecto
+                  backgroundColor: '#028bbf', // Color de la barra
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Botones de acción */}
+      <div className="flex justify-between space-x-4">
+        <button
+          onClick={handleCloseModal}
+          className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-full font-medium transition duration-200 ease-in-out flex items-center space-x-2 shadow-lg transform hover:scale-105 w-full"
+        >
+          <Clock className="h-5 w-5" />
+          <span>En otro momento</span>
+        </button>
+        
+        <button
+          onClick={() => router.push('/profile')} // Asumiendo que /profile es la página para completar el perfil
+          className="bg-[#028bbf] hover:bg-[#027ba8] text-white px-6 py-3 rounded-full font-medium transition duration-200 ease-in-out flex items-center space-x-2 shadow-lg transform hover:scale-105 w-full"
+        >
+          <CheckCircle className="h-5 w-5" />
+          <span>Completar Ahora</span>
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
         {/* Saludo personalizado */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">

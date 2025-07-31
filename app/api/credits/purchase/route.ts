@@ -69,7 +69,6 @@ export async function POST(request: NextRequest) {
         }
       } catch (creditError) {
         console.error('❌ Error agregando créditos:', creditError);
-        console.error('❌ Error de pago en MercadoPago:', paymentResponse.status_detail);
 
         // Aún devolvemos el resultado del pago, pero logeamos el error
         // El webhook puede manejar la adición de créditos como respaldo
