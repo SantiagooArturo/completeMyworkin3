@@ -150,18 +150,21 @@ export default function CreditPurchaseModal({
     setIsLoading(true);
     try {
       console.log('💳 Procesando compra de créditos...');
-      
+      console.log('🔄 cardData:', cardData);
+      const cardExpirationMonth = cardData.expiryDate.split('/')[0];
+      const cardExpirationYear = cardData.expiryDate.split('/')[1];
       // Preparar datos de la tarjeta para tokenización
       const cardForm = {
+        cardExpirationMonth: cardExpirationMonth,
+        cardExpirationYear: cardExpirationYear,
         cardNumber: cardData.cardNumber.replace(/\s/g, ''),
         cardholderName: cardData.cardholderName,
-        cardExpirationMonth: cardData.expiryDate.split('/')[0],
-        cardExpirationYear: '20' + cardData.expiryDate.split('/')[1],
         securityCode: cardData.cvv,
         identificationType: cardData.docType,
         identificationNumber: cardData.docNumber
       };
-
+      
+      console.log('🔄 cardForm:', cardForm);
       // Crear token de la tarjeta
       const token = await mpInstance.createCardToken(cardForm);
       console.log('✅ Token de créditos creado:', token.id);
