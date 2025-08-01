@@ -109,6 +109,7 @@ y consigue tu
             <div>
               <img src="/MyWorkIn-web.png" alt="MyWorkIn Logo" className="h-8 mb-4" />
               <p className="text-gray-600">La plataforma líder de empleabilidad juvenil en Perú.</p>
+              <img src="/meta-partner.png" alt="Meta Business Partner" className="h-16 mt-3 opacity-80" />
             </div>
             <div>
               <h3 className="font-bold text-gray-900 mb-4">Plataforma</h3>
