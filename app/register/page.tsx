@@ -174,7 +174,24 @@ export default function RegisterPage() {
                 onChange={e => setDisplayName(e.target.value)}
                 required
               />
-            </div>            
+            </div>       
+
+               <div>
+              <label htmlFor="university" className="block text-sm font-medium text-gray-700 mb-1">
+                Universidad *
+              </label>
+              <input
+                id="university"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#028bbf] focus:border-transparent transition"
+                type="text"
+                placeholder="Escribe tu universidad"
+                value={university}
+                onChange={e => setUniversity(e.target.value)}
+                required
+              />
+            </div>  
+
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Correo electrónico *
