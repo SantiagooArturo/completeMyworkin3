@@ -126,7 +126,8 @@ const MOCK_PRACTICES: Practica[] = [
 export class OnboardingMatchService {
   static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string): Promise<OnboardingMatchData> {
     // 1. PRIMERO: Verificar si ya existe un match reciente en Firestore
-    const existingMatch = await this.getExistingMatch(userId, matchQuery);
+    //const existingMatch = await this.getExistingMatch(userId, matchQuery);
+    const existingMatch = false;
     if (existingMatch) {
       console.log('✅ Usando prácticas guardadas (cache)');
       return existingMatch;

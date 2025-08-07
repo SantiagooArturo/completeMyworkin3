@@ -394,7 +394,7 @@ export default function DashboardPage() {
                           <Briefcase className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-900">Portal de Trabajo</h4>
+                          <h4 className="font-medium text-gray-900">Portal de Trabajo </h4>
                           <p className="text-sm text-gray-600">Oportunidades personalizadas</p>
                         </div>
                       </Link>

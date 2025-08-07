@@ -32,12 +32,17 @@ export interface MatchPracticesResponse {
 
 export async function matchPractices(data: MatchPracticesRequest): Promise<MatchPracticesResponse> {
   // Logging para debug
-  console.log('🔍 Datos enviados a matchPractices:', {
+  console.log('🔍 Datos enviados a matchPractices uwu:', {
     puesto: data.puesto,
     cv_url: data.cv_url,
     cv_url_type: typeof data.cv_url,
     cv_url_length: data.cv_url?.length || 0
   });
+  const url_localhost = "http://127.0.0.1:8000/match-practices"
+  const url_produccion = "https://jobsmatch.onrender.com/match-practices"
+  //comunicando la url:
+  console.log("Se enviarán los datos a la siguiente url: ", url_localhost);
+
 
   // Validación previa
   if (!data.cv_url || data.cv_url.trim() === '') {
@@ -48,14 +53,13 @@ export async function matchPractices(data: MatchPracticesRequest): Promise<Match
     throw new Error('puesto es requerido y no puede estar vacío');
   }
 
-  const response = await fetch('https://jobsmatch.onrender.com/match-practices', {
+  const response = await fetch(url_localhost, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
   });
-
   if (!response.ok) {
     const errorText = await response.text();
     console.error('❌ Error response from match-practices:', {
