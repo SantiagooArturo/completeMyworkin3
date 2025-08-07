@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firest
 interface SimpleUploadCVModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadSuccess: (cvData: { fileName: string; fileUrl: string }) => void;
+  onUploadSuccess: (cvData: { fileName: string; fileUrl: string; fileEmbedding?: number[] }) => void;
 }
 
 export default function SimpleUploadCVModal({
@@ -75,6 +75,73 @@ export default function SimpleUploadCVModal({
       // Verificar si el documento del usuario existe en Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
+      
+      // Obtener la posición del usuario para el embedding
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      const userPosition = userData?.position || null;
+      
+      // Generar embedding del CV
+      let cv_embedding = null;
+      try {
+        const url_localhost = "http://127.0.0.1:8000"
+        const url_produccion = "https://jobsmatch.onrender.com"
+        const embeddingResponse = await fetch(`${url_localhost}/cvFileUrl_to_embedding`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cv_url: fileUrl,
+            desired_position: userPosition
+          }),
+        });
+        
+        if (embeddingResponse.ok) {
+          const embeddingResult = await embeddingResponse.json();
+          
+          // El API retorna un Vector object, necesitamos extraer el array
+          // Si viene como {embedding: {_value: [...]}} extraemos el array
+          if (embeddingResult?.embedding?._value && Array.isArray(embeddingResult.embedding._value)) {
+            cv_embedding = embeddingResult.embedding._value;
+          }
+          // Si viene como {_value: [...]} extraemos el array
+          else if (embeddingResult?._value && Array.isArray(embeddingResult._value)) {
+            cv_embedding = embeddingResult._value;
+          }
+          // Si ya es un array directamente
+          else if (Array.isArray(embeddingResult)) {
+            cv_embedding = embeddingResult;
+          }
+          else {
+            console.warn('Formato de embedding no reconocido:', embeddingResult);
+            cv_embedding = null;
+          }
+          
+          // Debug: verificar que es un array
+          console.log('✅ CV Embedding generado:', {
+            originalResponse: embeddingResult,
+            extractedEmbedding: cv_embedding,
+            type: typeof cv_embedding,
+            isArray: Array.isArray(cv_embedding),
+            length: cv_embedding?.length,
+            firstFewValues: cv_embedding?.slice(0, 3)
+          });
+        } else {
+          console.warn('Error generating CV embedding:', await embeddingResponse.text());
+        }
+      } catch (embeddingError) {
+        console.warn('Error calling embedding API:', embeddingError);
+        // Continue with upload even if embedding fails
+      }
+
+      // Debug: verificar qué se va a guardar en Firestore
+      if (cv_embedding) {
+        console.log('💾 Guardando embedding en Firestore:', {
+          type: typeof cv_embedding,
+          isArray: Array.isArray(cv_embedding),
+          length: cv_embedding?.length
+        });
+      }
 
       if (!userDoc.exists()) {
         // Si el usuario no existe, crear el documento
@@ -86,7 +153,8 @@ export default function SimpleUploadCVModal({
           hasCV: true,
           cvUploadedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          ...(cv_embedding && { cv_embedding: cv_embedding })
         });
       } else {
         // Si el usuario ya existe, actualizar los campos correspondientes
@@ -95,14 +163,16 @@ export default function SimpleUploadCVModal({
           cvFileUrl: fileUrl,
           hasCV: true,
           cvUploadedAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          ...(cv_embedding && { cv_embedding: cv_embedding })
         });
       }
 
       // Notificar éxito
       onUploadSuccess({
         fileName: selectedFile.name,
-        fileUrl: fileUrl
+        fileUrl: fileUrl,
+        fileEmbedding: cv_embedding
       });
 
       // Cerrar modal

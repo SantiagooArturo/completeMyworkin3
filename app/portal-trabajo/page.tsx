@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
@@ -37,6 +38,7 @@ interface UserProfile {
   cvFileName?: string;
   cvFileUrl?: string;
   ultimoPuesto?: string;
+  cv_embedding?: number[];
 }
 
 export default function PortalTrabajoPage() {
@@ -46,12 +48,23 @@ export default function PortalTrabajoPage() {
   const [customPuesto, setCustomPuesto] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [practicas, setPracticas] = useState<Practica[]>([]);
+  
+  // 🐛 DEBUG: Log cada vez que se actualiza el estado de prácticas
+  useEffect(() => {
+    console.log('🔄 Estado de prácticas actualizado:', {
+      count: practicas.length,
+      renderTime: new Date().toLocaleTimeString(),
+      practices: practicas.slice(0, 3).map(p => ({ company: p.company, title: p.title }))
+    });
+  }, [practicas]);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false); // Ref para acceder al estado actual en callbacks
   const [userProfile, setUserProfile] = useState<UserProfile>({ hasCV: false });
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [renderCounter, setRenderCounter] = useState(0); // Contador para forzar re-renders
 
   // 1. Estados para filtros
   const [tipoTrabajo, setTipoTrabajo] = useState('todos');
@@ -79,7 +92,8 @@ export default function PortalTrabajoPage() {
             hasCV: !!(userData.cvFileUrl || userData.cvFileName),
             cvFileName: userData.cvFileName || undefined,
             cvFileUrl: userData.cvFileUrl || undefined,
-            ultimoPuesto: puestoPrincipal
+            ultimoPuesto: puestoPrincipal,
+            cv_embedding: userData.cv_embedding || undefined
           });
 
           // Solo inicializar puesto si está definido
@@ -88,7 +102,7 @@ export default function PortalTrabajoPage() {
             
             // Si tiene CV y puesto, cargar prácticas automáticamente
             if (userData.cvFileUrl) {
-              await loadPracticas(userData.cvFileUrl, puestoPrincipal);
+              await loadPracticas(userData.cvFileUrl, puestoPrincipal, userData.cv_embedding);
             }
           } else {
             setSelectedPuesto('');
@@ -118,8 +132,8 @@ export default function PortalTrabajoPage() {
     return () => clearInterval(interval);
   }, [user, userProfile.hasCV, userProfile.cvFileUrl, selectedPuesto]);
 
-  // Función para cargar prácticas usando el servicio real
-  const loadPracticas = async (cvUrl: string, puesto: string) => {
+  // Función para cargar prácticas usando streaming directo con actualizaciones progresivas
+  const loadPracticas = async (cvUrl: string, puesto: string, cv_embedding?: number[]) => {
     try {
       console.log('🔍 Cargando prácticas para:', {
         puesto: puesto,
@@ -128,21 +142,49 @@ export default function PortalTrabajoPage() {
       });
 
       setLoading(true);
+      loadingRef.current = true; // Sincronizar ref
+      setPracticas([]); // Limpiar prácticas anteriores
       
-      const matchResult = await OnboardingMatchService.executeMatchWithRetry({
+      // 🔥 STREAMING DIRECTO: Usar matchPractices con callback de progreso
+      const { matchPractices } = await import('../../services/matchPracticesService');
+      
+      const matchResult = await matchPractices({
         puesto: puesto,
-        cv_url: cvUrl
-      }, user!.uid);
+        cv_url: cvUrl,
+        cv_embedding: cv_embedding
+      }, (practices: any[], isComplete: boolean) => {
+        // 📡 CALLBACK DE PROGRESO: Actualizar UI en tiempo real
+        console.log(`🔄 Actualizando UI: ${practices.length} prácticas, completado: ${isComplete}`);
+        
+        // 🔥 ACTUALIZACIÓN SIMPLE: Solo setPracticas sin complicaciones
+        console.log('📡 Callback recibido - actualizando estado:', practices.length);
+        setPracticas([...practices]); // Actualizar estado
+        console.log('✅ setPracticas llamado con:', practices.length, 'prácticas');
+        
+        // 🚀 QUITAR LOADING INMEDIATAMENTE: En cuanto lleguen las primeras prácticas
+        if (practices.length > 0 && loadingRef.current) {
+          setLoading(false); // Quitar loading para mostrar prácticas progresivamente
+          loadingRef.current = false; // Sincronizar ref
+          console.log('🔓 Loading removido - UI libre para renderizar');
+        }
+        
+        if (isComplete) {
+          console.log(`✅ Streaming completado: ${practices.length} prácticas cargadas`);
+        }
+      });
 
-      setPracticas(matchResult.practices);
-      
-      const sourceMessage = matchResult.source === 'api' ? 'nuevas' : 'guardadas';
-      console.log(`✅ Prácticas ${sourceMessage} cargadas: ${matchResult.practices.length} (${matchResult.source})`);
+      // Fallback: si no se usó callback, actualizar aquí
+      if (matchResult.practicas) {
+        setPracticas(matchResult.practicas);
+        setLoading(false);
+        console.log(`✅ Prácticas cargadas (fallback): ${matchResult.practicas.length}`);
+      }
       
     } catch (error) {
       console.error('❌ Error cargando prácticas:', error);
       setError('Error al cargar prácticas. Mostrando resultados de ejemplo.');
       setPracticas([]);
+      setLoading(false);
     }
   };
 
@@ -161,7 +203,7 @@ export default function PortalTrabajoPage() {
     setLoading(true);
     setError(null);
     
-    await loadPracticas(userProfile.cvFileUrl, selectedPuesto);
+    await loadPracticas(userProfile.cvFileUrl, selectedPuesto, userProfile.cv_embedding);
     setLastRefresh(new Date());
     setLoading(false);
   };
@@ -181,17 +223,26 @@ export default function PortalTrabajoPage() {
   };
 
   // Función para manejar el éxito de la subida de CV
-  const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string }) => {
+  const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string, fileEmbedding?: number[] }) => {
+    console.log('🎯 Portal: handleUploadSuccess recibido:', {
+      fileName: cvData.fileName,
+      fileUrl: cvData.fileUrl,
+      fileEmbedding: cvData.fileEmbedding,
+      embeddingExists: !!cvData.fileEmbedding,
+      embeddingLength: cvData.fileEmbedding?.length
+    });
+    
     setUserProfile({
       hasCV: true,
       cvFileName: cvData.fileName,
-      cvFileUrl: cvData.fileUrl
+      cvFileUrl: cvData.fileUrl,
+      cv_embedding: cvData.fileEmbedding
     });
 
     // Si hay puesto seleccionado, cargar prácticas automáticamente
     if (selectedPuesto) {
       setLoading(true);
-      await loadPracticas(cvData.fileUrl, selectedPuesto);
+      await loadPracticas(cvData.fileUrl, selectedPuesto, cvData.fileEmbedding);
       setLastRefresh(new Date());
       setLoading(false);
     }
@@ -210,7 +261,7 @@ export default function PortalTrabajoPage() {
       // Si tiene CV, cargar prácticas automáticamente con el nuevo puesto
       if (userProfile.hasCV && userProfile.cvFileUrl) {
         setLoading(true);
-        await loadPracticas(userProfile.cvFileUrl, nuevoPuesto);
+        await loadPracticas(userProfile.cvFileUrl, nuevoPuesto, userProfile.cv_embedding);
         setLastRefresh(new Date());
         setLoading(false);
       }
@@ -940,7 +991,7 @@ export default function PortalTrabajoPage() {
                 };
                 return (
                   <JobCard 
-                    key={`${practice.company}-${sortedIndex}`} 
+                    key={`practice-${sortedIndex}-${practice.company}-${practice.title}`.replace(/\s+/g, '-')} 
                     job={jobData} 
                     index={sortedIndex}
                     onCardClick={handleCardClick}

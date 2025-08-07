@@ -9,6 +9,7 @@ export interface OnboardingMatchData {
   matchQuery: {
     puesto: string;
     cv_url: string;
+    cv_embedding?: number[];
   };
   timestamp: any;
   retryCount: number;
@@ -126,6 +127,7 @@ const MOCK_PRACTICES: Practica[] = [
 export class OnboardingMatchService {
   static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string): Promise<OnboardingMatchData> {
     // 1. PRIMERO: Verificar si ya existe un match reciente en Firestore
+    //comentado unicamente para pruebas. al comentarse evita el cacheo de los matches previos
     //const existingMatch = await this.getExistingMatch(userId, matchQuery);
     const existingMatch = false;
     if (existingMatch) {
