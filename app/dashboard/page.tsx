@@ -374,7 +374,7 @@ export default function DashboardPage() {
                       </Link>
 
                       <Link
-                        href="/match-cv"
+                        href="/portal-trabajo"
                         className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-[#028bbf] hover:shadow-md transition group"
                       >
                         <div className="bg-orange-100 group-hover:bg-orange-200 p-2 rounded-lg transition">
