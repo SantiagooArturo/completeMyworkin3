@@ -6,7 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { X } from 'lucide-react';
 import Link from 'next/link';
 import { OnboardingData, OnboardingService } from '@/services/onboardingService';
-import { updateDoc, doc, getDoc } from 'firebase/firestore';
+import { updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+
 import { db } from '@/firebase/config';
 import {
   Select,
@@ -16,9 +17,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FileUp, FilePlus, Upload, CheckCircle } from 'lucide-react';
-import { matchPractices } from '@/services/matchPracticesService';
-import { OnboardingMatchService } from '@/services/onboardingMatchService';
+import { FileUp, FilePlus, Upload, CheckCircle,  } from 'lucide-react';
 import LoadingScreen from '@/components/LoadingScreens';
 import OnboardingLoadingScreen from '@/components/OnboardingLoadingScreen';
 import CVSubmissionModal from '@/components/CVSubmissionModal';
@@ -317,18 +316,7 @@ export default function OnboardingPage() {
 
       // Hacer match practices
       setLoadingStep('searching');
-      
-      console.log('📤 Ejecutando match con datos del modal:', {
-        puesto: puesto,
-        cv_url: fileUrl
-      });
-
-      const matchResult = await OnboardingMatchService.executeMatchWithRetry({
-        puesto: puesto,
-        cv_url: fileUrl
-      }, user!.uid);
-
-      console.log(`✅ Match completado: ${matchResult.practices.length} prácticas (${matchResult.source})`);
+  
       
       // Finalizar
       setLoadingStep('preparing');
@@ -416,13 +404,83 @@ export default function OnboardingPage() {
             cv_url: cvUrl
           });
 
-          console.log('✅ Ejecutando match con retry logic...');
-          const matchResult = await OnboardingMatchService.executeMatchWithRetry({
-            puesto: puesto,
-            cv_url: cvUrl
-          }, user.uid);
 
-          console.log(`✅ Match completado con ${matchResult.practices.length} prácticas (${matchResult.source})`);
+          async function updateUserEmbeddings(
+            uid: string,
+            desiredPosition: string | null,
+            cvUrl: string
+          ): Promise<void> {
+
+            if (!uid || typeof uid !== 'string' || uid.trim() === '') {
+              throw new Error('UID inválido o no definido');
+            }
+            if (!cvUrl) throw new Error('URL del CV es requerida');
+          
+            const userDocRef = doc(db, 'users', uid);
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+              throw new Error('Usuario no encontrado en Firestore');
+            }
+          
+            let cv_embeddings: Record<string, any> | null = null;
+          
+            try {
+              const API_URL = process.env.NODE_ENV === 'development'
+                ? 'http://127.0.0.1:8000/cvFileUrl_to_embedding'
+                : 'https://jobsmatch.onrender.com/cvFileUrl_to_embedding';
+            
+              const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  cv_url: cvUrl,
+                  desired_position: desiredPosition,
+                }),
+              });
+            
+              if (response.ok) {
+                const result = await response.json();
+              
+                if (result.embeddings && typeof result.embeddings === 'object') {
+                  const cleanEmbeddings: any = {};
+                  const aspects = ['hard_skills', 'soft_skills', 'sector_afinnity', 'general'];
+                
+                  for (const aspect of aspects) {
+                    if (result.embeddings[aspect]) {
+                      cleanEmbeddings[aspect] = result.embeddings[aspect]._value || result.embeddings[aspect];
+                      if (!Array.isArray(cleanEmbeddings[aspect])) cleanEmbeddings[aspect] = [];
+                    } else {
+                      cleanEmbeddings[aspect] = [];
+                    }
+                  }
+                
+                  cv_embeddings = cleanEmbeddings;
+                }
+              } else {
+                const errorText = await response.text();
+                throw new Error(`Error en API de embeddings: ${response.status} ${errorText}`);
+              }
+            } catch (error) {
+              console.error('Error llamando API de embeddings:', error);
+              throw error;
+            }
+          
+            if (!cv_embeddings) {
+              throw new Error('No se generaron embeddings válidos');
+            }
+          
+            await updateDoc(userDocRef, {
+              cv_embeddings,
+              cvUpdatedAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
+
+
+          
+          //AQUI DEBERIA ACTUALIZAR LOS EMBEDDINGS DEL CV.
+          await updateUserEmbeddings(user.uid, puestoPrincipal, cvUrl);
+          //nota: se crean los embedings del cv del user aqui porque si se redirije a "/portal-trabajo" sin haber creado los embeddings antes, entonces se crearán los emebddings en esa vista y tardará mas en cargar el portal de trabajo.
           
           // Paso 3: Preparando redirección
           setLoadingStep('preparing');
