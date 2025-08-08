@@ -3,11 +3,16 @@ import { X, Upload, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/firebase/config';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { CVEmbeddingUnion } from '../services/matchPracticesService';
 
 interface SimpleUploadCVModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadSuccess: (cvData: { fileName: string; fileUrl: string; fileEmbedding?: number[] }) => void;
+  onUploadSuccess: (cvData: { 
+    fileName: string; 
+    fileUrl: string; 
+    fileEmbedding?: CVEmbeddingUnion;
+  }) => void;
 }
 
 export default function SimpleUploadCVModal({
@@ -80,16 +85,18 @@ export default function SimpleUploadCVModal({
       const userData = userDoc.exists() ? userDoc.data() : null;
       const userPosition = userData?.position || null;
       
-      // Generar embedding del CV
-      let cv_embedding = null;
+      // 🆕 OBTENER EMBEDDINGS DEL BACKEND (sin validaciones)
+      let cv_embeddings: Record<string, any> | null = null;
       try {
-        const url_localhost = "http://127.0.0.1:8000"
-        const url_produccion = "https://jobsmatch.onrender.com"
-        const embeddingResponse = await fetch(`${url_localhost}/cvFileUrl_to_embedding`, {
+        const API_URL = process.env.NODE_ENV === 'development' 
+        ? 'http://127.0.0.1:8000/cvFileUrl_to_embedding' 
+        : 'https://jobsmatch.onrender.com/cvFileUrl_to_embedding';
+        
+        console.log('🔍 Llamando API de embeddings:', { API_URL: API_URL, cv_url: fileUrl });
+        
+        const embeddingResponse = await fetch(API_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cv_url: fileUrl,
             desired_position: userPosition
@@ -97,50 +104,80 @@ export default function SimpleUploadCVModal({
         });
         
         if (embeddingResponse.ok) {
-          const embeddingResult = await embeddingResponse.json();
-          
-          // El API retorna un Vector object, necesitamos extraer el array
-          // Si viene como {embedding: {_value: [...]}} extraemos el array
-          if (embeddingResult?.embedding?._value && Array.isArray(embeddingResult.embedding._value)) {
-            cv_embedding = embeddingResult.embedding._value;
-          }
-          // Si viene como {_value: [...]} extraemos el array
-          else if (embeddingResult?._value && Array.isArray(embeddingResult._value)) {
-            cv_embedding = embeddingResult._value;
-          }
-          // Si ya es un array directamente
-          else if (Array.isArray(embeddingResult)) {
-            cv_embedding = embeddingResult;
-          }
-          else {
-            console.warn('Formato de embedding no reconocido:', embeddingResult);
-            cv_embedding = null;
-          }
-          
-          // Debug: verificar que es un array
-          console.log('✅ CV Embedding generado:', {
-            originalResponse: embeddingResult,
-            extractedEmbedding: cv_embedding,
-            type: typeof cv_embedding,
-            isArray: Array.isArray(cv_embedding),
-            length: cv_embedding?.length,
-            firstFewValues: cv_embedding?.slice(0, 3)
+          const result = await embeddingResponse.json();
+          console.log('✅ Respuesta del API de embedding:', { 
+            hasEmbeddings: !!result.embeddings,
+            keys: result.embeddings ? Object.keys(result.embeddings) : []
           });
+          
+          // Log detallado de la estructura de embeddings recibida
+          console.log('🔍 Estructura de embeddings recibida:', {
+            hasEmbeddings: !!result.embeddings,
+            isObject: typeof result.embeddings === 'object',
+            keys: Object.keys(result.embeddings || {}),
+            sampleValue: result.embeddings ? result.embeddings.general : 'No hay embeddings'
+          });
+          
+          if (result.embeddings && typeof result.embeddings === 'object') {
+            // Asegurarse de que no haya propiedades _value anidadas
+            const cleanEmbeddings: any = {};
+            const aspects = ['hard_skills', 'soft_skills', 'sector_afinnity', 'general'];
+            
+            for (const aspect of aspects) {
+              if (result.embeddings[aspect]) {
+                // Si el aspecto tiene _value, extraerlo, de lo contrario usar directamente
+                cleanEmbeddings[aspect] = result.embeddings[aspect]._value || result.embeddings[aspect];
+                
+                // Asegurarse de que sea un array
+                if (!Array.isArray(cleanEmbeddings[aspect])) {
+                  console.warn(`⚠️ El aspecto ${aspect} no es un array:`, cleanEmbeddings[aspect]);
+                  cleanEmbeddings[aspect] = [];
+                }
+              } else {
+                console.warn(`⚠️ Falta el aspecto requerido: ${aspect}`);
+                cleanEmbeddings[aspect] = [];
+              }
+            }
+            
+            // Log de la estructura limpia
+            console.log('🔄 Estructura de embeddings limpia:', {
+              keys: Object.keys(cleanEmbeddings),
+              sampleValue: cleanEmbeddings.general ? 
+                `Array de ${cleanEmbeddings.general.length} elementos` : 'No hay datos'
+            });
+            
+            cv_embeddings = cleanEmbeddings;
+          } else {
+            console.warn('⚠️ La respuesta no contiene embeddings en el formato esperado:', result);
+          }
         } else {
-          console.warn('Error generating CV embedding:', await embeddingResponse.text());
+          const errorText = await embeddingResponse.text();
+          console.error('❌ Error en la API:', {
+            status: embeddingResponse.status,
+            error: errorText
+          });
         }
-      } catch (embeddingError) {
-        console.warn('Error calling embedding API:', embeddingError);
-        // Continue with upload even if embedding fails
+      } catch (error) {
+        console.error('❌ Error llamando al API de embeddings:', error);
+        // Continuar con la subida aunque falle el embedding
       }
 
-      // Debug: verificar qué se va a guardar en Firestore
-      if (cv_embedding) {
-        console.log('💾 Guardando embedding en Firestore:', {
-          type: typeof cv_embedding,
-          isArray: Array.isArray(cv_embedding),
-          length: cv_embedding?.length
-        });
+      // 🔍 DEBUG: Verificar qué se va a guardar en Firestore
+      if (cv_embeddings) {
+        const embeddingInfo = Array.isArray(cv_embeddings) 
+          ? {
+              type: 'legacy_array',
+              length: cv_embeddings.length
+            }
+          : {
+              type: 'multi_aspect_object',
+              aspects: Object.keys(cv_embeddings),
+              totalVectors: Object.values(cv_embeddings).reduce((sum: number, arr: any) => sum + (arr?.length || 0), 0)
+            };
+            
+        console.log('💾 Preparando embedding para Firestore:', embeddingInfo);
+      } else {
+        console.log('⚠️ No hay embedding válido para guardar en Firestore');
       }
 
       if (!userDoc.exists()) {
@@ -154,7 +191,15 @@ export default function SimpleUploadCVModal({
           cvUploadedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          ...(cv_embedding && { cv_embedding: cv_embedding })
+          ...(cv_embeddings && { cv_embeddings: cv_embeddings }) // 🆕 Nuevo campo: cv_embeddings
+        });
+        
+        console.log('✅ Usuario CREADO en Firestore:', {
+          userId: user.uid,
+          cvFileName: selectedFile.name,
+          hasEmbedding: !!cv_embeddings,
+          embeddingType: cv_embeddings ? (Array.isArray(cv_embeddings) ? 'legacy_array' : 'multi_aspect') : 'none',
+          savedField: cv_embeddings ? 'cv_embeddings' : 'none'
         });
       } else {
         // Si el usuario ya existe, actualizar los campos correspondientes
@@ -164,7 +209,15 @@ export default function SimpleUploadCVModal({
           hasCV: true,
           cvUploadedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          ...(cv_embedding && { cv_embedding: cv_embedding })
+          ...(cv_embeddings && { cv_embeddings: cv_embeddings }) // 🆕 Nuevo campo: cv_embeddings
+        });
+        
+        console.log('✅ Usuario ACTUALIZADO en Firestore:', {
+          userId: user.uid,
+          cvFileName: selectedFile.name,
+          hasEmbedding: !!cv_embeddings,
+          embeddingType: cv_embeddings ? (Array.isArray(cv_embeddings) ? 'legacy_array' : 'multi_aspect') : 'none',
+          savedField: cv_embeddings ? 'cv_embeddings' : 'none'
         });
       }
 
@@ -172,7 +225,7 @@ export default function SimpleUploadCVModal({
       onUploadSuccess({
         fileName: selectedFile.name,
         fileUrl: fileUrl,
-        fileEmbedding: cv_embedding
+        fileEmbedding: cv_embeddings || undefined // 🔧 Fix: null → undefined
       });
 
       // Cerrar modal

@@ -139,7 +139,7 @@ function PostularContent() {
         publishedDate: selectedJob?.publishedDate || "",
         endDate: selectedJob?.endDate || "",
         // Agregar datos de similitud con los nuevos campos
-        requisitos_tecnicos: selectedJob?.requisitos_tecnicos || 0,
+        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
         similitud_puesto: selectedJob?.similitud_puesto || 0,
         afinidad_sector: selectedJob?.afinidad_sector || 0,
         similitud_semantica: selectedJob?.similitud_semantica || 0,
@@ -194,7 +194,7 @@ function PostularContent() {
         publishedDate: selectedJob?.publishedDate || "",
         endDate: selectedJob?.endDate || "",
         // Agregar datos de similitud con los nuevos campos
-        requisitos_tecnicos: selectedJob?.requisitos_tecnicos || 0,
+        similitud_requisitos: selectedJob?.similitud_requisitos || 0,
         similitud_puesto: selectedJob?.similitud_puesto || 0,
         afinidad_sector: selectedJob?.afinidad_sector || 0,
         similitud_semantica: selectedJob?.similitud_semantica || 0,

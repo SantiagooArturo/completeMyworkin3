@@ -6,9 +6,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import JobCard from '@/components/dashboard/JobCard';
-import SimpleUploadCVModal from '@/components/SimpleUploadCVModal';
+import SimpleUploadCVModal from '../../components/SimpleUploadCVModal';
 import { OnboardingMatchService } from '@/services/onboardingMatchService';
-import { Practica } from '@/services/matchPracticesService';
+import { matchPractices, CVEmbeddingUnion, Practica } from '../../services/matchPracticesService';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { 
@@ -38,7 +38,7 @@ interface UserProfile {
   cvFileName?: string;
   cvFileUrl?: string;
   ultimoPuesto?: string;
-  cv_embedding?: number[];
+  cv_embeddings?: CVEmbeddingUnion;
 }
 
 export default function PortalTrabajoPage() {
@@ -49,14 +49,6 @@ export default function PortalTrabajoPage() {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [practicas, setPracticas] = useState<Practica[]>([]);
   
-  // 🐛 DEBUG: Log cada vez que se actualiza el estado de prácticas
-  useEffect(() => {
-    console.log('🔄 Estado de prácticas actualizado:', {
-      count: practicas.length,
-      renderTime: new Date().toLocaleTimeString(),
-      practices: practicas.slice(0, 3).map(p => ({ company: p.company, title: p.title }))
-    });
-  }, [practicas]);
   const [loading, setLoading] = useState(false);
   const loadingRef = useRef(false); // Ref para acceder al estado actual en callbacks
   const [userProfile, setUserProfile] = useState<UserProfile>({ hasCV: false });
@@ -88,12 +80,40 @@ export default function PortalTrabajoPage() {
           const userData = userDoc.data();
           const puestoPrincipal = userData.position;
 
+          // 🔍 DEBUG: Analizar embedding leído de Firestore (nuevo campo cv_embeddings)
+          const firestoreEmbedding = userData.cv_embeddings || userData.cv_embedding; // Fallback para datos legacy
+          const firestoreEmbeddingInfo = firestoreEmbedding
+            ? Array.isArray(firestoreEmbedding)
+              ? {
+                  type: 'legacy_array',
+                  length: firestoreEmbedding.length
+                }
+              : {
+                  type: 'multi_aspect_object', 
+                  aspects: Object.keys(firestoreEmbedding),
+                  totalVectors: Object.values(firestoreEmbedding).reduce((sum: number, arr: any) => sum + (arr?.length || 0), 0)
+                }
+            : { type: 'none' };
+            
+          console.log('📖 Embedding leído de Firestore:', {
+            userId: user.uid,
+            hasEmbedding: !!firestoreEmbedding,
+            embeddingInfo: firestoreEmbeddingInfo,
+            firestoreFields: {
+              cvFileUrl: !!userData.cvFileUrl,
+              cvFileName: !!userData.cvFileName,
+              cv_embeddings: !!userData.cv_embeddings, // 🆕 Nuevo campo
+              cv_embedding: !!userData.cv_embedding,   // 🔄 Campo legacy (fallback)
+              readFrom: userData.cv_embeddings ? 'cv_embeddings' : (userData.cv_embedding ? 'cv_embedding' : 'none')
+            }
+          });
+          
           setUserProfile({
             hasCV: !!(userData.cvFileUrl || userData.cvFileName),
             cvFileName: userData.cvFileName || undefined,
             cvFileUrl: userData.cvFileUrl || undefined,
             ultimoPuesto: puestoPrincipal,
-            cv_embedding: userData.cv_embedding || undefined
+            cv_embeddings: firestoreEmbedding || undefined
           });
 
           // Solo inicializar puesto si está definido
@@ -102,7 +122,7 @@ export default function PortalTrabajoPage() {
             
             // Si tiene CV y puesto, cargar prácticas automáticamente
             if (userData.cvFileUrl) {
-              await loadPracticas(userData.cvFileUrl, puestoPrincipal, userData.cv_embedding);
+              await loadPracticas(userData.cvFileUrl, puestoPrincipal, userData.cv_embeddings);
             }
           } else {
             setSelectedPuesto('');
@@ -132,54 +152,61 @@ export default function PortalTrabajoPage() {
     return () => clearInterval(interval);
   }, [user, userProfile.hasCV, userProfile.cvFileUrl, selectedPuesto]);
 
-  // Función para cargar prácticas usando streaming directo con actualizaciones progresivas
-  const loadPracticas = async (cvUrl: string, puesto: string, cv_embedding?: number[]) => {
+  const loadPracticas = async (cvUrl: string, puesto: string, cv_embeddings?: CVEmbeddingUnion) => {
     try {
-      console.log('🔍 Cargando prácticas para:', {
-        puesto: puesto,
-        cvUrl: cvUrl,
-        userId: user?.uid
-      });
-
+      console.log('🔍 Cargando prácticas para:', { puesto, cvUrl, cv_embeddings: !!cv_embeddings, userId: user?.uid });
+  
       setLoading(true);
-      loadingRef.current = true; // Sincronizar ref
-      setPracticas([]); // Limpiar prácticas anteriores
-      
-      // 🔥 STREAMING DIRECTO: Usar matchPractices con callback de progreso
-      const { matchPractices } = await import('../../services/matchPracticesService');
-      
-      const matchResult = await matchPractices({
-        puesto: puesto,
-        cv_url: cvUrl,
-        cv_embedding: cv_embedding
-      }, (practices: any[], isComplete: boolean) => {
-        // 📡 CALLBACK DE PROGRESO: Actualizar UI en tiempo real
-        console.log(`🔄 Actualizando UI: ${practices.length} prácticas, completado: ${isComplete}`);
-        
-        // 🔥 ACTUALIZACIÓN SIMPLE: Solo setPracticas sin complicaciones
-        console.log('📡 Callback recibido - actualizando estado:', practices.length);
-        setPracticas([...practices]); // Actualizar estado
-        console.log('✅ setPracticas llamado con:', practices.length, 'prácticas');
-        
-        // 🚀 QUITAR LOADING INMEDIATAMENTE: En cuanto lleguen las primeras prácticas
-        if (practices.length > 0 && loadingRef.current) {
-          setLoading(false); // Quitar loading para mostrar prácticas progresivamente
-          loadingRef.current = false; // Sincronizar ref
-          console.log('🔓 Loading removido - UI libre para renderizar');
-        }
-        
-        if (isComplete) {
-          console.log(`✅ Streaming completado: ${practices.length} prácticas cargadas`);
-        }
-      });
+      loadingRef.current = true;
+      setPracticas([]);
+  
+      // 1️⃣ Verificar si hay match en caché
 
-      // Fallback: si no se usó callback, actualizar aquí
-      if (matchResult.practicas) {
-        setPracticas(matchResult.practicas);
+      const existingMatch = await OnboardingMatchService.getExistingMatch(user!.uid, {
+        puesto,
+        cv_url: cvUrl,
+      });
+  
+      if (existingMatch) {
+        console.log('✅ Usando prácticas guardadas (cache)');
+        setPracticas(existingMatch.practices);
         setLoading(false);
-        console.log(`✅ Prácticas cargadas (fallback): ${matchResult.practicas.length}`);
+        return; // No hacemos streaming si ya tenemos resultados frescos
       }
-      
+
+      console.log('No hay prácticas guardadas en cache para:', { puesto, cvUrl, userId: user?.uid });
+  
+      // 2️⃣ Si no hay cache → Streaming progresivo
+      const { matchPractices } = await import('../../services/matchPracticesService');
+  
+      let allPractices: any[] = []; // Para acumular y guardar al final
+  
+      await matchPractices({
+        userId: user!.uid,
+        puesto,
+        cv_url: cvUrl,
+        cv_embeddings
+      }, (practices: any[], isComplete: boolean) => {
+        setPracticas([...practices]);
+        allPractices = practices; // Guardar para persistir al final
+  
+        if (practices.length > 0 && loadingRef.current) {
+          setLoading(false);
+          loadingRef.current = false;
+        }
+  
+        // 3️⃣ Cuando termine el streaming → guardar en Firestore
+        if (isComplete && practices.length > 0) {
+          const matchQuery = {
+            puesto,
+            cv_url: cvUrl,
+          };
+          OnboardingMatchService.saveMatch(user!.uid, matchQuery, practices);
+          console.log("✅ Match guardado en Firestore con este matchQuery: ", matchQuery);
+        }
+        
+      });
+  
     } catch (error) {
       console.error('❌ Error cargando prácticas:', error);
       setError('Error al cargar prácticas. Mostrando resultados de ejemplo.');
@@ -187,6 +214,7 @@ export default function PortalTrabajoPage() {
       setLoading(false);
     }
   };
+  
 
   // Función para refrescar prácticas
   const handleRefresh = async () => {
@@ -203,7 +231,7 @@ export default function PortalTrabajoPage() {
     setLoading(true);
     setError(null);
     
-    await loadPracticas(userProfile.cvFileUrl, selectedPuesto, userProfile.cv_embedding);
+    await loadPracticas(userProfile.cvFileUrl, selectedPuesto, userProfile.cv_embeddings);
     setLastRefresh(new Date());
     setLoading(false);
   };
@@ -223,20 +251,40 @@ export default function PortalTrabajoPage() {
   };
 
   // Función para manejar el éxito de la subida de CV
-  const handleUploadSuccess = async (cvData: { fileName: string; fileUrl: string, fileEmbedding?: number[] }) => {
+  const handleUploadSuccess = async (cvData: { 
+    fileName: string; 
+    fileUrl: string; 
+    fileEmbedding?: CVEmbeddingUnion;
+  }) => {
+    // 🔍 DEBUG: Analizar embedding recibido del modal
+    const embeddingInfo = cvData.fileEmbedding 
+      ? Array.isArray(cvData.fileEmbedding)
+        ? {
+            type: 'legacy_array',
+            length: cvData.fileEmbedding.length,
+            sampleValues: cvData.fileEmbedding.slice(0, 3)
+          }
+        : {
+            type: 'multi_aspect_object',
+            aspects: Object.keys(cvData.fileEmbedding),
+            aspectLengths: Object.fromEntries(
+              Object.entries(cvData.fileEmbedding).map(([key, value]) => [key, (value as number[]).length])
+            )
+          }
+      : { type: 'none' };
+      
     console.log('🎯 Portal: handleUploadSuccess recibido:', {
       fileName: cvData.fileName,
       fileUrl: cvData.fileUrl,
-      fileEmbedding: cvData.fileEmbedding,
       embeddingExists: !!cvData.fileEmbedding,
-      embeddingLength: cvData.fileEmbedding?.length
+      embeddingInfo: embeddingInfo
     });
     
     setUserProfile({
       hasCV: true,
       cvFileName: cvData.fileName,
       cvFileUrl: cvData.fileUrl,
-      cv_embedding: cvData.fileEmbedding
+      cv_embeddings: cvData.fileEmbedding
     });
 
     // Si hay puesto seleccionado, cargar prácticas automáticamente
@@ -261,7 +309,8 @@ export default function PortalTrabajoPage() {
       // Si tiene CV, cargar prácticas automáticamente con el nuevo puesto
       if (userProfile.hasCV && userProfile.cvFileUrl) {
         setLoading(true);
-        await loadPracticas(userProfile.cvFileUrl, nuevoPuesto, userProfile.cv_embedding);
+        //primero denería actualizar firestore con el campo embeddings llamando al servicio simpleUpload
+        await loadPracticas(userProfile.cvFileUrl, nuevoPuesto);
         setLastRefresh(new Date());
         setLoading(false);
       }
@@ -983,7 +1032,7 @@ export default function PortalTrabajoPage() {
                   applicationUrl: practice.url,
                   skills: {
                     general: practice.similitud_total,
-                    technical: practice.requisitos_tecnicos,
+                    technical: practice.similitud_requisitos,
                     soft: practice.similitud_puesto,
                     experience: practice.afinidad_sector,
                     macro: practice.similitud_semantica

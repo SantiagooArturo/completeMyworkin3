@@ -47,7 +47,7 @@ export default function PracticaDetailPage() {
         publishedDate: practica.fecha_agregado,
         endDate: practica.fecha_agregado, // Usar fecha_agregado si no hay fecha_limite
         // Datos de similitud específicos del match con los nuevos campos
-        requisitos_tecnicos: practica.requisitos_tecnicos,
+        similitud_requisitos: practica.similitud_requisitos,
         similitud_puesto: practica.similitud_puesto,
         afinidad_sector: practica.afinidad_sector,
         similitud_semantica: practica.similitud_semantica,
@@ -107,15 +107,9 @@ export default function PracticaDetailPage() {
       },
       {
         label: 'Requisitos Técnicos',
-        value: practica.requisitos_tecnicos || 0,
+        value: practica.similitud_requisitos || 0,
         color: '#10B981',
         justificacion: practica.justificacion_requisitos || 'No disponible'
-      },
-      {
-        label: 'Similitud Puesto',
-        value: practica.similitud_puesto || 0,
-        color: '#3B82F6',
-        justificacion: practica.justificacion_puesto || 'No disponible'
       },
       {
         label: 'Afinidad Sector',
@@ -129,12 +123,7 @@ export default function PracticaDetailPage() {
         color: '#8B5CF6',
         justificacion: practica.justificacion_semantica || 'No disponible'
       },
-      {
-        label: 'Juicio Sistema',
-        value: practica.juicio_sistema || 0,
-        color: '#EF4444',
-        justificacion: practica.justificacion_juicio || 'No disponible'
-      }
+
     ];
   };
 

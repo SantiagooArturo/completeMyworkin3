@@ -42,7 +42,7 @@ export class PortalTrabajoMockService {
         salary: '$800 - $1200',
         url: 'https://example.com/practica1',
         fecha_agregado: '2023-10-01',
-        requisitos_tecnicos: 85,
+        similitud_requisitos: 85,
         similitud_puesto: 90,
         afinidad_sector: 80,
         similitud_semantica: 75,

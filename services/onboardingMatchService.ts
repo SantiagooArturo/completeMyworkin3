@@ -1,6 +1,10 @@
-import { collection, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { matchPractices, MatchPracticesRequest, Practica } from './matchPracticesService';
+import crypto from 'crypto'; 
+import { 
+  query, collection, where, orderBy, limit, getDocs, getDoc,serverTimestamp, 
+  deleteDoc, doc, setDoc 
+} from 'firebase/firestore';
 
 export interface OnboardingMatchData {
   userId: string;
@@ -26,7 +30,7 @@ const MOCK_PRACTICES: Practica[] = [
     url: "https://example.com/job1",
     fecha_agregado: "2025-01-10",
     schedule: "Tiempo completo",
-    requisitos_tecnicos: 85,
+    similitud_requisitos: 85,
     similitud_puesto: 92,
     afinidad_sector: 78,
     similitud_semantica: 88,
@@ -47,7 +51,7 @@ const MOCK_PRACTICES: Practica[] = [
     url: "https://example.com/job2",
     fecha_agregado: "2025-01-09",
     schedule: "Tiempo completo",
-    requisitos_tecnicos: 80,
+    similitud_requisitos: 80,
     similitud_puesto: 88,
     afinidad_sector: 82,
     similitud_semantica: 85,
@@ -68,7 +72,7 @@ const MOCK_PRACTICES: Practica[] = [
     url: "https://example.com/job3",
     fecha_agregado: "2025-01-08",
     schedule: "Tiempo parcial",
-    requisitos_tecnicos: 87,
+    similitud_requisitos: 87,
     similitud_puesto: 95,
     afinidad_sector: 75,
     similitud_semantica: 82,
@@ -89,7 +93,7 @@ const MOCK_PRACTICES: Practica[] = [
     url: "https://example.com/job4",
     fecha_agregado: "2025-01-07",
     schedule: "Tiempo completo",
-    requisitos_tecnicos: 75,
+    similitud_requisitos: 75,
     similitud_puesto: 80,
     afinidad_sector: 88,
     similitud_semantica: 78,
@@ -110,7 +114,7 @@ const MOCK_PRACTICES: Practica[] = [
     url: "https://example.com/job5",
     fecha_agregado: "2025-01-06",
     schedule: "Flexible",
-    requisitos_tecnicos: 70,
+    similitud_requisitos: 70,
     similitud_puesto: 75,
     afinidad_sector: 85,
     similitud_semantica: 80,
@@ -124,12 +128,21 @@ const MOCK_PRACTICES: Practica[] = [
   }
 ];
 
+  // Genera un hash consistente a partir de puesto+cv_url
+function generateMatchId(puesto: string, cv_url: string) {
+    return crypto.createHash('md5').update(puesto + '|' + cv_url).digest('hex');
+}
+
+function generateMatchKey(puesto: string, cv_url: string) {
+  return puesto + '|' + cv_url; // o en minúsculas si quieres ignorar mayúsculas
+}
+  
+
 export class OnboardingMatchService {
   static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string): Promise<OnboardingMatchData> {
     // 1. PRIMERO: Verificar si ya existe un match reciente en Firestore
     //comentado unicamente para pruebas. al comentarse evita el cacheo de los matches previos
-    //const existingMatch = await this.getExistingMatch(userId, matchQuery);
-    const existingMatch = false;
+    const existingMatch = await this.getExistingMatch(userId, matchQuery);
     if (existingMatch) {
       console.log('✅ Usando prácticas guardadas (cache)');
       return existingMatch;
@@ -205,43 +218,75 @@ export class OnboardingMatchService {
     }
   }
 
-  // NUEVA FUNCIÓN: Verificar match existente
-  static async getExistingMatch(userId: string, matchQuery: MatchPracticesRequest): Promise<OnboardingMatchData | null> {
-    try {
-      const matchDoc = await getDoc(doc(db, 'onboarding_matches', userId));
-      
-      if (!matchDoc.exists()) {
-        return null;
-      }
+  // Obtener match existente (máx. 2h de antigüedad)
+static async getExistingMatch(
+  userId: string,
+  matchQuery: { puesto: string; cv_url: string }
+) {
+  try {
+    const matchId = generateMatchId(matchQuery.puesto, matchQuery.cv_url);
+    const matchRef = doc(db, 'onboarding_matches', userId, 'matches', matchId);
+    const snapshot = await getDoc(matchRef);
 
-      const data = matchDoc.data() as OnboardingMatchData;
-      
-      // Verificar si el match es para el mismo puesto y CV
-      if (data.matchQuery?.puesto !== matchQuery.puesto || 
-          data.matchQuery?.cv_url !== matchQuery.cv_url) {
-        return null;
-      }
+    if (!snapshot.exists()) return null;
 
-      // Verificar si el match es reciente (menos de 2 horas)
-      const matchTime = data.timestamp?.toDate?.() || new Date(0);
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-      
-      if (matchTime < twoHoursAgo) {
-        console.log('🕐 Match guardado es muy antiguo, buscando nuevo...');
-        return null;
-      }
+    const data = snapshot.data() as OnboardingMatchData;
 
-      console.log('🎯 Match encontrado en cache:', {
-        puesto: data.matchQuery?.puesto,
-        practices: data.practices.length,
-        source: data.source,
-        age: `${Math.round((Date.now() - matchTime.getTime()) / (1000 * 60))} minutos`
-      });
+    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+    const matchTime = data.timestamp?.toDate?.() || new Date(0);
 
-      return data;
-    } catch (error) {
-      console.error('Error verificando match existente:', error);
-      return null;
-    }
+    if (matchTime.getTime() < twoHoursAgo) return null;
+
+    console.log('🎯 Match encontrado en cache:', {
+      puesto: data.matchQuery?.puesto,
+      practices: data.practices.length,
+      source: data.source
+    });
+
+    return data;
+  } catch (error) {
+    console.error('Error verificando match existente:', error);
+    return null;
   }
 }
+
+// Guardar match con límite de 10 documentos
+static async saveMatch(
+  userId: string,
+  matchQuery: { puesto: string; cv_url: string },
+  practices: Practica[]
+) {
+  try {
+    const matchesRef = collection(db, 'onboarding_matches', userId, 'matches');
+    const matchId = generateMatchId(matchQuery.puesto, matchQuery.cv_url);
+
+    // Guardar o actualizar directamente por matchId
+    await setDoc(doc(matchesRef, matchId), {
+      userId,
+      practices,
+      source: 'api',
+      matchQuery,
+      timestamp: serverTimestamp(),
+      retryCount: 0
+    });
+
+    // Limitar a los 10 más recientes
+    const snapshot = await getDocs(query(matchesRef, orderBy('timestamp', 'desc')));
+    if (snapshot.size > 10) {
+      const docsToDelete = snapshot.docs.slice(10);
+      await Promise.all(docsToDelete.map(d => deleteDoc(d.ref)));
+    }
+
+    console.log('💾 Match guardado en Firestore');
+  } catch (error) {
+    console.error('❌ Error guardando match:', error);
+  }
+}
+
+
+}
+
+
+
+
+

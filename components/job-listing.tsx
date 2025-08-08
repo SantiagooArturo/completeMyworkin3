@@ -39,7 +39,7 @@ export default function JobListing({ practice }: JobListingProps) {
                   : undefined),
       endDate: practice.end_date,
       // Agregar datos de similitud con nueva estructura
-      requisitos_tecnicos: (practice as any).requisitos_tecnicos,
+      similitud_requisitos: (practice as any).requisitos_tecnicos,
       similitud_puesto: (practice as any).similitud_puesto,
       afinidad_sector: (practice as any).afinidad_sector,
       similitud_semantica: (practice as any).similitud_semantica,

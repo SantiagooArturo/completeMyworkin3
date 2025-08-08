@@ -11,7 +11,7 @@ export interface Practica {
   
   logo?:string;
   // Datos de similitud/match (nueva estructura)
-  requisitos_tecnicos: number;
+  similitud_requisitos: number;
   similitud_puesto: number;
   afinidad_sector: number;
   similitud_semantica: number;

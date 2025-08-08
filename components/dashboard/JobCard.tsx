@@ -167,7 +167,7 @@ export default function JobCard({ job, index, onCardClick }: JobCardProps) {
       publishedDate: job.publishedDate,
       logo: job.logo,
       // Agregar datos de similitud con nueva estructura
-      requisitos_tecnicos: job.skills.technical,
+      similitud_requisitos: job.skills.technical,
       similitud_puesto: job.skills.soft,
       afinidad_sector: job.skills.experience,
       similitud_semantica: job.skills.macro || 0,
