@@ -139,83 +139,9 @@ function generateMatchKey(puesto: string, cv_url: string) {
   
 
 export class OnboardingMatchService {
-  static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string): Promise<OnboardingMatchData> {
-    // 1. PRIMERO: Verificar si ya existe un match reciente en Firestore
-    //comentado unicamente para pruebas. al comentarse evita el cacheo de los matches previos
-    const existingMatch = await this.getExistingMatch(userId, matchQuery);
-    if (existingMatch) {
-      console.log('✅ Usando prácticas guardadas (cache)');
-      return existingMatch;
-    }
-
-    // 2. SI NO EXISTE: Hacer nueva petición al API
-    let retryCount = 0;
-    let practices: Practica[] = [];
-    let source: 'api' | 'mock' = 'mock';
-
-    // Primer intento
-    try {
-      console.log('Primer intento de matchPractices...');
-      const response = await matchPractices(matchQuery);
-      practices = response.practicas;
-      source = 'api';
-      console.log('✅ Primer intento exitoso');
-    } catch (error) {
-      console.log('❌ Primer intento falló:', error);
-      retryCount = 1;
-
-      // Delay de 2 segundos antes del segundo intento
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Segundo intento
-      try {
-        console.log('Segundo intento de matchPractices...');
-        const response = await matchPractices(matchQuery);
-        practices = response.practicas;
-        source = 'api';
-        console.log('✅ Segundo intento exitoso');
-      } catch (secondError) {
-        console.log('❌ Segundo intento falló:', secondError);
-        retryCount = 2;
-        
-        // Usar prácticas mock
-        console.log('🔄 Usando prácticas mock como fallback');
-        practices = MOCK_PRACTICES;
-        source = 'mock';
-      }
-    }
-
-    // Guardar en Firestore solo si es de API (no mock)
-    if (source === 'api') {
-      const matchData: OnboardingMatchData = {
-        userId,
-        practices,
-        source,
-        matchQuery,
-        timestamp: serverTimestamp(),
-        retryCount
-      };
-
-      try {
-        await setDoc(doc(db, 'onboarding_matches', userId), matchData);
-        console.log('✅ Datos guardados en Firestore');
-      } catch (firestoreError) {
-        console.error('❌ Error guardando en Firestore:', firestoreError);
-        // No fallar si Firestore falla, solo continuar
-      }
-
-      return matchData;
-    } else {
-      // Para mock, no guardar en Firestore pero retornar estructura similar
-      return {
-        userId,
-        practices,
-        source,
-        matchQuery,
-        timestamp: new Date(),
-        retryCount
-      };
-    }
+  static async executeMatchWithRetry(matchQuery: MatchPracticesRequest, userId: string){
+    const maxRetries = 3;
+    //funcrion deprecada y vaciada
   }
 
   // Obtener match existente (máx. 2h de antigüedad)

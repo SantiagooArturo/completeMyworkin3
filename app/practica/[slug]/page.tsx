@@ -101,25 +101,25 @@ export default function PracticaDetailPage() {
     return [
       {
         label: 'Match General',
-        value:  parseInt(practica.similitud_total) || 0, // Usar el valor calculado del backend
+        value:  Math.round(practica.similitud_total) || 0, // Usar el valor calculado del backend
         color: '#6366F1',
         justificacion: 'Evaluación integral de compatibilidad calculada por el sistema'
       },
       {
         label: 'Requisitos Técnicos',
-        value:  parseInt(practica.similitud_requisitos) || 0,
+        value:  Math.round(practica.similitud_requisitos) || 0,
         color: '#10B981',
         justificacion: practica.justificacion_requisitos || 'No disponible'
       },
       {
         label: 'Afinidad Sector',
-        value:  parseInt(practica.afinidad_sector) || 0,
+        value:  Math.round(practica.afinidad_sector) || 0,
         color: '#F59E0B',
         justificacion: practica.justificacion_afinidad || 'No disponible'
       },
       {
         label: 'Similitud Semántica',
-        value:  parseInt(practica.similitud_semantica) || 0,
+        value:  Math.round(practica.similitud_semantica) || 0,
         color: '#8B5CF6',
         justificacion: practica.justificacion_semantica || 'No disponible'
       },

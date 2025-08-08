@@ -56,7 +56,7 @@ export async function uploadCVEmbeddings(userId: string, cvUrl: string, desiredP
 
     await updateDoc(doc(db, 'users', userId), { cv_embeddings: embeddingsClean });
     console.log('✅ Embeddings limpiados y guardados en Firestore');
-    return embeddingsClean;
+    return embeddingsClean as CVEmbeddingUnion;
 
   } catch (err) {
     console.error('❌ No se pudieron guardar embeddings:', err);
@@ -179,7 +179,7 @@ export async function matchPractices(
     const embeddings = await uploadCVEmbeddings(request.userId, request.cv_url, request.puesto);
   
     if (embeddings) {
-      requestBody.cv_embeddings = embeddings;
+      requestBody.cv_embeddings = embeddings as CVEmbeddingUnion;
       console.log('✅ Embeddings obtenidos y añadidos a la solicitud');
     } else {
       console.warn('⚠️ No se pudieron generar embeddings - la solicitud continuará sin ellos');

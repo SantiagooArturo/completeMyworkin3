@@ -5,6 +5,13 @@ import { db } from '@/firebase/config';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { CVEmbeddingUnion } from '../services/matchPracticesService';
 
+type CVEmbedding = {
+  hard_skills: number[];
+  soft_skills: number[];
+  sector_afinnity: number[];
+  general: number[];
+};
+
 interface SimpleUploadCVModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -225,7 +232,7 @@ export default function SimpleUploadCVModal({
       onUploadSuccess({
         fileName: selectedFile.name,
         fileUrl: fileUrl,
-        fileEmbedding: cv_embeddings || undefined // 🔧 Fix: null → undefined
+        fileEmbedding: cv_embeddings as CVEmbedding || undefined
       });
 
       // Cerrar modal
