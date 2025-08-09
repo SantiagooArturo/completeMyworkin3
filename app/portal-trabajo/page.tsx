@@ -509,7 +509,7 @@ export default function PortalTrabajoPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">
-              Portal de Trabajo prueba
+              Portal de Trabajo 
             </h1>
           </div>
           <p className="text-gray-600">
